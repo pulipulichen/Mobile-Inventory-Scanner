@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0f766e" />
+    <meta
+      name="description"
+      content="Mobile Inventory Scanner 的 Google Sheet、QR Code 列印與手機盤點入口"
+    />
+    <title>Mobile Inventory Scanner｜盤點工具入口</title>
+    <link rel="icon" href="./assets/icon.png" type="image/png" />
+    <style>
+      :root {
+        color-scheme: light;
+        --background: #f3f8f7;
+        --surface: #ffffff;
+        --text: #183332;
+        --muted: #55706e;
+        --border: #d5e4e1;
+        --primary: #0f766e;
+        --primary-dark: #095b55;
+        --accent: #e5f5f1;
+        --shadow: 0 1rem 2.5rem rgb(15 118 110 / 10%);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-width: 320px;
+        background:
+          radial-gradient(circle at top right, #d7f2ec 0, transparent 30rem),
+          var(--background);
+        color: var(--text);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+        line-height: 1.6;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      a:focus-visible {
+        outline: 0.2rem solid #f59e0b;
+        outline-offset: 0.25rem;
+      }
+
+      .skip-link {
+        position: absolute;
+        top: 0.75rem;
+        left: 0.75rem;
+        z-index: 10;
+        padding: 0.65rem 1rem;
+        border-radius: 0.5rem;
+        background: var(--text);
+        color: #fff;
+        transform: translateY(-200%);
+      }
+
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+
+      .site-header {
+        border-bottom: 1px solid rgb(213 228 225 / 70%);
+        background: rgb(255 255 255 / 78%);
+        backdrop-filter: blur(0.75rem);
+      }
+
+      .header-content,
+      .page-content {
+        width: min(100% - 2rem, 70rem);
+        margin: 0 auto;
+      }
+
+      .header-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        min-height: 4.5rem;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: var(--text);
+        font-weight: 750;
+        text-decoration: none;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 2.5rem;
+        height: 2.5rem;
+        place-items: center;
+        border-radius: 0.75rem;
+        background: var(--primary);
+        color: #fff;
+        font-size: 1.35rem;
+        font-weight: 800;
+      }
+
+      .brand-name {
+        display: grid;
+        line-height: 1.2;
+      }
+
+      .brand-name small {
+        margin-top: 0.2rem;
+        color: var(--muted);
+        font-size: 0.7rem;
+        font-weight: 500;
+      }
+
+      .header-link {
+        padding: 0.5rem 0.75rem;
+        border-radius: 0.5rem;
+        color: var(--primary-dark);
+        font-size: 0.9rem;
+        font-weight: 650;
+        text-decoration: none;
+      }
+
+      .header-link:hover {
+        background: var(--accent);
+      }
+
+      .hero {
+        padding: clamp(3.5rem, 9vw, 7rem) 0 clamp(2.5rem, 7vw, 5rem);
+        text-align: center;
+      }
+
+      .eyebrow {
+        margin: 0 0 0.75rem;
+        color: var(--primary-dark);
+        font-size: 0.82rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 12ch;
+        margin: 0 auto 1rem;
+        color: var(--text);
+        font-size: clamp(2.25rem, 7vw, 4.5rem);
+        letter-spacing: -0.045em;
+        line-height: 1.05;
+      }
+
+      .hero-text {
+        max-width: 42rem;
+        margin: 0 auto;
+        color: var(--muted);
+        font-size: clamp(1rem, 2vw, 1.2rem);
+      }
+
+      .tool-section {
+        padding-bottom: clamp(3rem, 7vw, 5.5rem);
+      }
+
+      .section-heading {
+        margin-bottom: 1.25rem;
+      }
+
+      h2 {
+        margin: 0;
+        font-size: clamp(1.5rem, 3vw, 2rem);
+        letter-spacing: -0.025em;
+      }
+
+      .section-heading p {
+        margin: 0.35rem 0 0;
+        color: var(--muted);
+      }
+
+      .tool-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+      }
+
+      .tool-card {
+        display: flex;
+        min-height: 14rem;
+        flex-direction: column;
+        padding: clamp(1.25rem, 3vw, 1.75rem);
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .tool-icon {
+        display: grid;
+        width: 3rem;
+        height: 3rem;
+        margin-bottom: 1rem;
+        place-items: center;
+        border-radius: 0.8rem;
+        background: var(--accent);
+        color: var(--primary-dark);
+        font-size: 1.5rem;
+      }
+
+      .tool-card h3 {
+        margin: 0;
+        font-size: 1.2rem;
+      }
+
+      .tool-card p {
+        margin: 0.45rem 0 1.25rem;
+        color: var(--muted);
+      }
+
+      .tool-link {
+        display: inline-flex;
+        min-height: 2.75rem;
+        align-items: center;
+        justify-content: center;
+        align-self: flex-start;
+        gap: 0.4rem;
+        margin-top: auto;
+        padding: 0.65rem 1rem;
+        border: 2px solid var(--primary);
+        border-radius: 0.55rem;
+        color: var(--primary-dark);
+        font-weight: 750;
+        text-decoration: none;
+        transition:
+          background-color 0.2s ease,
+          color 0.2s ease;
+      }
+
+      .tool-link:hover {
+        background: var(--primary);
+        color: #fff;
+      }
+
+      .tool-card--primary {
+        border-color: var(--primary);
+        background: linear-gradient(145deg, #0f766e, #095b55);
+        color: #fff;
+      }
+
+      .tool-card--primary .tool-icon {
+        background: rgb(255 255 255 / 18%);
+        color: #fff;
+      }
+
+      .tool-card--primary p {
+        color: #d9f4ef;
+      }
+
+      .tool-card--primary .tool-link {
+        border-color: #fff;
+        color: #fff;
+      }
+
+      .tool-card--primary .tool-link:hover {
+        background: #fff;
+        color: var(--primary-dark);
+      }
+
+      .guide {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.8fr);
+        gap: clamp(1.5rem, 5vw, 4rem);
+        align-items: start;
+        margin-bottom: clamp(3rem, 7vw, 5.5rem);
+        padding: clamp(1.5rem, 4vw, 2.5rem);
+        border-radius: 1rem;
+        background: #dff2ed;
+      }
+
+      .guide h2 {
+        color: var(--primary-dark);
+      }
+
+      .guide p {
+        margin-bottom: 0;
+        color: #315a56;
+      }
+
+      .steps {
+        margin: 0;
+        padding-left: 1.5rem;
+        color: #315a56;
+      }
+
+      .steps li + li {
+        margin-top: 0.55rem;
+      }
+
+      .site-footer {
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .footer-content {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 1.5rem 0;
+      }
+
+      .footer-content p {
+        margin: 0;
+      }
+
+      @media (max-width: 42rem) {
+        .header-link {
+          font-size: 0;
+        }
+
+        .header-link::after {
+          content: "說明";
+          font-size: 0.9rem;
+        }
+
+        .tool-grid,
+        .guide {
+          grid-template-columns: 1fr;
+        }
+
+        .tool-card {
+          min-height: 0;
+        }
+
+        .footer-content {
+          flex-direction: column;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+
+        *,
+        *::before,
+        *::after {
+          transition-duration: 0.01ms !important;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳至主要內容</a>
+
+    <header class="site-header">
+      <div class="header-content">
+        <a class="brand" href="./" aria-label="Mobile Inventory Scanner 首頁">
+          <span class="brand-mark" aria-hidden="true">⌗</span>
+          <span class="brand-name">
+            Mobile Inventory Scanner
+            <small>行動盤點工具</small>
+          </span>
+        </a>
+        <a class="header-link" href="#usage-guide">使用說明</a>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="hero" aria-labelledby="page-title">
+        <div class="page-content">
+          <p class="eyebrow">Inventory made simple</p>
+          <h1 id="page-title">從試算表開始，完成每一次盤點</h1>
+          <p class="hero-text">
+            先建立或複製盤點用 Google Sheet，再依工作需要列印 QR Code
+            標籤，或直接使用手機掃描盤點。
+          </p>
+        </div>
+      </section>
+
+      <section class="tool-section" aria-labelledby="tools-title">
+        <div class="page-content">
+          <div class="section-heading">
+            <h2 id="tools-title">選擇要使用的工具</h2>
+            <p>所有工具都會在瀏覽器中開啟，依照目前工作流程選擇即可。</p>
+          </div>
+
+          <div class="tool-grid">
+            <article class="tool-card tool-card--primary">
+              <div class="tool-icon" aria-hidden="true">▣</div>
+              <h3>初始化 Google Sheet</h3>
+              <p>開啟已設定好欄位格式的範本，作為盤點資料來源。</p>
+              <a
+                class="tool-link"
+                href="https://docs.google.com/spreadsheets/d/1XA-VP_7g0Op-1s_LTjNroFOsOA4DvJEyGq8GaytCkCI/edit?gid=0#gid=0"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                開啟初始化試算表 <span aria-hidden="true">↗</span>
+              </a>
+            </article>
+
+            <article class="tool-card">
+              <div class="tool-icon" aria-hidden="true">⧉</div>
+              <h3>建立 Google Sheet 副本</h3>
+              <p>保留原始範本不被修改，建立一份屬於自己的盤點試算表。</p>
+              <a
+                class="tool-link"
+                href="https://docs.google.com/spreadsheets/d/1XA-VP_7g0Op-1s_LTjNroFOsOA4DvJEyGq8GaytCkCI/copy"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                建立我的副本 <span aria-hidden="true">↗</span>
+              </a>
+            </article>
+
+            <article class="tool-card">
+              <div class="tool-icon" aria-hidden="true">▦</div>
+              <h3>QR Code 列印工具</h3>
+              <p>從 Google Sheet 讀取 ID，產生可下載的 QR Code 標籤 PDF。</p>
+              <a class="tool-link" href="./print/">開啟 print <span aria-hidden="true">→</span></a>
+            </article>
+
+            <article class="tool-card">
+              <div class="tool-icon" aria-hidden="true">⌁</div>
+              <h3>手機盤點掃描工具</h3>
+              <p>使用手機相機或照片辨識 QR Code，記錄盤點位置與時間。</p>
+              <a class="tool-link" href="./scan/">開啟 scan <span aria-hidden="true">→</span></a>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="usage-guide" class="page-content guide" aria-labelledby="guide-title">
+        <div>
+          <h2 id="guide-title">建議使用流程</h2>
+          <p>
+            第一次使用時，請先建立 Google Sheet 副本，再將副本網址提供給
+            print 與 scan 使用。
+          </p>
+        </div>
+        <ol class="steps">
+          <li>建立自己的 Google Sheet 副本。</li>
+          <li>在 print 輸入副本網址並列印 QR Code。</li>
+          <li>在 scan 設定 Apps Script 與盤點位置後開始掃描。</li>
+        </ol>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="page-content footer-content">
+        <p>Mobile Inventory Scanner</p>
+        <p>QR Code 只包含設備 ID，盤點資料儲存於 Google Sheet。</p>
+      </div>
+    </footer>
+  </body>
+</html>

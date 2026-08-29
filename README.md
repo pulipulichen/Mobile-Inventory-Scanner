@@ -42,3 +42,10 @@ google_sheet/
 5. 將 `scan/dist/` 與 `print/dist/` 部署到 HTTPS 靜態網站。
 
 > 手機相機與 PWA 需要 HTTPS；`localhost` 可作為開發例外。
+
+## 已初始化資源
+
+- 初始化 Google Sheet：[開啟 Google Sheet](https://docs.google.com/spreadsheets/d/1XA-VP_7g0Op-1s_LTjNroFOsOA4DvJEyGq8GaytCkCI/edit?gid=0#gid=0)
+- 複製 Google Sheet：[複製試算表](https://docs.google.com/spreadsheets/d/1XA-VP_7g0Op-1s_LTjNroFOsOA4DvJEyGq8GaytCkCI/copy)
+- 開啟 `print/`：[QR Code 列印工具](https://pulipulichen.github.io/Mobile-Inventory-Scanner/print)
+- 開啟 `scan/`：[行動盤點掃描工具](https://pulipulichen.github.io/Mobile-Inventory-Scanner/scan)
