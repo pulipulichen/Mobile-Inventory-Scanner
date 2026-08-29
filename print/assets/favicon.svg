@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="QR Code printing">
+  <rect width="512" height="512" rx="112" fill="#2457A7"/>
+  <rect x="132" y="72" width="248" height="150" rx="18" fill="#FFFFFF"/>
+  <path d="M334 72v52h46" fill="#DCEBFF"/>
+  <path d="M334 72v52h46" fill="none" stroke="#173A73" stroke-width="12" stroke-linejoin="round"/>
+  <g fill="#173A73">
+    <path d="M174 104h48v48h-48zm10 10v28h28v-28zm8 8h12v12h-12z"/>
+    <path d="M238 104h48v48h-48zm10 10v28h28v-28zm8 8h12v12h-12z"/>
+    <path d="M174 160h48v48h-48zm10 10v28h28v-28zm8 8h12v12h-12z"/>
+    <rect x="242" y="164" width="14" height="14"/><rect x="262" y="164" width="14" height="14"/>
+    <rect x="282" y="164" width="14" height="14"/><rect x="242" y="184" width="14" height="14"/>
+    <rect x="282" y="184" width="14" height="14"/><rect x="302" y="144" width="14" height="14"/>
+    <rect x="302" y="164" width="14" height="34"/>
+  </g>
+  <rect x="88" y="194" width="336" height="190" rx="44" fill="#173A73"/>
+  <rect x="116" y="224" width="280" height="102" rx="18" fill="#4B82C3"/>
+  <circle cx="362" cy="250" r="11" fill="#DCEBFF"/>
+  <path d="M154 314h204l34 126H120z" fill="#FFFFFF"/>
+  <path d="M154 314h204l34 126H120z" fill="none" stroke="#173A73" stroke-width="12" stroke-linejoin="round"/>
+  <g fill="#173A73">
+    <rect x="170" y="344" width="34" height="34"/><rect x="216" y="344" width="18" height="18"/>
+    <rect x="246" y="344" width="34" height="34"/><rect x="292" y="344" width="18" height="18"/>
+    <rect x="322" y="344" width="20" height="20"/><rect x="216" y="374" width="18" height="18"/>
+    <rect x="292" y="374" width="18" height="18"/><rect x="170" y="390" width="34" height="22"/>
+    <rect x="246" y="390" width="18" height="22"/><rect x="278" y="398" width="64" height="14"/>
+  </g>
+</svg>

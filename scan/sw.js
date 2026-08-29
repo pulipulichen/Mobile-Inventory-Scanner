@@ -7,7 +7,7 @@ const APP_SHELL = [
   "./manifest.webmanifest",
   "./config/google-sheet.js",
   "./css/app.css",
-  "./icons/icon.svg",
+  "./assets/favicon.svg",
   "./js/google-sheet.js",
   "./js/print.js",
   "./js/scan.js"
