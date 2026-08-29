@@ -4,10 +4,11 @@ All notable changes to this project are documented in the version files below.
 
 ## Latest Version
 
-- [0.0.2](changelog/CHANGELOG-0.0.2.md)
+- [0.0.3](changelog/CHANGELOG-0.0.3.md)
 
 ## Archive
 
+- [0.0.2](changelog/CHANGELOG-0.0.2.md)
 - [0.0.1](changelog/CHANGELOG-0.0.1.md)
 
 ## Update Policy

@@ -39,6 +39,7 @@ const isPendingLoading = ref(false);
 const isPhotoLoading = ref(false);
 const isCameraActive = ref(false);
 const camera = ref<InstanceType<typeof CameraScanner> | null>(null);
+const isInventoryConfirmed = ref(false);
 const statusKey = ref("status.ready");
 const statusParams = ref<Record<string, unknown>>({});
 const statusTone = ref<"info" | "success" | "warning" | "error">("info");
@@ -53,12 +54,12 @@ const isAppsScriptUrlInvalid = computed(() => {
   return value.length > 0 && !isAppsScriptUrl(value);
 });
 const isInventoryReady = computed(
-  () => isAppsScriptUrl(appsScriptUrl.value) && Boolean(location.value.trim()),
+  () =>
+    isInventoryConfirmed.value &&
+    isAppsScriptUrl(appsScriptUrl.value),
 );
 const showStatusAlert = computed(
-  () =>
-    isAppsScriptUrlInvalid.value ||
-    (isInventoryReady.value && statusKey.value !== "status.ready"),
+  () => isAppsScriptUrlInvalid.value || statusKey.value !== "status.ready",
 );
 const effectiveStatusMessage = computed(() =>
   isAppsScriptUrlInvalid.value
@@ -128,11 +129,15 @@ function setError(error: unknown): string {
 
 function updateAppsScriptUrl(value: string): void {
   appsScriptUrl.value = value;
+  isInventoryConfirmed.value = false;
+  setStatus("status.ready");
   saveAppsScriptUrl(value);
 }
 
 function updateLocation(value: string): void {
   location.value = value;
+  isInventoryConfirmed.value = false;
+  setStatus("status.ready");
   saveLocation(value);
 }
 
@@ -142,10 +147,12 @@ function validateAppsScriptUrl(): boolean {
   return false;
 }
 
-function validateLocation(): boolean {
-  if (location.value.trim()) return true;
-  setStatus("errors.INVALID_LOCATION", {}, "error");
-  return false;
+function confirmSettings(): void {
+  isInventoryConfirmed.value = false;
+  if (!validateAppsScriptUrl()) return;
+
+  isInventoryConfirmed.value = true;
+  setStatus("status.settings_confirmed", {}, "success");
 }
 
 function resetSession(): void {
@@ -183,7 +190,7 @@ function handleCameraStatus(
 
 async function startCamera(): Promise<void> {
   if (!canStartCamera.value) return;
-  if (!validateAppsScriptUrl() || !validateLocation()) return;
+  if (!validateAppsScriptUrl()) return;
   resetSession();
   camera.value?.start();
 }
@@ -266,7 +273,7 @@ async function sendResult(result: ScanResult): Promise<void> {
 }
 
 async function handlePhoto(file: File): Promise<void> {
-  if (!validateAppsScriptUrl() || !validateLocation()) return;
+  if (!validateAppsScriptUrl()) return;
 
   isPhotoLoading.value = true;
   setStatus("status.photo_recognizing");
@@ -359,6 +366,7 @@ function handleLocaleChange(event: Event): void {
           :disabled="isCameraActive"
           @update:apps-script-url="updateAppsScriptUrl"
           @update:location="updateLocation"
+          @confirm="confirmSettings"
         />
 
         <v-alert

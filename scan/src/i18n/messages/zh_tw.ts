@@ -11,7 +11,7 @@ export default {
     app_bar_subtitle: "QR Code 行動盤點",
     settings_heading: "連線與位置",
     settings_description:
-      "輸入 Apps Script 部署後的 /exec 網址與目前位置，不需要登入 Google。",
+      "輸入 Apps Script 部署後的 /exec 網址；目前位置可選填，不需要登入 Google。",
     apps_script_url_label: "Apps Script /exec 網址",
     apps_script_url_placeholder:
       "https://script.google.com/macros/s/…/exec",
@@ -22,7 +22,11 @@ export default {
       "Google Drive 會在新分頁開啟。選取試算表後，將網址複製回這裡。",
     location_label: "目前位置",
     location_placeholder: "理科實驗室",
-    location_hint: "成功盤點時會將此位置寫入 Google Sheet。",
+    location_hint:
+      "可留白；留白時會保留 Google Sheet 中原本的位置，有輸入內容才會更新位置。",
+    confirm_settings: "確認設定並進入盤點",
+    confirm_settings_hint:
+      "確認 Apps Script 網址後即可進入盤點；目前位置可選填。",
     scanner_heading: "開始盤點",
     scanner_description:
       "請將 QR Code 放在鏡頭前方並開始掃描，也可以拍照或讀取相片；一次可辨識多個 QR Code。",
@@ -50,7 +54,8 @@ export default {
     privacy_note: "QR Code 影像只在此瀏覽器本機辨識，不會上傳照片或相機影像。",
   },
   status: {
-    ready: "請先設定 Apps Script URL 與目前位置。",
+    ready: "請先設定 Apps Script URL；目前位置可選填。",
+    settings_confirmed: "設定完成，可以開始盤點。",
     camera_starting: "正在啟動相機…",
     camera_active: "相機已啟動，請將 QR Code 對準鏡頭。",
     camera_stopped: "相機已停止。",

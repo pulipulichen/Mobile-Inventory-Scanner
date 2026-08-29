@@ -51,8 +51,6 @@ framework 取代實體輸出邏輯。語系選擇器等規格指定原生元素�
 | `pdf-lib` | `print` | 在瀏覽器本機產生並下載 PDF；以向量方塊繪製 QR Code | [官方文件](https://pdf-lib.js.org/) | [建立 PDF 的 JSFiddle](https://jsfiddle.net/Hopding/rxwsc8f5/13/) |
 | `pdflib-fontkit` | `print` | 讓 `pdf-lib` 內嵌 Noto Sans TC，以便 PDF 標籤顯示繁體中文 `name` | [GitHub README](https://github.com/znacloud/pdf-fontkit) | — |
 | `@undecaf/zbar-wasm` | `scan` | 在瀏覽器本機辨識 `ImageData`，支援同一張圖片多個 barcode / QR Code | [GitHub README](https://github.com/undecaf/zbar-wasm) | [官方掃描 Demo](https://undecaf.github.io/zbar-wasm/example/) |
-| `vite-plugin-pwa` | `scan` | 產生 PWA manifest 與 Service Worker，快取 App shell 與靜態資源 | [官方文件](https://vite-pwa-org.netlify.app/guide/) | [官方 Examples（需本機啟動）](https://vite-pwa-org.netlify.app/examples/) |
-
 `pdf-lib` 取代瀏覽器 `window.print()` 作為 PDF 產生方式。`print` 不引入
 `jsPDF` 或其他第二套 PDF renderer；QR Code 的編碼仍統一由 `qrcode` 負責。
 
@@ -102,7 +100,7 @@ Web App 讀取與寫入盤點資料。
 ./frontend.sh npm print install vuetify
 ./frontend.sh npm print install --save-dev vite-plugin-vuetify
 ./frontend.sh npm print install qrcode pdf-lib
-./frontend.sh npm scan install @undecaf/zbar-wasm vite-plugin-pwa
+./frontend.sh npm scan install @undecaf/zbar-wasm
 ```
 
 實際加入新套件前，先確認既有依賴與瀏覽器原生 API 無法滿足需求，再記錄

@@ -11,6 +11,7 @@ defineProps<{
 const emit = defineEmits<{
   "update:appsScriptUrl": [value: string];
   "update:location": [value: string];
+  confirm: [];
 }>();
 
 const { t } = useI18n({ useScope: "global" });
@@ -70,12 +71,26 @@ const { t } = useI18n({ useScope: "global" });
         persistent-placeholder
         :hint="t('scan.location_hint')"
         autocomplete="off"
-        aria-required="true"
         variant="outlined"
         persistent-hint
         :disabled="disabled"
         @update:model-value="emit('update:location', String($event ?? ''))"
       />
+
+      <v-btn
+        class="confirm-settings-button"
+        type="button"
+        color="primary"
+        size="large"
+        prepend-icon="mdi-check-circle"
+        :disabled="disabled"
+        @click="emit('confirm')"
+      >
+        {{ t("scan.confirm_settings") }}
+      </v-btn>
+      <p class="field-description settings-confirmation-hint">
+        {{ t("scan.confirm_settings_hint") }}
+      </p>
     </div>
   </section>
 </template>

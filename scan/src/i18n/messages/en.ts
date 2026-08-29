@@ -12,7 +12,7 @@ export default {
     app_bar_subtitle: "Mobile QR Code inventory",
     settings_heading: "Connection and location",
     settings_description:
-      "Enter the deployed Apps Script /exec URL and current location. Google sign-in is not required.",
+      "Enter the deployed Apps Script /exec URL. Current location is optional; Google sign-in is not required.",
     apps_script_url_label: "Apps Script /exec URL",
     apps_script_url_placeholder:
       "https://script.google.com/macros/s/…/exec",
@@ -23,7 +23,11 @@ export default {
       "Google Drive opens in a new tab. Select a spreadsheet and copy its URL back here.",
     location_label: "Current location",
     location_placeholder: "Science Laboratory",
-    location_hint: "Successful checks save this location to Google Sheets.",
+    location_hint:
+      "Optional. Leave it blank to keep the existing Google Sheets location; enter a value to update it.",
+    confirm_settings: "Confirm settings and enter inventory",
+    confirm_settings_hint:
+      "Confirm the Apps Script URL to show the inventory controls; current location is optional.",
     scanner_heading: "Start inventory check",
     scanner_description:
       "Place QR Codes in front of the camera and start scanning. You can also take or choose a photo; multiple QR Codes are supported.",
@@ -52,7 +56,8 @@ export default {
       "QR Code images are decoded locally in this browser. Photos and camera frames are not uploaded.",
   },
   status: {
-    ready: "Set the Apps Script URL and current location to begin.",
+    ready: "Set the Apps Script URL to begin; current location is optional.",
+    settings_confirmed: "Settings confirmed. You can start the inventory check.",
     camera_starting: "Starting camera…",
     camera_active: "Camera is active. Place a QR Code in front of the camera.",
     camera_stopped: "Camera stopped.",

@@ -307,7 +307,8 @@ QR decode 必須支援 multi-code detection，不能只處理第一個結果。�
 網路需求：
 
 - `print` 下載 Google Sheet CSV 時需要網路；PDF 產生本身在瀏覽器本機完成。
-- `scan` 的 App shell 與 QR decode 靜態資源可由 PWA cache 再次啟動，但寫入 Apps Script 仍需要網路。
+- `scan` 的 PWA 不註冊 Service Worker，也不使用 HTML5 Cache Storage 快取檔案；
+  每次載入仍由網頁伺服器取得目前資源。
 - `scan` 的尚未盤點清單透過同一個 Apps Script `/exec?action=pending` 讀取。
 - 第一版不做離線盤點 queue；無法連線的項目不可標記為成功。
 

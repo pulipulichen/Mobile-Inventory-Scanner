@@ -27,7 +27,6 @@
 - `vite-plugin-vuetify`：Vite 編譯時按需載入 Vuetify 元件。
 - `@mdi/font`：提供 Material Design Icons，供掃描操作按鈕與「最近使用的
   Apps Script」圖示使用。
-- `vite-plugin-pwa`：產生 PWA manifest / Service Worker。
 - `@undecaf/zbar-wasm`：在瀏覽器本機辨識 QR Code，支援相機影格與
   圖片中的多個 QR Code。
 - `MediaDevices.getUserMedia()`：取得使用者同意的後置鏡頭影像，供即時掃描使用。
@@ -96,10 +95,9 @@ flowchart TD
 
 ## PWA
 
-至少包含 manifest、Service Worker、App icon、可加入手機主畫面與 Standalone 顯示模式。
-
-PWA 快取的目的，是讓 App shell 與 QR decode 靜態資源可以再次啟動；第一版
-**不代表支援離線盤點**。Apps Script 寫入仍需要網路。
+使用靜態 manifest、App icon、可加入手機主畫面與 Standalone 顯示模式。
+PWA 不註冊 Service Worker，也不使用 HTML5 Cache Storage 快取檔案；第一版
+不支援離線盤點，Apps Script 寫入仍需要網路。
 
 `@undecaf/zbar-wasm` 所需 WASM 資源要跟著 build 部署，不把第三方 CDN 當成必要 runtime dependency。
 
@@ -149,7 +147,7 @@ https://script.google.com/macros/s/xxxxxxxxxxxxxxxx/exec
 
 需求：
 
-- location 不可為空。
+- location 可留白；留白時保留 Google Sheet 中該 ID 原本的位置，有輸入內容才更新位置。
 - 保存最近使用位置到 `localStorage`。
 - 提供「歷史位置下拉選單」。
 - 使用者曾輸入過的位置可快速選取。

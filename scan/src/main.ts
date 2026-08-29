@@ -7,6 +7,32 @@ import App from "./App.vue";
 import { i18n } from "./i18n";
 import "./styles/main.scss";
 
+async function clearLegacyPwaState(): Promise<void> {
+  if ("serviceWorker" in navigator) {
+    try {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(
+        registrations.map((registration) => registration.unregister()),
+      );
+    } catch {
+      // Service worker cleanup is best-effort and must not block the app.
+    }
+  }
+
+  if ("caches" in window) {
+    try {
+      const cacheNames = await window.caches.keys();
+      await Promise.all(
+        cacheNames.map((cacheName) => window.caches.delete(cacheName)),
+      );
+    } catch {
+      // Cache cleanup is best-effort and must not block the app.
+    }
+  }
+}
+
+void clearLegacyPwaState();
+
 const vuetify = createVuetify({
   icons: {
     defaultSet: "mdi",

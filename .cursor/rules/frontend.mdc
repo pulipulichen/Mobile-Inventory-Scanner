@@ -128,8 +128,9 @@ mis.print.qr_size_mm
 - WASM 檔案應跟著 Vite build 部署，不依賴第三方 CDN 才能掃描。
 - 同一影格、同一張圖片與同一掃描 session 中重複辨識出的 ID，必須去重後才呼叫
   Apps Script。
-- `scan` 必須是 PWA；使用 `vite-plugin-pwa` 管理 manifest / service worker。
-- PWA 快取只保證 App shell / 靜態資源可啟動；第一版不做離線待送 queue。
+- `scan` 必須是 PWA；使用靜態 manifest 提供可安裝與 standalone 顯示。
+- PWA 不註冊 Service Worker，也不使用 HTML5 Cache Storage 快取檔案；
+  第一版不做離線待送 queue。
 
 ## 8. print 專用技術決策
 
@@ -202,3 +203,14 @@ Node / npm 一律從根目錄的 `Containerfile.frontend` 建立 Podman image，
 若只修改其中一個 App，至少 build 該 App。
 
 不可在 build 失敗的情況下宣告功能完成。
+
+### 建置等待限制
+
+- 只修改一個 App 時，使用 `./frontend.sh build <scan|print>`，不要為了單一
+  App 執行會同時處理兩個 App 的總建置腳本。
+- 建置命令必須有明確逾時上限，例如：
+  `timeout --foreground 120s ./frontend.sh build scan`。
+- 建置進入背景執行後，先讀取終端輸出確認是否已完成；看到成功結果就立即繼續，
+  不得無限期等待或反覆輪詢同一個已完成的命令。
+- 超過逾時上限仍未完成時，停止該次等待並回報「建置逾時」，不得宣稱建置成功，
+  也不得在沒有新診斷資訊的情況下無限重試。
