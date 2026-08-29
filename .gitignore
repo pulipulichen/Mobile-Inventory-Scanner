@@ -1,1 +1,13 @@
 .obsidian
+
+# Frontend dependencies / build output
+**/node_modules/
+**/dist/
+**/.vite/
+**/coverage/
+*.log
+
+# Local frontend environment files
+.env
+.env.*
+!.env.example

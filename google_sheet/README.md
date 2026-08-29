@@ -1,213 +1,179 @@
 # Google Sheet / Apps Script 規格
 
-本目錄負責 Google Sheet 與 Google Apps Script 的整合。
+本目錄負責盤點用 Google Sheet 範本，以及綁定於該試算表的 Google Apps Script。
 
-Google Sheet 是盤點資料的主要資料來源；QR Code 列印頁與手機掃描盤點頁不直接操作 Sheet，而是透過 Apps Script Web App 提供的 API 讀取或更新資料。
+整體流程以 [`docs/architecture.md`](../docs/architecture.md) 為準。
+
+## 使用流程
+
+1. 使用者從專案提供的 Google Sheet 範本建立自己的盤點表。
+2. 使用者取得自己的 Google Sheet 網址。
+3. 試算表內已包含或依本文件部署 Apps Script。
+4. Apps Script 部署成 Web App，供手機端 `scan` 頁面呼叫。
+5. 掃描頁將 `location` 與 QR Code 中的 `id` 傳給 Apps Script。
+6. Apps Script 找到對應 ID 後，寫入盤點時間與位置。
+
+Google Sheet 不需要公開；擁有該試算表權限的使用者即可管理資料與 Apps Script。
+
+---
 
 ## Google Sheet 欄位
 
-預設工作表欄位如下：
+第一版固定使用以下三個欄位：
 
-| 欄位 | 說明 | 範例 |
-| --- | --- | --- |
-| `id` | 資產或盤點項目的唯一識別碼，也是 QR Code 的內容 | `A01` |
-| `checked_time` | 最近一次成功盤點時間 | `20260829-1710` |
-| `location` | 最近一次盤點時輸入的位置 | `機房 A` |
+| 欄位 | 必填 | 說明 | 範例 |
+| --- | --- | --- | --- |
+| `id` | 是 | 盤點項目的唯一識別碼，也是 QR Code 的內容 | `A01` |
+| `checked_time` | 否 | 最近一次成功盤點的日期時間，由 Apps Script 寫入 | `2026-08-29 17:10:00` |
+| `location` | 否 | 最近一次成功盤點的位置，由掃描端傳入 | `主機房 A 區` |
 
-第一列固定作為欄位名稱，例如：
+範例：
 
 ```text
-id | checked_time | location
-A01|              |
-B03|              |
-C04|              |
+id  | checked_time        | location
+A01 | 2026-08-29 17:10:00 | 主機房 A 區
+B03 |                     |
+C04 |                     |
 ```
 
-## ID 規則
+### `id` 規則
 
 - `id` 必須唯一。
-- QR Code 內容直接使用 `id`，不額外包 JSON 或網址。
-- `id` 一律視為字串處理，避免 `001` 被轉成 `1`。
-- 空白 ID 不列入盤點資料。
-- 若 Google Sheet 出現重複 ID，Apps Script 應回傳錯誤，不自動選其中一列更新。
+- `id` 一律視為字串。
+- QR Code 內容就是 `id` 本身，不包 URL、JSON 或其他前後綴。
+- 空白 ID 不視為有效盤點資料。
+- 若 Sheet 中出現重複 ID，Apps Script 不應任意更新其中一筆，必須回傳錯誤。
+
+### `checked_time`
+
+- 由 Apps Script 伺服器端產生，不採用手機時間。
+- 使用試算表 / Apps Script 時區，預設 `Asia/Taipei`。
+- 第一版建議顯示格式：`yyyy-MM-dd HH:mm:ss`。
+
+### `location`
+
+- 由手機掃描頁手動輸入。
+- Apps Script 收到空白位置時應拒絕寫入。
+- 成功盤點後直接覆寫該 ID 目前的 `location`。
+
+---
 
 ## Apps Script 功能
 
-Apps Script 預計部署為 Web App，提供 `print` 與 `scan` 網頁使用的 API。
+Apps Script 第一版只負責「依 ID 寫入盤點結果」。
 
-### 1. 讀取全部盤點項目
+它不負責 QR Code 產生，也不負責手機端圖片辨識。
 
-用途：QR Code 列印頁取得所有可以產生 QR Code 的 ID。
+### Web App 輸入
 
-應具備：
+掃描頁每辨識到一個 QR Code，就送出一筆盤點請求。
 
-- 讀取指定 Spreadsheet / Sheet。
-- 根據欄位名稱找到 `id` 欄。
-- 忽略空白 ID。
-- 保留 ID 原始字串格式。
-- 檢查重複 ID。
-- 回傳盤點項目清單。
-
-建議回傳：
+輸入至少包含：
 
 ```json
 {
-  "success": true,
-  "items": [
-    { "id": "A01" },
-    { "id": "B03" },
-    { "id": "C04" }
-  ]
-}
-```
-
-### 2. 查詢單一 ID
-
-用途：掃描 QR Code 後確認這個 ID 是否存在於 Google Sheet。
-
-輸入概念：
-
-```json
-{
-  "action": "getItem",
-  "id": "A01"
-}
-```
-
-成功時可回傳：
-
-```json
-{
-  "success": true,
-  "item": {
-    "id": "A01",
-    "checked_time": "20260829-1710",
-    "location": "機房 A"
-  }
-}
-```
-
-### 3. 寫入盤點結果
-
-用途：手機成功掃描 QR Code 後，更新該 ID 的盤點時間與位置。
-
-輸入概念：
-
-```json
-{
-  "action": "check",
   "id": "A01",
-  "location": "機房 A"
+  "location": "主機房 A 區"
 }
 ```
 
-Apps Script 應執行：
+可接受 `POST`，內容可使用 JSON 或表單格式；實作時選定一種固定介面即可。
 
-1. 根據 `id` 找到對應資料列。
-2. 找不到 ID 時回傳錯誤。
-3. 找到多筆相同 ID 時回傳重複 ID 錯誤。
-4. 將 Apps Script 伺服器端目前時間寫入 `checked_time`。
-5. 將使用者輸入的位置寫入 `location`。
-6. 回傳更新後結果。
+### 寫入流程
 
-成功回傳概念：
+Apps Script 收到請求後：
+
+1. 驗證 `id` 不為空。
+2. 驗證 `location` 不為空。
+3. 在 `id` 欄尋找完全相符的資料。
+4. 找不到 ID 時回傳盤點失敗。
+5. 找到多筆相同 ID 時回傳重複 ID 錯誤。
+6. 找到唯一資料列時，以伺服器目前時間更新 `checked_time`。
+7. 將輸入的位置更新到 `location`。
+8. 回傳本次盤點結果。
+
+### 成功回傳
 
 ```json
 {
   "success": true,
-  "item": {
-    "id": "A01",
-    "checked_time": "20260829-1710",
-    "location": "機房 A"
-  }
+  "id": "A01",
+  "checked_time": "2026-08-29 17:10:00",
+  "location": "主機房 A 區",
+  "message": "盤點成功"
 }
 ```
 
-## checked_time 格式
+### 失敗回傳
 
-暫定格式：
-
-```text
-YYYYMMDD-HHmm
+```json
+{
+  "success": false,
+  "id": "A99",
+  "error": "ID_NOT_FOUND",
+  "message": "找不到 ID: A99"
+}
 ```
 
-例如：
+至少區分以下錯誤：
 
-```text
-20260829-1710
-```
+- `INVALID_ID`：ID 為空或格式不合法。
+- `INVALID_LOCATION`：位置為空。
+- `ID_NOT_FOUND`：Sheet 找不到該 ID。
+- `DUPLICATE_ID`：Sheet 中同一 ID 出現多筆。
+- `SHEET_NOT_FOUND`：目標工作表不存在。
+- `COLUMN_NOT_FOUND`：必要欄位不存在。
+- `WRITE_FAILED`：寫入失敗。
 
-時間由 Apps Script 端產生，不採用手機送來的時間，避免手機時間或時區設定錯誤。
+Apps Script 即使發生錯誤，也應盡量回傳 JSON，讓掃描頁可以直接顯示結果。
 
-預設時區：
+---
 
-```text
-Asia/Taipei
-```
+## Apps Script 與試算表關係
 
-## Apps Script 設定
+建議使用 **Bound Script（綁定試算表的 Apps Script）**。
 
-Apps Script 應集中設定：
+如此從範本建立副本時，Apps Script 可與試算表一起管理，不需要在程式碼內硬編碼另一份 Spreadsheet ID。
 
-- Spreadsheet ID
-- Sheet 名稱
-- Header row
-- 欄位名稱
-- 時區
-- API 存取方式
-
-概念範例：
+程式可透過目前綁定的 Spreadsheet 取得資料，例如概念上使用：
 
 ```javascript
-const CONFIG = {
-  spreadsheetId: '...',
-  sheetName: '盤點',
-  headerRow: 1,
-  timezone: 'Asia/Taipei',
-  columns: {
-    id: 'id',
-    checkedTime: 'checked_time',
-    location: 'location'
-  }
-};
+SpreadsheetApp.getActiveSpreadsheet();
 ```
 
-## 預計目錄
+工作表名稱、欄位名稱與時區可集中在設定區。
+
+---
+
+## 建議目錄
 
 ```text
 google_sheet/
 ├── README.md
+├── template/
+│   └── ... Google Sheet 範本相關說明或資源
 └── appscript/
     ├── Code.gs
     └── appsscript.json
 ```
 
-## 錯誤處理
+---
 
-Apps Script 至少需要區分：
+## 第一版完成條件
 
-- Sheet 不存在。
-- 必要欄位不存在。
-- ID 不存在。
-- ID 重複。
-- location 為空。
-- 寫入 Google Sheet 失敗。
-- 不合法的 action。
+- [ ] 有可複製的 Google Sheet 範本。
+- [ ] 範本包含 `id`、`checked_time`、`location` 三欄。
+- [ ] Apps Script 可部署成 Web App。
+- [ ] Web App 可接收 `id` 與 `location`。
+- [ ] 找到 ID 時更新 `checked_time` 與 `location`。
+- [ ] 找不到 ID 時不修改 Sheet 並回傳錯誤。
+- [ ] 重複 ID 時不修改 Sheet 並回傳錯誤。
+- [ ] 回傳格式可直接供 `scan` 頁顯示。
 
-建議所有 API 都使用一致格式：
+## 第一版不做
 
-```json
-{
-  "success": false,
-  "error": "ITEM_NOT_FOUND",
-  "message": "找不到 ID: A01"
-}
-```
-
-## 尚待確認
-
-- Apps Script Web App 是否允許匿名存取，或需要驗證。
-- 是否限制可呼叫 API 的來源網域。
-- 是否需要額外的盤點歷程 Sheet，而不是只保留最後一次 `checked_time` / `location`。
-- 是否需要支援多個工作表。
-- 是否需要提供新增、刪除或修改盤點項目的 API。
+- 盤點歷程表。
+- 新增 / 刪除 / 修改 ID 的 API。
+- GPS 定位。
+- Apps Script 產生 QR Code。
+- Apps Script 處理圖片或辨識 QR Code。

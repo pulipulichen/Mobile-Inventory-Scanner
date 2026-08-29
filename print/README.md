@@ -1,93 +1,277 @@
 # QR Code 列印功能規格
 
-本目錄負責產生盤點用 QR Code，主要在桌上型電腦或筆電瀏覽器操作。
+本目錄負責從 Google Sheet 讀取盤點項目，產生 QR Code 列印報表，並讓使用者透過瀏覽器列印或輸出 PDF。
 
-目標流程：
+整體流程以 [`docs/architecture.md`](../docs/architecture.md) 為準。
+
+## 前端技術決策
+
+`print` 是 **純前端靜態網頁**，正式環境不需要任何自建後端服務。
+
+固定技術棧：
+
+- Vue 3。
+- Composition API + `<script setup lang="ts">`。
+- TypeScript。
+- Vite。
+- SCSS / Sass。
+- npm `qrcode`：在瀏覽器產生 QR Code，列印時使用 SVG。
+- Google Identity Services：Google OAuth 登入。
+- Google Sheets API：直接從瀏覽器讀取使用者有權限的 Sheet。
+
+第一版不使用 Vue Router、Pinia、Nuxt、大型 UI framework 或自建 PDF renderer。
+
+### 編譯方式
+
+主機只需要安裝 Podman，不要求安裝 Node.js / npm。
+
+專案根目錄提供：
 
 ```text
-Google Sheet
-    ↓
-Apps Script API
-    ↓
-讀取所有 ID
-    ↓
-產生 QR Code
-    ↓
-調整版面 / 尺寸
-    ↓
-預覽
-    ↓
-列印或輸出 PDF
+Containerfile.frontend
+frontend.sh
 ```
 
-## 使用情境
+第一次建立編譯 image：
 
-管理者先在 Google Sheet 建立盤點項目，例如：
+```bash
+./frontend.sh image
+```
+
+安裝依賴：
+
+```bash
+./frontend.sh install print
+```
+
+開發模式：
+
+```bash
+./frontend.sh dev print
+```
+
+預設從主機開啟：
 
 ```text
-A01
-B03
-C04
+http://localhost:5174
 ```
 
-開啟列印頁後，系統讀取所有 ID，依序產生對應 QR Code，再由使用者調整尺寸及列印版面。
+正式編譯：
 
-## QR Code 內容
+```bash
+./frontend.sh build print
+```
 
-QR Code 只包含該筆資料的 `id`。
+輸出目錄：
+
+```text
+print/dist/
+```
+
+`dist/` 可直接部署成靜態網站，不需要 Node.js runtime。
+
+---
+
+## 使用流程
+
+```text
+開啟 print 網頁
+    ↓
+輸入 Google Sheet 網址
+    ↓
+Google OAuth 登入
+    ↓
+Google Sheets API 讀取 id 欄
+    ↓
+設定列印參數
+    ↓
+前端產生 SVG QR Code 報表預覽
+    ↓
+window.print()
+    ↓
+瀏覽器列印 / 另存 PDF
+```
+
+所有使用者輸入或調整內容，都要保存到 `localStorage`。
+
+---
+
+## Google OAuth 設定
+
+列印頁使用 Google Identity Services 取得 OAuth access token，再由瀏覽器呼叫 Google Sheets API。
+
+前端 build-time 設定使用：
+
+```text
+VITE_GOOGLE_CLIENT_ID
+```
+
+開發機可放在：
+
+```text
+print/.env.local
+```
 
 例如：
 
+```dotenv
+VITE_GOOGLE_CLIENT_ID=xxxxxxxxxxxx.apps.googleusercontent.com
+```
+
+注意：
+
+- OAuth Client ID 是前端公開識別值，可以進入 bundle。
+- **不可使用 Client Secret。**
+- 不可放 service account private key。
+- `.env.local` 不 commit。
+- 正式網域與 localhost 必須依 Google OAuth 設定加入允許的 JavaScript origin。
+
+---
+
+## 資料來源
+
+使用者輸入完整 Google Sheet 網址，例如：
+
+```text
+https://docs.google.com/spreadsheets/d/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/edit
+```
+
+前端解析 Spreadsheet ID。
+
+第一版欄位：
+
+```text
+id | checked_time | location
+```
+
+列印功能只需要讀取 `id`。
+
+### Google Sheet 權限
+
+- Google Sheet 不要求公開分享。
+- 使用者在列印頁登入 Google 帳號。
+- 登入帳號只要有該 Sheet 讀取權限即可。
+- 不建立自建後端代讀 Sheet。
+- 前端不保存 access token 到長期 localStorage；token 只保留在必要的 session / memory 範圍。
+
+---
+
+## QR Code 內容與產生方式
+
+每一筆有效 `id` 產生一張 QR Code。
+
+payload 只放 ID 本身，例如：
+
 ```text
 A01
 ```
 
-不加入：
+不可加入：
 
-- URL
-- JSON
-- checked_time
-- location
-- 其他前綴或後綴
+- Google Sheet URL。
+- Apps Script URL。
+- JSON。
+- `checked_time`。
+- `location`。
+- 額外前綴 / 後綴。
 
-這樣 QR Code 可以保持簡單，也方便掃描程式直接取得 ID。
+QR Code 下方顯示同一筆 ID 的可讀文字。
 
-## 資料來源
+使用 npm `qrcode` 套件在瀏覽器產生 SVG；不要用低解析度 canvas / PNG 再以 CSS 放大列印。
 
-列印頁透過 Apps Script API 取得 Google Sheet 中所有有效 ID。
+---
 
-預期資料格式：
+## 頁面輸入項目
 
-```json
-{
-  "success": true,
-  "items": [
-    { "id": "A01" },
-    { "id": "B03" },
-    { "id": "C04" }
-  ]
-}
+### Google Sheet 網址
+
+必要欄位。
+
+需求：
+
+- 驗證 Google Sheet URL。
+- 解析 Spreadsheet ID。
+- 保存到 `localStorage`。
+- 下次開啟自動帶入。
+- 提供「重新讀取」。
+
+### 列印參數
+
+第一版至少提供：
+
+- QR Code 尺寸。
+- ID 文字大小。
+- QR Code 與 ID 文字間距。
+- 標籤間距。
+- 頁面邊界。
+- 紙張方向：直向 / 橫向。
+
+預設紙張 A4。
+
+所有參數：
+
+- 修改後立即更新預覽，或提供明確「更新預覽」。
+- 保存到 `localStorage`。
+- 下次開啟自動套用。
+
+QR Code 實體尺寸使用 `mm`，例如預設：
+
+```text
+30 mm × 30 mm
 ```
 
-## 主要功能
+ID 字體可使用 `pt`。
 
-### 1. 載入 ID
+---
 
-- 頁面開啟後可載入 Google Sheet 資料。
-- 顯示總筆數。
+## localStorage
+
+key 統一使用 `mis.print.*` prefix。
+
+至少保存：
+
+```text
+mis.print.google_sheet_url
+mis.print.qr_size_mm
+mis.print.id_font_size_pt
+mis.print.qr_text_gap_mm
+mis.print.label_gap_mm
+mis.print.page_margin_mm
+mis.print.orientation
+```
+
+OAuth access token 不視為一般偏好設定，不應長期寫入 localStorage。
+
+可提供「重設為預設值」清除本頁設定。
+
+---
+
+## ID 資料處理
+
+從 Google Sheets API 讀取後：
+
+- 第一列視為 header。
+- 依欄位名稱找 `id`，不要硬綁固定欄號。
 - 忽略空白 ID。
-- Apps Script 回傳錯誤時顯示明確訊息。
+- ID 保持字串型態。
+- 保留 Sheet 原始順序。
+- 若有重複 ID，提示使用者，不直接產生容易混淆的列印結果。
 
-### 2. QR Code 產生
+載入成功後顯示：
 
-每一筆 ID 產生一張 QR Code。
+- Google Sheet 名稱或 Spreadsheet ID。
+- 有效 ID 總數。
+- 資料錯誤數量，例如空白或重複 ID。
 
-每個標籤至少包含：
+讀取失敗時清除 / 標記舊資料，不能讓使用者誤以為舊資料是本次結果。
 
-- QR Code 圖形。
-- ID 文字。
+---
 
-概念：
+## 報表預覽
+
+頁面顯示接近實際列印結果的 A4 預覽。
+
+每個標籤：
 
 ```text
 ┌───────────────┐
@@ -98,153 +282,122 @@ A01
 └───────────────┘
 ```
 
-### 3. QR Code 大小調整
-
-使用者可以調整 QR Code 實際列印尺寸。
-
-暫定：
-
-- 使用 mm 作為單位。
-- 可以用 slider 或數值輸入調整。
-- 修改後立即更新預覽。
-
-可先提供合理預設值，例如：
-
-```text
-30 mm × 30 mm
-```
-
-實際最小值與最大值待確認。
-
-### 4. 標籤版面
-
-列印頁應自動根據 QR Code 尺寸排列。
-
 需求：
 
-- 盡可能利用 A4 紙張空間。
-- 多筆 QR Code 自動換行、換頁。
-- QR Code 不可跨頁切開。
-- ID 文字必須跟對應 QR Code 保持在同一標籤內。
-- 列印時隱藏所有操作按鈕、設定面板等 UI。
+- QR Code 與 ID 保持同一標籤。
+- 標籤不可被分頁切開。
+- 自動依尺寸計算每列數量。
+- 自動換列 / 換頁。
+- 多頁顯示清楚頁面分隔。
+- 預覽與 `@media print` 使用相同尺寸變數，避免畫面與列印規格各算一套。
 
-### 5. 紙張設定
+---
 
-第一版以 A4 為主要目標。
+## 列印與 PDF
 
-暫定：
+第一版只使用瀏覽器原生列印：
 
-```text
-紙張：A4
-方向：直向
-邊界：可調整或使用預設安全邊界
-```
-
-之後可再決定是否加入：
-
-- A4 橫向。
-- Letter。
-- 標籤紙規格。
-- 自訂紙張大小。
-
-### 6. 預覽
-
-正式列印前需有預覽區。
-
-預覽應盡量接近實際紙張結果，包括：
-
-- QR Code 尺寸。
-- 每列張數。
-- 每頁張數。
-- 頁面邊界。
-- QR Code 與 ID 文字的間距。
-
-### 7. 列印 / PDF
-
-主要輸出方式使用瀏覽器的 Print 功能：
-
-```javascript
-window.print();
+```ts
+window.print()
 ```
 
 使用者可以：
 
-- 直接送到實體印表機。
-- 在 Chrome / Edge 選擇「另存為 PDF」。
+- 直接列印實體印表機。
+- 由 Chrome / Edge / Safari 列印介面另存 PDF。
 
-因此第一版不一定需要自行實作 PDF renderer。
+`@media print` 必須：
 
-## 建議操作介面
+- 隱藏設定面板。
+- 隱藏按鈕與非報表 UI。
+- 只輸出 QR Code 報表。
+- 保持 QR Code 實際 mm 尺寸。
+- 避免標籤被 page break 切開。
 
-桌面版介面概念：
+第一版不引入 jsPDF、PDFKit 等 PDF renderer。
 
-```text
-┌─────────────────────────────────────┐
-│ QR Code 列印                         │
-├─────────────────────────────────────┤
-│ 資料：已載入 120 筆                  │
-│                                     │
-│ QR Code 大小  [ 30 ] mm             │
-│                                     │
-│ [重新載入] [列印 / 產生 PDF]          │
-├─────────────────────────────────────┤
-│                                     │
-│              預覽區                  │
-│                                     │
-└─────────────────────────────────────┘
-```
-
-## RWD
-
-這個功能主要供電腦操作。
-
-手機上可以開啟，但第一版不用特別最佳化手機列印操作。
+---
 
 ## QR Code 品質
 
-QR Code 必須：
+- 使用 SVG。
+- 保留足夠 quiet zone。
+- 黑白對比清楚。
+- 不使用 bitmap CSS 放大。
+- 產出的紙本必須能被 `scan` 可靠辨識。
 
-- 使用足夠解析度。
-- 保留 quiet zone。
-- 不因 CSS 縮放造成模糊。
-- 列印後仍能被手機鏡頭可靠辨識。
+---
 
-若使用 Canvas 產生，需注意列印 DPI；若套件支援 SVG，優先考慮 SVG，以避免縮放失真。
+## 建議元件 / 程式分層
+
+```text
+src/
+├── components/
+│   ├── GoogleSheetSource.vue
+│   ├── PrintSettings.vue
+│   ├── PrintPreview.vue
+│   └── QrLabel.vue
+├── composables/
+│   ├── usePrintSettings.ts
+│   └── useGoogleAuth.ts
+├── services/
+│   ├── google_auth.ts
+│   ├── google_sheets.ts
+│   └── qr_generator.ts
+├── styles/
+│   ├── main.scss
+│   └── print.scss
+├── types/
+├── utils/
+├── App.vue
+└── main.ts
+```
+
+Component 不直接散落 OAuth、Sheets API 或 QR library 操作；統一透過 service / composable。
+
+---
 
 ## 錯誤處理
 
-至少需處理：
+至少處理：
 
-- Apps Script 無法連線。
-- Google Sheet 沒有資料。
-- ID 重複。
-- API 格式錯誤。
+- Google Sheet URL 格式錯誤。
+- 尚未登入 Google。
+- OAuth 設定錯誤。
+- 登入帳號沒有 Sheet 權限。
+- Google API 無法連線。
+- 找不到 `id` 欄位。
+- Sheet 沒有有效 ID。
+- 出現重複 ID。
 - QR Code 產生失敗。
 
-若資料讀取失敗，不應產生不完整的列印結果。
+---
 
 ## 第一版完成條件
 
-第一版至少完成：
-
-- [ ] 從 Apps Script 讀取 ID。
-- [ ] 每個 ID 產生 QR Code。
+- [ ] Vue 3 + TypeScript + Vite + SCSS 專案可用 Podman build。
+- [ ] `./frontend.sh build print` 成功產生 `print/dist/`。
+- [ ] 可輸入並保存 Google Sheet URL。
+- [ ] 可從 URL 解析 Spreadsheet ID。
+- [ ] 可透過 Google Identity Services 登入。
+- [ ] 可由瀏覽器直接用 Google Sheets API 讀取有權限的 Sheet。
+- [ ] 不需要 Sheet 公開分享。
+- [ ] 可從 `id` 欄取得所有有效 ID。
+- [ ] 每個 ID 產生 SVG QR Code。
 - [ ] QR Code 下方顯示 ID。
-- [ ] 可以調整 QR Code 尺寸。
-- [ ] A4 自動排版。
-- [ ] 多頁自動分頁。
-- [ ] 可以預覽。
-- [ ] 可以透過瀏覽器列印。
-- [ ] 可以透過瀏覽器另存 PDF。
+- [ ] 可設定 QR Code 實體尺寸與基本列印參數。
+- [ ] 所有列印偏好保存到 `localStorage`。
+- [ ] A4 自動排列與分頁。
+- [ ] 可預覽。
+- [ ] `window.print()` 可列印。
+- [ ] 可由瀏覽器另存 PDF。
 
-## 尚待確認
+## 第一版不做
 
-- QR Code 預設尺寸。
-- 最小 / 最大尺寸。
-- 是否需要調整 QR Code 間距。
-- 是否需要調整字體大小。
-- 是否需要選擇只列印部分 ID。
-- 是否需要搜尋 / 篩選 ID。
-- 是否需要手動指定每列幾個 QR Code。
-- 是否需要支援標籤貼紙規格。
-- 是否需要在 QR Code 旁加入其他文字資訊。
+- 透過 Apps Script 產生 QR Code。
+- 寫入 `checked_time` 或 `location`。
+- 手機掃描功能。
+- 自訂任意紙張規格。
+- 複雜標籤模板設計器。
+- 自建後端。
+- 自建 PDF renderer。

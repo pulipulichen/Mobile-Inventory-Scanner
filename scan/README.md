@@ -1,44 +1,121 @@
 # QR Code 手機盤點功能規格
 
-本目錄負責手機端 QR Code 掃描與盤點。
+本目錄負責手機端的 QR Code 圖片辨識與盤點寫入。
 
-主要使用情境是在現場以手機開啟網頁或 PWA，先輸入目前所在位置，再使用手機相機掃描資產上的 QR Code。掃描成功後，系統透過 Apps Script 更新 Google Sheet 的 `checked_time` 與 `location`。
+整體流程以 [`docs/architecture.md`](../docs/architecture.md) 為準。
 
-## 主要流程
+第一版不做持續開啟鏡頭的即時掃描，而是以「拍照」或「讀取相片」取得圖片，再從圖片中辨識一個或多個 QR Code。
+
+## 前端技術決策
+
+`scan` 是 **純前端靜態 PWA**，正式環境不需要任何自建後端服務。
+
+固定技術棧：
+
+- Vue 3。
+- Composition API + `<script setup lang="ts">`。
+- TypeScript。
+- Vite。
+- SCSS / Sass。
+- `vite-plugin-pwa`：產生 PWA manifest / Service Worker。
+- `@undecaf/zbar-wasm`：在瀏覽器本機辨識 QR Code，並支援同張圖片多個 QR Code。
+
+第一版不使用 Vue Router、Pinia、Nuxt 或大型 UI framework。
+
+影像只在使用者裝置內處理，不把照片上傳到伺服器。
+
+### 編譯方式
+
+主機只需要安裝 Podman，不要求安裝 Node.js / npm。
+
+專案根目錄提供：
 
 ```text
-手機開啟 PWA
+Containerfile.frontend
+frontend.sh
+```
+
+第一次建立前端編譯 image：
+
+```bash
+./frontend.sh image
+```
+
+安裝依賴：
+
+```bash
+./frontend.sh install scan
+```
+
+開發模式：
+
+```bash
+./frontend.sh dev scan
+```
+
+預設從主機開啟：
+
+```text
+http://localhost:5173
+```
+
+正式編譯：
+
+```bash
+./frontend.sh build scan
+```
+
+輸出目錄：
+
+```text
+scan/dist/
+```
+
+`dist/` 是可直接部署到 HTTPS 靜態網站的成品，不需要 Node.js runtime。
+
+---
+
+## 使用流程
+
+```text
+手機開啟 scan 網頁 / PWA
+    ↓
+輸入 Apps Script Web App 網址
     ↓
 輸入目前位置
     ↓
-啟動相機
+選擇：拍照 / 讀取相片
     ↓
-掃描 QR Code
+瀏覽器本機辨識一個或多個 QR Code
     ↓
-取得 ID
+取得每個 QR Code 的 id 並去重
     ↓
-Apps Script 查詢 ID
+逐筆將 id + location 傳給 Apps Script
     ↓
-更新 checked_time / location
+Apps Script 更新 Google Sheet
     ↓
-顯示成功或錯誤
-    ↓
-繼續掃描下一個
+畫面下方列出每筆 QR Code 與盤點結果
 ```
+
+網頁中所有使用者輸入的內容都必須保存到 `localStorage`。
+
+---
 
 ## 使用裝置
 
-第一版以手機瀏覽器為主：
+第一版主要針對：
 
 - Android Chrome。
 - iPhone Safari。
-- 安裝成 PWA 後使用。
+- 可安裝成 PWA 使用。
 
-相機功能必須在 HTTPS 環境下使用。
+拍照透過瀏覽器檔案 / 相機輸入介面呼叫手機相機，不需要長時間保持 camera preview。
+
+---
 
 ## PWA
 
-掃描頁需要支援 PWA，至少包含：
+至少包含：
 
 - `manifest.webmanifest`。
 - Service Worker。
@@ -46,13 +123,34 @@ Apps Script 查詢 ID
 - 可加入手機主畫面。
 - Standalone 顯示模式。
 
-PWA 的主要目的不是完整離線盤點，而是讓現場人員可以像 App 一樣快速開啟掃描功能。
+PWA 快取的目的，是讓 App shell 與 QR decode 靜態資源可以再次啟動；第一版 **不代表支援離線盤點**。
 
-## 位置輸入
+Apps Script 寫入仍需要網路。
 
-開始盤點前，使用者必須手動輸入「目前位置」。
+`@undecaf/zbar-wasm` 所需 WASM 資源要跟著 build 部署，不把第三方 CDN 當成必要 runtime dependency。
 
-例如：
+---
+
+## 頁面輸入項目
+
+### Apps Script Web App 網址
+
+必要欄位，例如：
+
+```text
+https://script.google.com/macros/s/xxxxxxxxxxxxxxxx/exec
+```
+
+需求：
+
+- 可手動輸入或貼上。
+- 保存到 `localStorage`。
+- 下次開啟自動帶入。
+- 呼叫失敗時顯示清楚錯誤。
+
+### 目前位置
+
+必要欄位，例如：
 
 ```text
 主機房 A 區
@@ -63,287 +161,244 @@ PWA 的主要目的不是完整離線盤點，而是讓現場人員可以像 App
 需求：
 
 - location 不可為空。
-- 最近一次輸入的位置保存在手機端。
-- 再次開啟頁面時自動帶入上一次的位置。
-- 使用者可以隨時修改位置。
-- 修改位置後，後續掃描都使用新位置。
+- 保存最近使用位置到 `localStorage`。
+- 提供「歷史位置下拉選單」。
+- 使用者曾輸入過的位置可快速選取。
+- 相同位置不要重複。
+- 新位置在執行盤點後加入歷史紀錄。
+- 仍可自由輸入新位置。
+- 第一版可保留最近 20 筆位置。
 
-第一版不使用 GPS 自動判斷位置。
+---
 
-## QR Code 內容
+## localStorage
 
-掃描到的 QR Code 內容就是 `id`。
+key 統一使用 `mis.scan.*` prefix。
 
-例如：
+至少保存：
 
 ```text
-A01
+mis.scan.apps_script_url
+mis.scan.location
+mis.scan.location_history
 ```
 
-掃描後先做：
+原則：
 
-- 去除前後空白。
-- 不自行變更大小寫。
-- 保持 ID 為字串。
+- 重新整理後保留。
+- 關閉再開啟 PWA 後保留。
+- 可清除歷史位置。
+- 可清除所有設定。
 
-## 掃描模式
+掃描結果是否跨重新整理保存，第一版不是必要條件。
 
-第一版預計支援兩種方式。
+---
 
-### 1. 即時相機掃描
+## 主要操作按鈕
 
-使用手機後鏡頭持續掃描 QR Code。
+第一版只有兩個主要影像來源按鈕：
+
+- `拍照`
+- `讀取相片`
+
+### 拍照
+
+可使用：
+
+```html
+<input type="file" accept="image/*" capture="environment">
+```
 
 需求：
 
 - 優先使用後鏡頭。
-- 畫面顯示即時 camera preview。
-- 辨識到 QR Code 後暫停重複觸發。
-- 等待該筆資料寫入完成後才允許下一次掃描。
-- 成功後快速恢復掃描下一筆。
+- 拍照完成後立即辨識。
+- 不做即時掃描 camera preview。
 
-### 2. 拍照辨識
-
-提供拍照或選擇照片的方式辨識 QR Code，作為即時掃描失敗時的替代方案。
+### 讀取相片
 
 需求：
 
-- 可呼叫手機相機拍照。
-- 可從照片中辨識 QR Code。
-- 辨識完成後走相同的盤點寫入流程。
+- 開啟手機照片 / 檔案選擇器。
+- 第一版一次處理一張圖片。
+- 選取後立即辨識。
 
-## Apps Script API
+---
 
-掃描成功取得 ID 後，呼叫 Apps Script 更新盤點結果。
+## QR Code 圖片辨識
 
-輸入概念：
+使用 `@undecaf/zbar-wasm` 對圖片轉成的 `ImageData` 進行本機辨識。
+
+需求：
+
+- 一次取得圖片中所有可辨識 QR Code，不可只取第一個。
+- 只接受 QR Code 類型作為盤點 ID；若 library 同時辨識到其他 barcode，可忽略非 QR Code。
+- QR Code payload 直接視為 `id`。
+- 去除 ID 前後空白。
+- 不修改大小寫。
+- ID 保持字串型態。
+- 同張圖片相同 ID 只送出一次。
+- 圖片不離開瀏覽器。
+
+例如辨識出：
+
+```text
+A01
+B03
+C04
+```
+
+就需要處理三筆盤點。
+
+若沒有 QR Code：
+
+```text
+此圖片中沒有辨識到 QR Code
+```
+
+---
+
+## Apps Script 呼叫
+
+每個唯一 ID 各送出一次請求，語意資料為：
 
 ```json
 {
-  "action": "check",
   "id": "A01",
   "location": "主機房 A 區"
 }
 ```
 
-Apps Script 負責：
+實際 HTTP transport 由 `src/services/` 封裝，必須能由瀏覽器直接呼叫 Apps Script，不建立自建 proxy server。
 
-- 確認 ID 是否存在。
-- 確認 ID 是否唯一。
-- 產生目前盤點時間。
-- 寫入 `checked_time`。
-- 寫入 `location`。
+第一版建議逐筆或低併發處理，讓 UI 可明確對應每一筆狀態。
 
-成功回傳：
+Apps Script 回傳格式依 [`google_sheet/README.md`](../google_sheet/README.md) 定義。
+
+成功範例：
 
 ```json
 {
   "success": true,
-  "item": {
-    "id": "A01",
-    "checked_time": "20260829-1710",
-    "location": "主機房 A 區"
-  }
+  "id": "A01",
+  "checked_time": "2026-08-29 17:10:00",
+  "location": "主機房 A 區",
+  "message": "盤點成功"
 }
 ```
 
-## checked_time
+失敗範例：
 
-手機不自行決定正式盤點時間。
-
-正式寫入 Google Sheet 的 `checked_time` 由 Apps Script 伺服器端產生，以避免：
-
-- 手機時間錯誤。
-- 手機時區錯誤。
-- 使用者修改系統時間。
-
-暫定格式：
-
-```text
-YYYYMMDD-HHmm
+```json
+{
+  "success": false,
+  "id": "A99",
+  "error": "ID_NOT_FOUND",
+  "message": "找不到 ID: A99"
+}
 ```
 
-例如：
+---
 
-```text
-20260829-1710
-```
+## 掃描結果列表
 
-## 成功回饋
+每筆至少顯示：
 
-一筆盤點成功後，需要立即且明顯地通知使用者。
-
-至少顯示：
-
-- 成功狀態。
 - ID。
-- location。
-- checked_time。
+- 等待送出 / 寫入中 / 成功 / 失敗。
+- Apps Script 回傳訊息。
+- 成功時顯示 `checked_time`。
+- 成功時顯示 `location`。
 
-例如：
+同一張圖片即使部分 ID 失敗，也必須繼續處理其他 ID。
 
-```text
-✓ 盤點成功
-A01
-主機房 A 區
-20260829-1710
-```
-
-建議另外加入：
-
-- 手機震動。
-- 成功提示音。
-- 綠色視覺提示。
-
-其中震動與提示音需考慮瀏覽器支援與使用者授權。
-
-## 錯誤回饋
-
-錯誤必須清楚區分，不應只顯示「失敗」。
-
-至少包含：
-
-### ID 不存在
+全部完成後顯示本次統計，例如：
 
 ```text
-找不到 ID：A99
+成功 5 / 失敗 1
 ```
 
-### ID 重複
+---
+
+## 建議元件 / 程式分層
 
 ```text
-Google Sheet 中有重複 ID：A01
-請先修正資料
+src/
+├── components/
+│   ├── ScanSettings.vue
+│   ├── ImageSourceButtons.vue
+│   └── ScanResultList.vue
+├── composables/
+│   ├── useScanSettings.ts
+│   └── useScanSession.ts
+├── services/
+│   ├── apps_script.ts
+│   └── qr_decoder.ts
+├── styles/
+├── types/
+├── utils/
+├── App.vue
+└── main.ts
 ```
 
-### 未輸入位置
+Component 不直接散落 Apps Script `fetch()` 或 QR library 操作；統一透過 service / composable。
 
-```text
-請先輸入目前位置
-```
+---
 
-### 網路錯誤
+## 錯誤處理
 
-```text
-無法連線到盤點服務
-請確認網路後重試
-```
+至少處理：
 
-### 相機權限錯誤
+- 未設定 Apps Script URL：`請先輸入 Apps Script 網址`。
+- 未輸入位置：`請先輸入目前位置`。
+- 圖片無 QR Code：`此圖片中沒有辨識到 QR Code`。
+- 圖片讀取失敗：`無法讀取相片，請重新選擇`。
+- Apps Script 無法連線：`無法連線到盤點服務`。
+- ID 不存在：直接顯示 Apps Script 回傳訊息。
+- 多筆中的單筆失敗：不得中止其他 ID。
 
-```text
-無法使用相機
-請允許瀏覽器使用相機權限
-```
-
-## 防止重複掃描
-
-實際操作時，相機可能在很短時間內重複辨識同一張 QR Code，因此必須防止重複寫入。
-
-第一版建議：
-
-1. 掃描到 QR Code 後立即鎖定 scanner。
-2. 等 Apps Script 回應完成。
-3. 顯示成功或失敗結果。
-4. 經過短暫 cooldown 後恢復掃描。
-
-另外可保留最近一筆 ID，避免同一張 QR Code 在數秒內被重複送出。
-
-## 畫面設計
-
-手機頁面應以單手操作為主，主要資訊不要太多。
-
-概念：
-
-```text
-┌───────────────────────────┐
-│ QR Code 盤點               │
-├───────────────────────────┤
-│ 目前位置                   │
-│ [ 主機房 A 區            ] │
-├───────────────────────────┤
-│                           │
-│                           │
-│       Camera Preview      │
-│                           │
-│                           │
-├───────────────────────────┤
-│ [開始掃描] [拍照辨識]       │
-├───────────────────────────┤
-│ ✓ A01                     │
-│ 主機房 A 區                │
-│ 20260829-1710             │
-└───────────────────────────┘
-```
-
-## 掃描狀態
-
-建議明確區分以下狀態：
-
-- 尚未開始。
-- 等待相機權限。
-- 掃描中。
-- 已辨識 QR Code。
-- 寫入中。
-- 盤點成功。
-- 盤點失敗。
-
-寫入期間應避免再次送出掃描結果。
-
-## 網路與離線
-
-第一版原則：
-
-- 頁面本身可由 PWA cache 載入。
-- Google Sheet 寫入仍需要網路。
-- 沒有網路時不可假裝盤點成功。
-
-之後如有需要，可以再加入離線 queue：
-
-```text
-掃描 → 暫存在手機 → 恢復網路 → 自動補送
-```
-
-但這不列入第一版必要功能。
+---
 
 ## 隱私與權限
 
-掃描頁只要求必要權限：
+只使用必要功能：
 
-- Camera：掃描 QR Code。
+- 相機：使用者按「拍照」時由瀏覽器呼叫。
+- 圖片：使用者主動按「讀取相片」時選取。
 
-第一版不要求：
+不需要：
 
 - GPS。
-- 聯絡人。
 - 麥克風。
-- 檔案系統權限。
+- 聯絡人。
+- 背景持續使用相機。
+
+---
 
 ## 第一版完成條件
 
-- [ ] 可以在手機 HTTPS 網頁開啟。
+- [ ] Vue 3 + TypeScript + Vite + SCSS 專案可用 Podman build。
+- [ ] `./frontend.sh build scan` 成功產生 `scan/dist/`。
+- [ ] 手機可開啟 HTTPS 網頁。
 - [ ] 可安裝成 PWA。
-- [ ] 可以手動輸入 location。
-- [ ] location 可記住上一次輸入值。
-- [ ] 可以使用後鏡頭即時掃描 QR Code。
-- [ ] 可以透過拍照辨識 QR Code。
-- [ ] QR Code 內容直接作為 ID。
-- [ ] 可以呼叫 Apps Script 更新 Google Sheet。
-- [ ] Apps Script 更新 `checked_time`。
-- [ ] Apps Script 更新 `location`。
-- [ ] ID 不存在時顯示錯誤。
-- [ ] 防止同一 QR Code 短時間重複寫入。
-- [ ] 成功後可立即繼續掃描下一筆。
-- [ ] 成功與失敗都有明顯的手機畫面回饋。
+- [ ] 可輸入並保存 Apps Script Web App URL。
+- [ ] 可輸入並保存目前位置。
+- [ ] 有歷史位置下拉選單。
+- [ ] 可按「拍照」取得新照片。
+- [ ] 可按「讀取相片」選擇既有圖片。
+- [ ] 可從一張圖片辨識多個 QR Code。
+- [ ] QR decode 全部在本機瀏覽器完成。
+- [ ] 同張圖片的重複 ID 不重複送出。
+- [ ] 每個 ID 都帶 location 呼叫 Apps Script。
+- [ ] 可顯示每個 ID 的等待 / 寫入中 / 成功 / 失敗狀態。
+- [ ] 單筆失敗不影響其他 QR Code。
 
-## 尚待確認
+## 第一版不做
 
-- 掃描成功後是否需要提示音。
-- 掃描成功後 cooldown 要幾秒。
-- 是否要顯示今日已盤點數量。
-- 是否要保留本機最近盤點紀錄。
-- 是否允許手動輸入 ID 作為備援。
-- 是否需要離線 queue。
-- 是否需要先查詢 ID，再要求使用者確認後才寫入。
-- 是否允許同一 ID 在同一天重複盤點。
-- 是否需要顯示該 ID 上一次的 checked_time / location。
+- 持續開啟相機的即時 QR Code scanner。
+- GPS 自動取得位置。
+- 離線盤點 queue。
+- 手動輸入 ID。
+- 修改 Google Sheet 資料結構。
+- 在手機端決定正式 `checked_time`。
+- 自建後端 / CORS proxy。

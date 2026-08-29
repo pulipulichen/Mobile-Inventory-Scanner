@@ -1,0 +1,176 @@
+---
+description: scan 與 print 的純前端 Vue 開發、依賴與 Podman 編譯規範
+alwaysApply: true
+---
+
+# Frontend Rules
+
+本規則適用於 `scan/` 與 `print/`。
+
+若本規則與其他從舊專案沿用的 Django、AdminLTE、後端或前端規則衝突，`scan/` 與 `print/` 以本規則為準。
+
+## 1. 架構原則
+
+- `scan/` 與 `print/` 都必須是 **純前端靜態網頁**。
+- 正式部署後只需要靜態檔案伺服器，不需要 Node.js runtime、Python、PHP、Django、Express 或其他自建後端。
+- Node.js 只存在於開發 / 編譯階段。
+- 前端與 Google Sheet / Apps Script 直接通訊，不建立中介 API server。
+- 不可把 Google Client Secret、service account key、私人憑證或其他 secret 放入前端 bundle。
+
+## 2. 固定技術棧
+
+兩個 App 統一使用：
+
+- Vue 3
+- Composition API
+- `<script setup lang="ts">`
+- TypeScript
+- Vite
+- SCSS / Sass
+- npm
+
+第一版不加入：
+
+- Vue Router：兩個 App 都是單頁工具，不需要路由。
+- Pinia：狀態量小，優先使用 composable 與 Vue reactive/ref。
+- SSR / Nuxt：不需要伺服器端 rendering。
+- UI framework：第一版不引入 Bootstrap、Vuetify、Quasar、Element Plus 等大型框架。
+
+如後續功能明確需要上述套件，再加入並同步修改 README。
+
+## 3. 專案結構
+
+兩個 App 都各自維持獨立 Vite 專案：
+
+```text
+scan/
+├── index.html
+├── package.json
+├── package-lock.json
+├── vite.config.ts
+├── tsconfig.json
+├── public/
+└── src/
+    ├── App.vue
+    ├── main.ts
+    ├── assets/
+    ├── components/
+    ├── composables/
+    ├── services/
+    ├── styles/
+    ├── types/
+    └── utils/
+
+print/
+└── 同樣結構
+```
+
+共用程式碼在真的出現重複需求後才抽共用 package；第一版不要過早建立 monorepo framework。
+
+## 4. Vue / TypeScript
+
+- Vue component 使用 `<script setup lang="ts">`。
+- 業務資料結構必須定義 TypeScript type / interface。
+- API 回傳不可直接假設型別正確；在 service 邊界做基本驗證與錯誤轉換。
+- Component 以 UI 呈現與互動為主；網路、localStorage、QR decode / encode 邏輯拆到 `services/`、`composables/` 或 `utils/`。
+- 不使用 `any` 規避型別問題；若第三方 library 型別不足，建立明確 wrapper。
+
+## 5. SCSS
+
+- 全域 SCSS 放 `src/styles/`。
+- Component-specific 樣式優先使用 `<style scoped lang="scss">`。
+- 列印專用規則使用 `@media print`。
+- 尺寸涉及實體列印時，使用 `mm` / `pt`，不要以畫面 pixel 假裝實際尺寸。
+- 手機掃描頁採 mobile-first。
+
+## 6. localStorage
+
+所有規格要求保存的輸入與設定，都要透過集中 wrapper / composable 存取，不要在各 component 到處直接呼叫 `localStorage`。
+
+key 使用固定 prefix：
+
+```text
+mis.scan.*
+mis.print.*
+```
+
+例如：
+
+```text
+mis.scan.apps_script_url
+mis.scan.location
+mis.scan.location_history
+mis.print.google_sheet_url
+mis.print.qr_size_mm
+```
+
+資料結構若可能變更，應保留 schema/version 的升級空間。
+
+## 7. scan 專用技術決策
+
+- 必須支援 Android Chrome 與 iPhone Safari。
+- 第一版使用 `<input type="file" accept="image/*">` 取得相片；拍照入口加 `capture="environment"`。
+- 不做持續 camera preview。
+- QR Code 辨識全部在瀏覽器本機執行，不上傳照片。
+- QR 解碼固定優先使用 `@undecaf/zbar-wasm`，原因是可在瀏覽器處理 `ImageData` 並一次回傳多個 barcode / QR Code。
+- WASM 檔案應跟著 Vite build 部署，不依賴第三方 CDN 才能掃描。
+- 同張圖片辨識出的 ID 必須去重後才呼叫 Apps Script。
+- `scan` 必須是 PWA；使用 `vite-plugin-pwa` 管理 manifest / service worker。
+- PWA 快取只保證 App shell / 靜態資源可啟動；第一版不做離線待送 queue。
+
+## 8. print 專用技術決策
+
+- QR Code 產生優先使用 npm `qrcode` 套件。
+- 列印輸出使用 SVG QR Code，避免 bitmap 放大造成模糊。
+- PDF 不自行 renderer；使用 `window.print()`，由瀏覽器列印或另存 PDF。
+- Google Sheet 讀取使用 Google Identity Services OAuth + Google Sheets API。
+- Google OAuth Client ID 可使用 `VITE_GOOGLE_CLIENT_ID` 注入，Client ID 是公開識別值；不可出現 Client Secret。
+- 使用者輸入 Google Sheet URL，前端解析 Spreadsheet ID。
+- 不要求 Google Sheet 公開分享，只要求登入帳號有讀取權限。
+
+## 9. 網路層
+
+- 外部 API 呼叫集中在 `src/services/`。
+- UI component 不直接散落 `fetch()`。
+- 所有 request 都要有 loading、success、error 狀態。
+- `scan` 不得因單筆 Apps Script 失敗而停止同張圖片其他 ID。
+- 不建立自建 CORS proxy；Apps Script / Google API 必須設計成瀏覽器可直接呼叫。
+
+## 10. Podman 開發與編譯
+
+**主機不要求安裝 Node.js 或 npm。**
+
+Node / npm 一律從根目錄的 `Containerfile.frontend` 建立 Podman image，並透過 `frontend.sh` 執行。
+
+統一命令：
+
+```bash
+./frontend.sh image
+./frontend.sh install scan
+./frontend.sh install print
+./frontend.sh dev scan
+./frontend.sh dev print
+./frontend.sh build scan
+./frontend.sh build print
+```
+
+規則：
+
+- 不在 README 教使用者直接執行 host `npm`。
+- 不把 `node_modules/`、`dist/`、`.vite/` commit 進 Git。
+- `package-lock.json` 必須 commit，確保 build 可重現。
+- 新增 / 更新 npm dependency 後同步更新 lockfile。
+- 正式部署內容只取各 App 的 `dist/`。
+
+## 11. 完成前檢查
+
+修改 `scan/` 或 `print/` 前端後至少執行：
+
+```bash
+./frontend.sh build scan
+./frontend.sh build print
+```
+
+若只修改其中一個 App，至少 build 該 App。
+
+不可在 build 失敗的情況下宣告功能完成。
