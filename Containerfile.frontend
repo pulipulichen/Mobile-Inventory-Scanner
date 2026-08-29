@@ -1,0 +1,9 @@
+FROM docker.io/library/node:24-bookworm-slim
+
+ENV NPM_CONFIG_UPDATE_NOTIFIER=false \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false
+
+WORKDIR /workspace
+
+CMD ["bash"]
