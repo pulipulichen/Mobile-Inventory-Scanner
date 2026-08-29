@@ -6,6 +6,7 @@ export default {
     language: "語言",
     chinese: "繁體中文",
     english: "English",
+    dismiss: "關閉提示",
   },
   scan: {
     app_bar_subtitle: "QR Code 行動盤點",
@@ -69,6 +70,7 @@ export default {
     ids_found_with_duplicates:
       "辨識完成，新增 {count} 個 QR Code；另有 {ignored} 個重複項目已忽略。",
     sending: "正在送出 {id} 的盤點結果…",
+    inventory_failed_item: "盤點失敗：{id}（{error}）",
     all_complete: "盤點完成：成功 {success} 筆，失敗 {failed} 筆。",
     pending_loaded: "已載入 {count} 個尚未盤點 ID。",
     pending_empty: "目前沒有尚未盤點的 ID。",

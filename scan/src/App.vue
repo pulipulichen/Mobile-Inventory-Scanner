@@ -49,6 +49,15 @@ const statusTone = ref<"info" | "success" | "warning" | "error">(
   isInventoryConfirmed.value ? "success" : "info",
 );
 const sessionIds = new Set<string>();
+type FailureToast = {
+  id: string;
+  errorCode: string;
+};
+const failureToastQueue = ref<FailureToast[]>([]);
+const activeFailureToast = ref<FailureToast | null>(null);
+const isFailureToastVisible = ref(false);
+let resolveActiveFailureToast: (() => void) | null = null;
+let isFailureToastProcessing = false;
 let submissionQueue: Promise<void> = Promise.resolve();
 
 const statusMessage = computed(() =>
@@ -74,6 +83,13 @@ const effectiveStatusMessage = computed(() =>
 const effectiveStatusTone = computed<"info" | "success" | "warning" | "error">(
   () => (isAppsScriptUrlInvalid.value ? "error" : statusTone.value),
 );
+const failureToastMessage = computed(() => {
+  if (!activeFailureToast.value) return "";
+  return t("status.inventory_failed_item", {
+    id: activeFailureToast.value.id,
+    error: t(`errors.${activeFailureToast.value.errorCode}`),
+  });
+});
 const canStartCamera = computed(() => !isCameraActive.value);
 const pendingGroups = computed<PendingLocationGroup[]>(() => {
   const groups = new Map<string, InventoryItem[]>();
@@ -132,6 +148,47 @@ function setError(error: unknown): string {
   return code;
 }
 
+function updateFailureToastVisibility(visible: boolean): void {
+  isFailureToastVisible.value = visible;
+  if (!visible) {
+    const resolve = resolveActiveFailureToast;
+    resolveActiveFailureToast = null;
+    resolve?.();
+  }
+}
+
+async function processFailureToasts(): Promise<void> {
+  if (isFailureToastProcessing) return;
+
+  isFailureToastProcessing = true;
+  while (failureToastQueue.value.length) {
+    activeFailureToast.value = failureToastQueue.value.shift() ?? null;
+    isFailureToastVisible.value = true;
+    await new Promise<void>((resolve) => {
+      resolveActiveFailureToast = resolve;
+    });
+  }
+  activeFailureToast.value = null;
+  isFailureToastProcessing = false;
+}
+
+function enqueueFailureToast(result: ScanResult): void {
+  failureToastQueue.value.push({
+    id: result.id,
+    errorCode: result.errorCode ?? "UNKNOWN",
+  });
+  void processFailureToasts();
+}
+
+function clearFailureToasts(): void {
+  failureToastQueue.value = [];
+  if (isFailureToastVisible.value) {
+    updateFailureToastVisibility(false);
+  } else {
+    activeFailureToast.value = null;
+  }
+}
+
 function updateAppsScriptUrl(value: string): void {
   appsScriptUrl.value = value;
   isInventoryConfirmed.value = false;
@@ -186,6 +243,7 @@ function clearResults(): void {
   camera.value?.stop();
   isCameraActive.value = false;
   resetSession();
+  clearFailureToasts();
   setStatus("status.session_cleared", {}, "success");
 }
 
@@ -240,14 +298,15 @@ function queueIds(ids: string[]): void {
     return;
   }
 
-  newIds.forEach((id) => {
+  const newResults = newIds.map((id): ScanResult => {
     sessionIds.add(id);
-    results.value.push({
+    return {
       id,
       name: id,
       state: "queued",
-    });
+    };
   });
+  results.value.unshift(...newResults);
   setStatus(
     ignoredCount
       ? "status.ids_found_with_duplicates"
@@ -256,9 +315,7 @@ function queueIds(ids: string[]): void {
     "info",
   );
 
-  const queuedResults = results.value.filter((result) =>
-    newIds.includes(result.id),
-  );
+  const queuedResults = newResults;
   submissionQueue = submissionQueue.then(async () => {
     for (const result of queuedResults) {
       await sendResult(result);
@@ -295,6 +352,7 @@ async function sendResult(result: ScanResult): Promise<void> {
   } catch (error) {
     result.state = "error";
     result.errorCode = setError(error);
+    enqueueFailureToast(result);
     if (navigator.vibrate) navigator.vibrate(250);
   }
 }
@@ -499,5 +557,26 @@ function handleLocaleChange(event: Event): void {
         </template>
       </v-container>
     </v-main>
+
+    <v-snackbar
+      :model-value="isFailureToastVisible"
+      class="failure-toast"
+      color="error"
+      location="bottom"
+      :timeout="8000"
+      role="alert"
+      @update:model-value="updateFailureToastVisibility"
+    >
+      {{ failureToastMessage }}
+      <template #actions>
+        <v-btn
+          variant="text"
+          :aria-label="t('common.dismiss')"
+          @click="updateFailureToastVisibility(false)"
+        >
+          {{ t("common.dismiss") }}
+        </v-btn>
+      </template>
+    </v-snackbar>
   </v-app>
 </template>

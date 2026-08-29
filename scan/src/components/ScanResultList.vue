@@ -18,7 +18,7 @@ function statusText(result: ScanResult): string {
     });
   }
   return t("scan.result_error", {
-    error: result.errorCode ?? "UNKNOWN",
+    error: t(`errors.${result.errorCode ?? "UNKNOWN"}`),
   });
 }
 </script>

@@ -7,6 +7,7 @@ export default {
     language: "Language",
     chinese: "繁體中文",
     english: "English",
+    dismiss: "Dismiss notification",
   },
   scan: {
     app_bar_subtitle: "Mobile QR Code inventory",
@@ -74,6 +75,7 @@ export default {
     ids_found_with_duplicates:
       "Recognition complete. Found {count} new QR Codes; {ignored} duplicates were ignored.",
     sending: "Sending the inventory result for {id}…",
+    inventory_failed_item: "Inventory check failed: {id} ({error})",
     all_complete: "Inventory check complete: {success} succeeded and {failed} failed.",
     pending_loaded: "Loaded {count} unchecked IDs.",
     pending_empty: "There are no unchecked IDs right now.",
