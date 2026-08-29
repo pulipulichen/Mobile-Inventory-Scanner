@@ -1,13 +1,18 @@
 import {
+  getCode128HeightMm,
+  getCode128WidthMm,
   getPaperSizeMm,
   MIN_PAGE_MARGIN_MM,
+  showsCode128,
   showsLabelText,
+  showsQrCode,
   type InventoryItem,
   type LayoutMetrics,
   type PrintSettings,
 } from "../types/print";
 
 const LABEL_PADDING_MM = 3;
+const BARCODE_STACK_GAP_MM = 2;
 export const CSS_PX_PER_MM = 96 / 25.4;
 
 export function calculateLayout(
@@ -24,9 +29,21 @@ export function calculateLayout(
   const textGapMm = showsLabelText(settings.labelText)
     ? settings.qrTextGapMm
     : 0;
-  const labelWidthMm = settings.qrSizeMm + LABEL_PADDING_MM * 2;
+  const qrVisible = showsQrCode(settings.barcodeMode);
+  const code128Visible = showsCode128(settings.barcodeMode);
+  const code128WidthMm = getCode128WidthMm(settings.qrSizeMm);
+  const code128HeightMm = getCode128HeightMm(settings.qrSizeMm);
+  const barcodeWidthMm = Math.max(
+    qrVisible ? settings.qrSizeMm : 0,
+    code128Visible ? code128WidthMm : 0,
+  );
+  const barcodeHeightMm =
+    (qrVisible ? settings.qrSizeMm : 0) +
+    (code128Visible ? code128HeightMm : 0) +
+    (qrVisible && code128Visible ? BARCODE_STACK_GAP_MM : 0);
+  const labelWidthMm = barcodeWidthMm + LABEL_PADDING_MM * 2;
   const labelHeightMm =
-    settings.qrSizeMm + textGapMm + textHeightMm + LABEL_PADDING_MM * 2;
+    barcodeHeightMm + textGapMm + textHeightMm + LABEL_PADDING_MM * 2;
   const pageMarginMm = Math.max(MIN_PAGE_MARGIN_MM, settings.pageMarginMm);
   const contentWidthMm = pageWidthMm - pageMarginMm * 2;
   const contentHeightMm = pageHeightMm - pageMarginMm * 2;

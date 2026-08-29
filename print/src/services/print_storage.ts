@@ -1,11 +1,13 @@
 import {
   DEFAULT_PRINT_SETTINGS,
   DEFAULT_SIMULATION_SETTINGS,
+  isBarcodeMode,
   isLabelTextMode,
   isPaperSize,
   isSimulationItemCount,
   MAX_PAGE_MARGIN_MM,
   MIN_PAGE_MARGIN_MM,
+  type BarcodeMode,
   type LabelTextMode,
   type Orientation,
   type PaperSize,
@@ -23,6 +25,7 @@ const STORAGE_KEYS = {
   pageMarginMm: "mis.print.page_margin_mm",
   orientation: "mis.print.orientation",
   labelText: "mis.print.label_text",
+  barcodeMode: "mis.print.barcode_mode",
   showIdText: "mis.print.show_id_text",
   locale: "mis.print.locale",
   simulationItemCount: "mis.print.simulator.item_count",
@@ -40,6 +43,8 @@ const PRINT_SETTINGS_STORAGE_KEYS = [
   STORAGE_KEYS.labelGapMm,
   STORAGE_KEYS.pageMarginMm,
   STORAGE_KEYS.orientation,
+  STORAGE_KEYS.labelText,
+  STORAGE_KEYS.barcodeMode,
   STORAGE_KEYS.showIdText,
   STORAGE_KEYS.locale,
 ] as const;
@@ -87,6 +92,11 @@ function readLabelText(fallback: LabelTextMode): LabelTextMode {
   return fallback;
 }
 
+function readBarcodeMode(fallback: BarcodeMode): BarcodeMode {
+  const saved = getItem(STORAGE_KEYS.barcodeMode);
+  return isBarcodeMode(saved) ? saved : fallback;
+}
+
 export function loadPrintSettings(): PrintSettings {
   const savedOrientation = getItem(STORAGE_KEYS.orientation);
   const orientation: Orientation =
@@ -129,6 +139,7 @@ export function loadPrintSettings(): PrintSettings {
     ),
     orientation,
     labelText: readLabelText(DEFAULT_PRINT_SETTINGS.labelText),
+    barcodeMode: readBarcodeMode(DEFAULT_PRINT_SETTINGS.barcodeMode),
   };
 }
 
@@ -141,6 +152,7 @@ export function savePrintSettings(settings: PrintSettings): void {
   setItem(STORAGE_KEYS.pageMarginMm, String(settings.pageMarginMm));
   setItem(STORAGE_KEYS.orientation, settings.orientation);
   setItem(STORAGE_KEYS.labelText, settings.labelText);
+  setItem(STORAGE_KEYS.barcodeMode, settings.barcodeMode);
 }
 
 export function loadGoogleSheetUrl(): string {
