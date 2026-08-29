@@ -27,6 +27,7 @@ const video = ref<HTMLVideoElement | null>(null);
 const isScanning = ref(false);
 const focusReticle = ref<{ x: number; y: number } | null>(null);
 const focusStatus = ref("");
+const scannerInput = ref("");
 const canvas = document.createElement("canvas");
 let stream: MediaStream | null = null;
 let frameRequest = 0;
@@ -55,6 +56,13 @@ function showFocusReticle(x: number, y: number): void {
   focusReticleTimeout = window.setTimeout(() => {
     focusReticle.value = null;
   }, 900);
+}
+
+function submitScannerInput(): void {
+  const value = scannerInput.value.trim();
+  if (!value) return;
+  emit("detected", [value]);
+  scannerInput.value = "";
 }
 
 function scheduleFrame(): void {
@@ -171,38 +179,57 @@ onBeforeUnmount(stop);
 </script>
 
 <template>
-  <div
-    ref="preview"
-    class="camera-preview"
-    role="region"
-    :aria-label="props.videoLabel"
-  >
-    <video
-      ref="video"
-      class="camera-video"
-      autoplay
-      muted
-      playsinline
-      aria-hidden="true"
-    />
-    <button
-      v-if="isScanning"
-      type="button"
-      class="camera-focus-target"
-      :aria-label="t('scan.camera_tap_to_focus')"
-      @click="handleFocusClick"
-    />
-    <span
-      v-if="focusReticle"
-      class="camera-focus-reticle"
-      :style="{ left: `${focusReticle.x}px`, top: `${focusReticle.y}px` }"
-      aria-hidden="true"
-    />
-    <p class="camera-frame-hint" aria-hidden="true">
-      {{ isScanning ? t("scan.camera_tap_to_focus_hint") : props.videoLabel }}
-    </p>
-    <p class="visually-hidden" role="status" aria-live="polite">
-      {{ focusStatus }}
-    </p>
+  <div>
+    <div
+      ref="preview"
+      class="camera-preview"
+      role="region"
+      :aria-label="props.videoLabel"
+    >
+      <video
+        ref="video"
+        class="camera-video"
+        autoplay
+        muted
+        playsinline
+        aria-hidden="true"
+      />
+      <button
+        v-if="isScanning"
+        type="button"
+        class="camera-focus-target"
+        :aria-label="t('scan.camera_tap_to_focus')"
+        @click="handleFocusClick"
+      />
+      <span
+        v-if="focusReticle"
+        class="camera-focus-reticle"
+        :style="{ left: `${focusReticle.x}px`, top: `${focusReticle.y}px` }"
+        aria-hidden="true"
+      />
+      <p class="camera-frame-hint" aria-hidden="true">
+        {{ isScanning ? t("scan.camera_tap_to_focus_hint") : props.videoLabel }}
+      </p>
+      <p class="visually-hidden" role="status" aria-live="polite">
+        {{ focusStatus }}
+      </p>
+    </div>
+
+    <form class="scanner-gun-input" @submit.prevent="submitScannerInput">
+      <v-text-field
+        v-model="scannerInput"
+        label="刷槍／條碼輸入"
+        placeholder="掃描 Code 128、QR Code，或手動輸入 ID 後按 Enter"
+        prepend-inner-icon="mdi-barcode-scan"
+        append-inner-icon="mdi-keyboard-return"
+        variant="outlined"
+        autocomplete="off"
+        autocapitalize="off"
+        spellcheck="false"
+        hide-details="auto"
+        clearable
+        @click:append-inner="submitScannerInput"
+      />
+    </form>
   </div>
 </template>
