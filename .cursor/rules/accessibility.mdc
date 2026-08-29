@@ -1,0 +1,256 @@
+---
+description: scan 與 print 的無障礙、鍵盤操作、螢幕閱讀器與盲人操作規範
+alwaysApply: true
+---
+
+# Accessibility Rules
+
+本規則適用於 `scan/`、`print/` 以及所有使用者可操作的前端介面。
+
+目標不是只有「通過檢查工具」，而是讓 **盲人、低視力使用者、無法使用滑鼠的人，以及使用螢幕閱讀器的人可以獨立完成主要工作流程**。
+
+至少以 **WCAG 2.2 AA** 為基準；若 WCAG AA 與本規則衝突，以較嚴格者為準。
+
+## 1. 核心原則
+
+- 所有主要功能必須能在 **不看畫面** 的情況下理解目前狀態與下一步操作。
+- 所有主要功能必須能只使用 **鍵盤** 完成，不可要求滑鼠、觸控拖曳、hover 或精準點擊。
+- 不可用顏色、位置、圖示、動畫或視覺外觀作為唯一資訊來源。
+- 不可因為加入無障礙功能而建立一套獨立的「無障礙版」頁面；同一套 UI 應直接可存取。
+- 優先使用原生 HTML 語意元素；原生元素能做到的功能，不要用 `div` + ARIA 模擬。
+- ARIA 只能補足語意，不可用 ARIA 掩蓋錯誤的 HTML 結構。
+
+## 2. 語意化 HTML
+
+必須優先使用正確元素：
+
+- 頁面主要內容：`<main>`
+- 導覽：`<nav>`
+- 區塊：`<section>` + 可辨識標題
+- 標題：依階層使用 `<h1>` ~ `<h6>`，不可只靠字體大小模擬標題
+- 操作按鈕：`<button>`
+- 導航連結：`<a href>`
+- 表單欄位：`<label>` + `<input>` / `<select>` / `<textarea>`
+- 資料表：`<table>`、`<thead>`、`<tbody>`、`<th scope>`、`<caption>`
+- 清單：`<ul>` / `<ol>`
+
+禁止：
+
+- 用 `<div @click>`、`<span @click>` 當按鈕。
+- 用 placeholder 取代 label。
+- 只用 icon 且沒有 accessible name 的按鈕。
+- 因 CSS 方便而破壞合理的 DOM / heading 順序。
+
+## 3. Accessible Name 與文字
+
+每個可互動控制項都必須有明確、可理解且不依賴視覺位置的名稱。
+
+例如：
+
+- 好：`重新拍照`、`開始辨識 QR Code`、`儲存盤點位置`
+- 不好：`按這裡`、`下一個`、`右側按鈕`、只有相機 icon
+
+規則：
+
+- 有可見文字時，accessible name 應與可見文字一致或至少包含可見文字。
+- icon-only button 必須提供 `aria-label`。
+- 裝飾性 icon / SVG 使用 `aria-hidden="true"`，避免螢幕閱讀器朗讀無意義內容。
+- 有資訊意義的圖片必須有合適 `alt`；純裝飾圖片使用 `alt=""`。
+- QR Code 在網頁畫面上必須有可存取的文字替代，例如對應的 `ID`；不可只讓螢幕閱讀器遇到一張無法理解的 QR 圖。
+
+## 4. 鍵盤操作
+
+所有功能都必須支援：
+
+- `Tab` / `Shift+Tab` 依合理順序移動焦點。
+- `Enter` / `Space` 啟動按鈕。
+- 原生 select、radio、checkbox 保留瀏覽器標準鍵盤行為。
+- Modal / dialog 開啟後焦點移入 dialog；關閉後焦點回到原本觸發按鈕。
+- 不可產生 keyboard trap。
+
+禁止使用正數 `tabindex`（例如 `tabindex="1"`、`2`）硬排焦點順序。
+
+若介面包含大量重複內容，應提供 **Skip link**，至少可以直接跳到主要操作區。
+
+## 5. Focus 必須清楚可見
+
+- 不可使用 `outline: none` / `outline: 0` 移除焦點樣式，除非提供更清楚的替代樣式。
+- 所有可操作元件在 `:focus-visible` 時必須有明顯焦點指示。
+- Focus indicator 與相鄰背景應有足夠對比，不可只用很淡的陰影。
+- DOM 順序必須符合操作順序；不可依賴 CSS `order` 製造與螢幕閱讀器不同的視覺順序。
+
+## 6. 觸控目標
+
+雖然 WCAG 的最低要求可能較小，本專案手機介面採較寬鬆標準：
+
+- 主要觸控按鈕建議至少 **44 × 44 CSS px**。
+- 相鄰操作按鈕必須有足夠間距，降低誤觸。
+- 不可只有極小 icon 可點擊；整個按鈕區域都應可操作。
+
+## 7. 顏色、文字與縮放
+
+- 一般文字對比至少 **4.5:1**。
+- 大字與重要 UI 元件邊界至少 **3:1**。
+- 成功、警告、錯誤不可只靠綠 / 黃 / 紅表示，必須同時有文字或 icon + accessible text。
+- 支援瀏覽器文字放大至 **200%**，主要功能仍可操作且內容不可被裁切。
+- 不固定死文字容器高度來避免放大後文字溢出。
+- 手機直向、橫向都不可因放大而迫使使用者只能做雙向捲動才能完成主要操作。
+
+## 8. 表單與驗證
+
+- 每個輸入欄位必須有 `<label>`。
+- 必填欄位不可只用 `*` 表示；螢幕閱讀器也必須知道欄位為必填。
+- 輸入說明使用 `aria-describedby` 關聯。
+- 發生錯誤時：
+  - 錯誤訊息必須是文字。
+  - 明確指出哪個欄位錯誤以及如何修正。
+  - 使用 `aria-invalid="true"` 標示錯誤欄位。
+  - 必要時把焦點移到錯誤摘要或第一個錯誤欄位，但不可造成無預警的焦點跳動。
+- 不可在使用者輸入單一字元時頻繁朗讀錯誤。
+
+## 9. 動態狀態與螢幕閱讀器通知
+
+Vue 更新畫面後，若狀態變化對完成工作很重要，必須讓螢幕閱讀器知道。
+
+使用適當 live region：
+
+- 一般進度 / 成功訊息：`aria-live="polite"` 或 `role="status"`
+- 阻止工作繼續的重要錯誤：必要時使用 `role="alert"`
+
+不可濫用 `aria-live="assertive"`。
+
+以下狀態至少要有非視覺通知：
+
+- 開始處理照片。
+- QR Code 辨識中。
+- 辨識完成，共找到幾個 ID。
+- 找到新的 ID。
+- ID 重複而被忽略。
+- 正在送出盤點結果。
+- 單筆成功 / 失敗。
+- 全部盤點完成。
+- 網路錯誤或 Google Apps Script / Google API 錯誤。
+
+Loading spinner 不可是唯一的 loading 資訊；必須有文字狀態。
+
+## 10. scan：盲人操作流程
+
+`scan/` 的主要流程必須特別針對看不到畫面的使用者設計。
+
+### 拍照 / 選圖
+
+- 拍照按鈕必須有清楚文字名稱，不可只有相機 icon。
+- 拍照前用文字說明：「請將 QR Code 放在鏡頭前方並拍照，可一次拍攝多個 QR Code」。
+- 若照片沒有辨識到任何 QR Code，必須以 live region 說明「未辨識到 QR Code，請重新拍照」，而不是只顯示紅框。
+- 必須提供明確的「重新拍照」按鈕。
+
+### 辨識結果
+
+- 辨識完成後，螢幕閱讀器應先知道結果數量，例如：「辨識完成，共 3 個 QR Code」。
+- 每個辨識出的 ID 都必須以文字存在 DOM 中，不能只畫框標示在照片上。
+- 若有多個 ID，使用語意化清單呈現。
+- 重複 ID 必須說明已忽略，不可默默消失。
+
+### 盤點送出
+
+- 送出前使用者必須能讀到目前 `location`。
+- 每一筆 ID 的送出結果必須可被螢幕閱讀器讀取。
+- 單筆失敗不可讓其他 ID 的結果消失。
+- 完成時至少朗讀：成功幾筆、失敗幾筆。
+- 若提供「再次掃描」，完成後應讓焦點合理回到主要掃描操作，不要求使用者重新從頁首一路 Tab。
+
+### 聲音與震動
+
+- 聲音 / vibration 可以作為成功提示的 **額外回饋**，不可作為唯一回饋。
+- 即使瀏覽器不支援 vibration、手機靜音或使用者聽不到聲音，完整流程仍必須可操作。
+
+## 11. print：無障礙要求
+
+- Google Sheet URL、QR 尺寸、篩選條件等欄位必須有明確 label 與說明。
+- QR Code 預覽不可只有圖片；每個 QR Code 都要有相對應的文字 ID。
+- 大量 QR Code 預覽應提供語意化結構，讓螢幕閱讀器可以逐項瀏覽。
+- 若有「全選 / 取消全選」，必須使用真正的 checkbox 或 button，並朗讀目前狀態。
+- 列印前應提供文字摘要，例如：「將列印 24 個 QR Code，尺寸 30 mm」。
+- `window.print()` 前的設定與操作必須可完全使用鍵盤完成。
+
+列印成品本身應在 QR Code 附近印出人類可讀的 `ID`，避免 QR Code 成為唯一識別方式。
+
+## 12. Dialog、Toast、Overlay
+
+- Modal 優先使用原生 `<dialog>`，或完整實作 dialog semantics。
+- 開啟 dialog 時要設定可理解的標題並讓 `aria-labelledby` 正確關聯。
+- Toast 不應搶走鍵盤焦點。
+- 重要 Toast 內容需透過 `role="status"` / `role="alert"` 通知。
+- Toast 不可只靠數秒後自動消失來承載必須閱讀的錯誤資訊；重要錯誤應保留在頁面中直到被修正或使用者明確關閉。
+- Overlay 不可讓背景仍可 Tab 進入。
+
+## 13. 動畫與 Reduced Motion
+
+- 尊重 `prefers-reduced-motion: reduce`。
+- 非必要動畫在 reduced motion 下關閉或大幅減少。
+- 不使用閃爍、快速跳動或可能造成干擾的動畫作為必要狀態提示。
+- 不可依靠動畫方向表示成功 / 失敗 / 下一步。
+
+## 14. 不可存取的常見寫法
+
+以下寫法原則上禁止：
+
+```html
+<div @click="submit">送出</div>
+<span class="icon-camera" @click="takePhoto"></span>
+<input placeholder="盤點位置">
+<button><svg><!-- icon --></svg></button>
+```
+
+應改為：
+
+```html
+<button type="button" @click="submit">送出盤點結果</button>
+
+<button type="button" @click="takePhoto">
+  <svg aria-hidden="true"><!-- icon --></svg>
+  拍攝 QR Code
+</button>
+
+<label for="location">盤點位置</label>
+<input id="location" v-model="location" autocomplete="off">
+
+<button type="button" aria-label="刪除這筆盤點紀錄">
+  <svg aria-hidden="true"><!-- icon --></svg>
+</button>
+```
+
+## 15. Vue 實作注意事項
+
+- `v-if` 新增的重要訊息若需要被朗讀，應放入穩定存在的 live region，而不是每次連 live region 容器本身一起建立 / 刪除。
+- 列表 `v-for` 必須使用穩定且有意義的 `:key`。
+- UI 狀態改變後，不可任意呼叫 `.focus()`；只有在對使用者流程有明確幫助時才管理焦點。
+- 自製 component 必須把必要的 `id`、`aria-*`、disabled state 與 keyboard behavior 正確傳到底層互動元素。
+- 不可因為 `pointer-events`、CSS overlay 或 absolute positioning 讓鍵盤焦點與實際可操作區不同。
+
+## 16. 完成前人工檢查
+
+修改 `scan/` 或 `print/` 的 UI / 互動後，不可只以「看起來正常」判定完成。
+
+至少檢查：
+
+1. **Keyboard only**：不使用滑鼠，從頁面載入開始完成主要流程。
+2. **Screen reader semantics**：確認按鈕、欄位、標題、狀態都有合理名稱與角色。
+3. **Focus order**：Tab 順序符合閱讀 / 工作流程，沒有跳躍或困住。
+4. **Zoom 200%**：主要內容與操作仍可使用。
+5. **Color independence**：關鍵狀態不依賴顏色辨識。
+6. **Dynamic announcement**：QR 辨識、送出結果與錯誤會被非視覺方式通知。
+
+開發環境可使用瀏覽器 Accessibility Tree / Lighthouse / axe 類工具協助檢查，但 **自動工具不能取代鍵盤與螢幕閱讀器的人工流程檢查**。
+
+## 17. 完成定義
+
+如果某個功能：
+
+- 只能靠滑鼠完成；
+- 只有看得到畫面的人知道現在發生什麼；
+- 螢幕閱讀器讀不到控制項用途；
+- 鍵盤焦點找不到或被困住；
+- QR 掃描結果只存在圖片標記而沒有文字；
+
+則該功能 **不得視為完成**。
