@@ -18,6 +18,7 @@
 | 欄位 | 用途 |
 | --- | --- |
 | `id` | 盤點項目的唯一識別碼，也是 QR Code 的內容 |
+| `name` | ID 的人類可識別名稱，可留白 |
 | `checked_time` | 最近一次成功盤點時間 |
 | `location` | 最近一次成功盤點的位置 |
 
@@ -43,6 +44,8 @@ flowchart TB
     photo --> scan
     scan -->|id + location| apps_script
     apps_script -->|更新 checked_time + location| sheet
+    scan -->|GET?action=pending| apps_script
+    apps_script -->|回傳未盤點 id + name + location| scan
 ```
 
 QR Code payload 只包含 `id` 本身，不包含 URL、JSON、位置或時間。`print` 可以連結到 `scan`，但不負責更新盤點資料；盤點寫入的唯一入口是 Apps Script。
@@ -74,6 +77,7 @@ Mobile-Inventory-Scanner/
 - 依 `id` 找出對應列。
 - 確認 ID 唯一。
 - 成功盤點時寫入 `checked_time` 與 `location`。
+- 以 GET 提供 `checked_time` 空白的尚未盤點項目。
 - 回傳統一 JSON 結果。
 - 在文件中教學如何取得 Google Sheet URL 與 Apps Script Web App URL。
 
@@ -96,12 +100,13 @@ Mobile-Inventory-Scanner/
 
 - 以手機瀏覽器 / PWA 為主要操作環境。
 - 使用者輸入 Apps Script Web App URL 與目前位置。
-- 透過拍照或相片選擇器取得單張圖片。
-- 在瀏覽器本機辨識同一張圖片中的一個或多個 QR Code。
-- 同一張圖片中的重複 ID 只送出一次。
+- 透過即時後置鏡頭、拍照或相片選擇器取得影像。
+- 在瀏覽器本機辨識影格或圖片中的一個或多個 QR Code。
+- 同一張圖片與同一個掃描 session 中的重複 ID 只送出一次。
 - 每個 ID 個別呼叫 Apps Script，單筆失敗不能中止其他 ID。
+- 可透過 Apps Script GET API 列出尚未盤點的 ID，並依 `location` 分組。
 
-第一版不使用持續開啟的 Camera Preview，主要操作方式是「拍照」與「讀取相片」。
+即時掃描與拍照都是替代入口；相機只在使用者主動操作期間使用。
 
 ---
 
@@ -111,8 +116,8 @@ Mobile-Inventory-Scanner/
 
 ```mermaid
 flowchart TB
-    A["從範本建立自己的 Google Sheet"] --> B["填入唯一 id"]
-    B --> C["確認欄位<br/>id | checked_time | location"]
+    A["從範本建立自己的 Google Sheet"] --> B["填入唯一 id 與 name"]
+    B --> C["確認欄位<br/>id | name | checked_time | location"]
     C --> D["在 Extensions > Apps Script<br/>建立 Bound Script"]
     D --> E["部署為 Web App"]
     E --> F["複製 /exec Web App URL"]
@@ -172,6 +177,7 @@ Apps Script 使用 `Utilities.formatDate` 時，對應的格式字串為 `yyyyMM
   "success": true,
   "item": {
     "id": "A01",
+    "name": "印表機",
     "checked_time": "20260829-171000",
     "location": "主機房 A 區"
   },
@@ -240,16 +246,21 @@ flowchart TB
 flowchart TB
     A["開啟 scan PWA"] --> B["帶入已保存的 Apps Script URL"]
     B --> C["輸入或選擇 location"]
-    C --> D{"圖片來源"}
-    D -->|"拍照"| E["呼叫手機後鏡頭拍照"]
-    D -->|"讀取相片"| F["選取既有圖片"]
-    E --> G["在瀏覽器本機解碼"]
-    F --> G
-    G --> H["取得圖片中的所有 QR Code"]
-    H --> I["去除前後空白並依 ID 去重"]
-    I --> J["逐筆送出 id + location"]
-    J --> K["Apps Script 更新 Google Sheet"]
-    K --> L["逐筆顯示成功或失敗"]
+    C --> D{"掃描或查詢"}
+    D -->|"列出尚未盤點"| E["GET /exec?action=pending"]
+    E --> F["依 location 分組顯示 id + name"]
+    D -->|"開始掃描"| G{"圖片來源"}
+    G -->|"拍照"| H["呼叫手機後鏡頭拍照"]
+    G -->|"讀取相片"| I["選取既有圖片"]
+    G -->|"即時掃描"| J["取得後置鏡頭影格"]
+    H --> K["在瀏覽器本機解碼"]
+    I --> K
+    J --> K
+    K --> L["取得影格或圖片中的所有 QR Code"]
+    L --> M["去除前後空白並依 ID 去重"]
+    M --> N["逐筆送出 id + location"]
+    N --> O["Apps Script 更新 Google Sheet"]
+    O --> P["逐筆顯示成功或失敗"]
 ```
 
 QR decode 必須支援 multi-code detection，不能只處理第一個結果。影像不離開使用者裝置；若同一張圖片有多筆 ID，其中一筆失敗時仍要繼續處理其他 ID。
@@ -296,6 +307,7 @@ QR decode 必須支援 multi-code detection，不能只處理第一個結果。�
 
 - `print` 讀取 Google Sheet 與 Google API 時需要網路；PDF 產生本身在瀏覽器本機完成。
 - `scan` 的 App shell 與 QR decode 靜態資源可由 PWA cache 再次啟動，但寫入 Apps Script 仍需要網路。
+- `scan` 的尚未盤點清單透過同一個 Apps Script `/exec?action=pending` 讀取。
 - 第一版不做離線盤點 queue；無法連線的項目不可標記為成功。
 
 ---
@@ -319,6 +331,10 @@ Apps Script 負責：
 - 回傳成功或錯誤 JSON。
 
 Apps Script 是盤點寫入的唯一權威來源；`scan` 不可在 API 回傳失敗時自行判定為成功，`print` 也不可直接修改 Sheet。
+
+`scan` 可透過同一個 Web App URL 的 `GET?action=pending` 取得
+`checked_time` 空白的項目。回應包含 `id`、`name` 與 `location`，分組與
+「尚未設定位置」的顯示由前端處理。
 
 ---
 

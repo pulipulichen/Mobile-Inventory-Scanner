@@ -8,7 +8,8 @@
 
 1. 登入具有該試算表讀取權限的 Google 帳號。
 2. 開啟盤點用 Google Sheet；也可以先從[最近使用的 Google Sheet](https://drive.google.com/drive/u/0/recent?q=type:spreadsheet)中選取。
-3. 確認第一列欄位名稱正好是 `id`、`checked_time`、`location`。
+3. 確認第一列欄位名稱正好是 `id`、`name`、`checked_time`、`location`。
+   `name` 用來填寫人類可識別名稱，例如「印表機」或「桌上型電腦」。
 4. 複製瀏覽器網址列的完整網址，例如：
 
    ```text

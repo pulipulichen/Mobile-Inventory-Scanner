@@ -117,12 +117,17 @@ mis.print.qr_size_mm
 ## 7. scan 專用技術決策
 
 - 必須支援 Android Chrome 與 iPhone Safari。
-- 第一版使用 `<input type="file" accept="image/*">` 取得相片；拍照入口加 `capture="environment"`。
-- 不做持續 camera preview。
-- QR Code 辨識全部在瀏覽器本機執行，不上傳照片。
-- QR 解碼固定優先使用 `@undecaf/zbar-wasm`，原因是可在瀏覽器處理 `ImageData` 並一次回傳多個 barcode / QR Code。
+- 第一版使用 `MediaDevices.getUserMedia()` 持續取得後置鏡頭影像，並提供
+  `<input type="file" accept="image/*">` 作為拍照 / 讀取相片的替代入口；拍照入口加
+  `capture="environment"`。
+- 即時掃描以節流的相機影格迴圈交給 QR decoder，停止掃描時必須釋放所有
+  `MediaStream` tracks。
+- QR Code 辨識全部在瀏覽器本機執行，不上傳照片或相機影像。
+- QR 解碼固定優先使用 `@undecaf/zbar-wasm`，原因是可在瀏覽器處理
+  `ImageData` 並一次回傳多個 barcode / QR Code。
 - WASM 檔案應跟著 Vite build 部署，不依賴第三方 CDN 才能掃描。
-- 同張圖片辨識出的 ID 必須去重後才呼叫 Apps Script。
+- 同一影格、同一張圖片與同一掃描 session 中重複辨識出的 ID，必須去重後才呼叫
+  Apps Script。
 - `scan` 必須是 PWA；使用 `vite-plugin-pwa` 管理 manifest / service worker。
 - PWA 快取只保證 App shell / 靜態資源可啟動；第一版不做離線待送 queue。
 

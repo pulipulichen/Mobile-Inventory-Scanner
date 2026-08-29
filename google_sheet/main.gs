@@ -14,6 +14,7 @@ var CONFIG = {
   LOCK_TIMEOUT_MS: 10000,
   COLUMNS: {
     ID: "id",
+    NAME: "name",
     CHECKED_TIME: "checked_time",
     LOCATION: "location"
   }
@@ -49,13 +50,36 @@ function doPost(event) {
  * Provides a small deployment health check. Inventory writes still require
  * POST and are never performed by this method.
  *
+ * Supported query parameters:
+ * - action=pending: returns items whose checked_time is blank.
+ * - action=list: returns all inventory items.
+ *
+ * @param {Object} event Apps Script web-app event.
  * @return {ContentService.TextOutput} JSON response.
  */
-function doGet() {
-  return jsonResponse_({
-    success: true,
-    message: "Inventory check service is ready. Use POST with a JSON body."
-  });
+function doGet(event) {
+  var action = getCellText_(
+    event && event.parameter && event.parameter.action
+  ).toLowerCase();
+
+  if (!action) {
+    return jsonResponse_({
+      success: true,
+      message: "Inventory check service is ready. Use POST or GET?action=pending."
+    });
+  }
+
+  try {
+    if (action === "pending") {
+      return jsonResponse_(processInventoryList_(true));
+    }
+    if (action === "list") {
+      return jsonResponse_(processInventoryList_(false));
+    }
+    throw apiError_("INVALID_REQUEST", "Unsupported GET action: " + action);
+  } catch (error) {
+    return jsonResponse_(buildErrorResponse_(error, {}));
+  }
 }
 
 /**
@@ -180,6 +204,9 @@ function processInventoryCheck_(request) {
       success: true,
       item: {
         id: request.id,
+        name: columnMap.name
+          ? getCellText_(sheet.getRange(match.rowNumber, columnMap.name).getDisplayValue())
+          : "",
         checked_time: checkedTime,
         location: nextLocation
       },
@@ -198,6 +225,57 @@ function processInventoryCheck_(request) {
   } finally {
     lock.releaseLock();
   }
+}
+
+/**
+ * Reads inventory rows for the scan page.
+ *
+ * @param {boolean} onlyPending Return only rows without checked_time.
+ * @return {Object} Inventory list response.
+ */
+function processInventoryList_(onlyPending) {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = getTargetSheet_(spreadsheet);
+  var columnMap = getColumnMap_(sheet);
+  var firstDataRow = CONFIG.HEADER_ROW + 1;
+  var lastRow = sheet.getLastRow();
+  var items = [];
+
+  if (lastRow >= firstDataRow) {
+    var lastColumn = sheet.getLastColumn();
+    var rows = sheet
+      .getRange(firstDataRow, 1, lastRow - CONFIG.HEADER_ROW, lastColumn)
+      .getDisplayValues();
+
+    rows.forEach(function(row) {
+      var id = getCellText_(row[columnMap.id - 1]).trim();
+      if (!id) {
+        return;
+      }
+
+      var checkedTime = getCellText_(row[columnMap.checkedTime - 1]).trim();
+      if (onlyPending && checkedTime) {
+        return;
+      }
+
+      items.push({
+        id: id,
+        name: columnMap.name
+          ? getCellText_(row[columnMap.name - 1]).trim()
+          : "",
+        checked_time: checkedTime,
+        location: getCellText_(row[columnMap.location - 1]).trim()
+      });
+    });
+  }
+
+  return {
+    success: true,
+    items: items,
+    message: onlyPending
+      ? "Pending inventory items loaded"
+      : "Inventory items loaded"
+  };
 }
 
 /**
@@ -231,6 +309,7 @@ function getTargetSheet_(spreadsheet) {
  *
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet Target worksheet.
  * @return {Object} Column indexes, using one-based sheet indexes.
+ * The name column is optional for backwards compatibility.
  */
 function getColumnMap_(sheet) {
   var lastColumn = sheet.getLastColumn();
@@ -279,6 +358,7 @@ function getColumnMap_(sheet) {
 
   return {
     id: columnMap[CONFIG.COLUMNS.ID],
+    name: columnMap[CONFIG.COLUMNS.NAME] || 0,
     checkedTime: columnMap[CONFIG.COLUMNS.CHECKED_TIME],
     location: columnMap[CONFIG.COLUMNS.LOCATION]
   };

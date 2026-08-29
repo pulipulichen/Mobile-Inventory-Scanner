@@ -1,8 +1,8 @@
 # 取得 Apps Script Web App URL
 
-`scan` 透過 Apps Script Web App 將 `id` 與 `location` 傳回同一份 Google
-Sheet。建議使用與試算表綁定的 **Bound Script**，讓程式可以直接取得目前
-的 Spreadsheet。
+`scan` 透過 Apps Script Web App 讀取尚未盤點的項目，並將 `id` 與 `location`
+寫回同一份 Google Sheet。建議使用與試算表綁定的 **Bound Script**，讓程式
+可以直接取得目前的 Spreadsheet。
 
 ## 操作步驟
 
@@ -37,3 +37,43 @@ flowchart TB
 
 完成後可回到 [Google Sheet / Apps Script 規格](./README.md) 查看 Web App
 輸入與回傳格式。
+
+## 盤點清單 API
+
+同一個 `/exec` URL 同時提供讀取清單的 GET API。`scan` 使用下列網址取得
+`checked_time` 空白的項目：
+
+```text
+GET https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec?action=pending
+```
+
+成功回傳範例：
+
+```json
+{
+  "success": true,
+  "items": [
+    {
+      "id": "B03",
+      "name": "桌上型電腦",
+      "checked_time": "",
+      "location": "倉庫 2F"
+    }
+  ],
+  "message": "Pending inventory items loaded"
+}
+```
+
+`scan` 會把有相同 `location` 的項目分在同一組；空白位置會顯示為
+「尚未設定位置」。`name` 來自 Sheet 的人類可識別名稱，未填時前端以
+`id` 顯示。
+
+若使用瀏覽器直接開啟未帶 `action` 的 `/exec`，只會看到部署健康檢查。
+`action=list` 可讀取所有非空 ID，包含已盤點與尚未盤點項目。
+
+### 權限注意事項
+
+GET API 會把盤點表中的 ID、名稱與位置提供給持有 Web App URL 的呼叫者。
+若資料不適合公開，請在部署時限制 **Who has access** 為組織或登入帳號，
+不要選擇 **Anyone**。選擇 **Anyone** 時，必須把 `/exec` URL 視為敏感設定
+妥善保管。

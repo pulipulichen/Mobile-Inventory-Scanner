@@ -39,6 +39,14 @@
 
 ### Documentation
 
+- Documented the live rear-camera scanning flow, camera stream cleanup, and
+  scan-session deduplication requirements.
+- Documented the pending-inventory read API, optional `name` column, and
+  location-grouped display behavior across the Google Sheet and frontend
+  specifications.
+- Updated the setup and frontend guidance to use the static Google Drive recent
+  spreadsheets link with manual Sheet URL copy and paste instead of a Drive API
+  picker.
 - Added a project roles document describing responsibilities and boundaries for
   the development environment, CI, static hosting, frontend apps, Google Sheet,
   and bound Apps Script.

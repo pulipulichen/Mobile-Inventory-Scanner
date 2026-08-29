@@ -4,6 +4,9 @@
 `print` 以電腦為主要操作環境，但必須支援平板與手機 RWD；在手機上也
 可以透過頁面入口前往 `scan` 進行盤點。
 
+掃描場景模擬器的規劃請參考
+[QR Code 掃描場景模擬器規格](./scan_simulation_spec.md)。
+
 共通流程以 [`docs/architecture.md`](../docs/architecture.md) 為準，套件
 清單見 [`docs/packages.md`](../docs/packages.md)。Google Sheet URL 的取得方式
 見 [`google_sheet/GET_GOOGLE_SHEET_URL.md`](../google_sheet/GET_GOOGLE_SHEET_URL.md)。
@@ -115,10 +118,11 @@ https://docs.google.com/spreadsheets/d/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 第一版欄位：
 
 ```text
-id | checked_time | location
+id | name | checked_time | location
 ```
 
-列印功能主要使用 `id`，載入時也必須保留每筆資料的實際列號，
+`name` 是 ID 的人類可識別名稱，可留白；`print` 仍以 `id` 作為 QR Code
+payload 與主要列印識別。列印功能載入時也必須保留每筆資料的實際列號，
 以便指出重複 ID 位於哪些儲存格。
 
 ### Google Sheet 權限
@@ -299,6 +303,7 @@ Component 不直接散落資料來源讀取或 QR library 操作；統一透過 
 - [ ] 不需要 Google Cloud Project、OAuth Client ID 或 Google Drive API。
 - [ ] 可從 URL 解析 Spreadsheet ID。
 - [ ] 可依輸入的 Google Sheet URL 讀取有權限的 Sheet。
+- [ ] 可接受額外的 `name` 欄位，且不影響 QR Code payload。
 - [ ] 可從 `id` 欄取得所有有效 ID。
 - [ ] 載入時可找出重複 ID，並指出每個重複 ID 所在的 A1 儲存格位置。
 - [ ] 有重複 ID 時不產生 QR Code 預覽、PDF 或直接列印結果。

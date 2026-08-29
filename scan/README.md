@@ -1,12 +1,15 @@
-# QR Code 手機盤點功能規格
+# QR Code 手機即時掃描與盤點功能規格
 
-本目錄負責手機端的 QR Code 圖片辨識與盤點寫入。
+本目錄負責手機端的 QR Code 即時掃描、圖片辨識與盤點寫入。
 
 共通流程以 [`docs/architecture.md`](../docs/architecture.md) 為準，套件
 清單見 [`docs/packages.md`](../docs/packages.md)。Apps Script Web App URL
-的取得方式見 [`google_sheet/README.md`](../google_sheet/README.md)。
+的取得方式見
+[`google_sheet/GET_APPS_SCRIPT_URL.md`](../google_sheet/GET_APPS_SCRIPT_URL.md)。
 
-第一版不做持續開啟鏡頭的即時掃描，而是以「拍照」或「讀取相片」取得圖片，再從圖片中辨識一個或多個 QR Code。
+第一版支援持續開啟後鏡頭的即時掃描，也支援以「拍照」或「讀取相片」
+取得圖片後辨識一個或多個 QR Code。兩種模式都在瀏覽器本機處理影像，
+不會上傳照片。
 
 ## 前端技術決策
 
@@ -22,9 +25,11 @@
 - Vuetify 4.x：手機盤點操作介面使用的 UI framework。
 - `vite-plugin-vuetify`：Vite 編譯時按需載入 Vuetify 元件。
 - `vite-plugin-pwa`：產生 PWA manifest / Service Worker。
-- `@undecaf/zbar-wasm`：在瀏覽器本機辨識 QR Code，支援同張圖片多個 QR Code。
-- Google Identity Services：僅在使用「最近使用的 Google Sheet」快速入口時進行 Google OAuth。
-- Google Drive API：列出最近開啟的 Google Sheets，方便快速開啟對應盤點表。
+- `@undecaf/zbar-wasm`：在瀏覽器本機辨識 QR Code，支援相機影格與
+  圖片中的多個 QR Code。
+- `MediaDevices.getUserMedia()`：取得使用者同意的後置鏡頭影像，供即時掃描使用。
+- Google Drive 最近使用頁面：透過固定網址開啟，讓使用者手動選取
+  Google Sheet 並複製網址。
 
 第一版不使用 Vue Router、Pinia、Nuxt 或第二套 UI framework。影像只在使用者
 裝置內處理，不把照片上傳到伺服器。
@@ -50,25 +55,31 @@ live region 與螢幕閱讀器要求。
 ## 使用流程
 
 ```mermaid
-flowchart TB
+flowchart TD
     A["手機開啟 scan 網頁 / PWA"] --> B["帶入或輸入 Apps Script Web App URL"]
     B --> C["輸入或選擇目前 location"]
-    C --> D{"選擇圖片來源"}
-    D -->|"拍照"| E["使用後鏡頭取得圖片"]
-    D -->|"讀取相片"| F["從照片 / 檔案選擇器選取圖片"]
-    E --> G["瀏覽器本機執行 QR decode"]
-    F --> G
-    G --> H["辨識同一張圖片中的所有 QR Code"]
-    H --> I["清理並依 id 去重"]
-    I --> J["逐筆送出 id + location"]
-    J --> K["Apps Script 更新 Google Sheet"]
-    K --> L["顯示每筆成功 / 失敗結果"]
-    A -.-> M["開啟最近使用的 Google Sheet"]
-    M --> N["Google OAuth 與 Drive API"]
-    N --> O["開啟選取的 Google Sheet"]
+    C --> D{"選擇掃描方式"}
+    D -->|"即時掃描"| E["啟動後置鏡頭"]
+    E --> F["持續取得相機影格"]
+    D -->|"拍照"| G["使用後鏡頭取得圖片"]
+    D -->|"讀取相片"| H["從照片 / 檔案選擇器選取圖片"]
+    F --> I["瀏覽器本機執行 QR decode"]
+    G --> I
+    H --> I
+    I --> J["辨識影格或圖片中的所有 QR Code"]
+    J --> K["清理並依 id 去重"]
+    K --> L["逐筆送出 id + location"]
+    L --> M["Apps Script 更新 Google Sheet"]
+    M --> N["顯示每筆成功 / 失敗結果"]
+    A --> O["按下列出尚未盤點的 ID"]
+    O --> P["GET Apps Script?action=pending"]
+    P --> R["依既有 location 分組並顯示 id + name"]
+    A -.-> S["開啟最近使用的 Google Sheet"]
+    S --> T["開啟 Google Drive 最近使用頁面"]
+    T --> U["手動選取 Sheet 並複製網址"]
 ```
 
-網頁中所有一般使用者設定都必須保存到 `localStorage`；OAuth access token 除外。
+網頁中所有一般使用者設定都必須保存到 `localStorage`。
 
 ---
 
@@ -76,7 +87,8 @@ flowchart TB
 
 第一版主要針對 Android Chrome、iPhone Safari，並可安裝成 PWA 使用。
 
-拍照透過瀏覽器檔案 / 相機輸入介面呼叫手機相機，不需要長時間保持 camera preview。
+即時掃描透過瀏覽器相機 API 保持 camera preview；拍照模式則透過瀏覽器
+檔案 / 相機輸入介面取得單張圖片。相機只在使用者主動啟動掃描或拍照時使用。
 
 ---
 
@@ -84,7 +96,8 @@ flowchart TB
 
 至少包含 manifest、Service Worker、App icon、可加入手機主畫面與 Standalone 顯示模式。
 
-PWA 快取的目的，是讓 App shell 與 QR decode 靜態資源可以再次啟動；第一版 **不代表支援離線盤點**。Apps Script 寫入與 Google Drive 最近檔案查詢仍需要網路。
+PWA 快取的目的，是讓 App shell 與 QR decode 靜態資源可以再次啟動；第一版
+**不代表支援離線盤點**。Apps Script 寫入與 Google Drive 網頁仍需要網路。
 
 `@undecaf/zbar-wasm` 所需 WASM 資源要跟著 build 部署，不把第三方 CDN 當成必要 runtime dependency。
 
@@ -92,41 +105,39 @@ PWA 快取的目的，是讓 App shell 與 QR decode 靜態資源可以再次啟
 
 ## Google Drive 最近使用的 Sheet 快速入口
 
-設定區必須提供明顯按鈕：
+設定區必須提供明顯連結：
 
 ```text
 開啟最近使用的 Google Sheet
 ```
 
-用途是讓使用者在手機盤點時快速找到目前要操作的 Google Sheet，不必先手動進入 Google Drive 搜尋。
+用途是讓使用者在手機盤點時快速找到目前要操作的 Google Sheet，不必先手動
+進入 Google Drive 搜尋。
 
 按下後：
 
-1. 若尚未取得 Google OAuth 權限，先執行登入 / 授權。
-2. 使用 Google Drive API `files.list` 讀取目前帳號最近開啟的檔案。
-3. 只顯示 MIME type 為 `application/vnd.google-apps.spreadsheet` 的 Google Sheets。
-4. 依 `viewedByMeTime desc` 排序，最近開啟的 Sheet 放最前面。
-5. 第一版預設顯示最近 20 筆，可視需要提供「載入更多」。
-6. 每筆至少顯示檔名與最近開啟時間。
-7. 點選某一筆後，以該檔案的 `webViewLink` / Google Sheet URL 開啟 Google Sheet；手機上優先另開分頁或交由系統可用的 Google Sheets / 瀏覽器處理，避免直接丟失目前 scan 畫面狀態。
-8. 返回 `scan` 後，原本輸入的 Apps Script URL、location 與掃描狀態不得被清除。
-9. 取消選取不得改動任何 scan 設定。
-
-Drive 查詢概念：
-
-```text
-q: mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false
-orderBy: viewedByMeTime desc
-fields: nextPageToken, files(id,name,viewedByMeTime,modifiedTime,webViewLink)
-```
+1. 開啟固定網址：
+   `https://drive.google.com/drive/u/0/recent?q=type:spreadsheet`。
+2. 在 Google Drive 中手動選取要使用的 Google Sheet。
+3. 複製瀏覽器網址列的完整 Google Sheet URL。
+4. 若要在 `print` 使用該試算表，將網址貼到 `print` 的 Google Sheet URL
+   欄位；`scan` 寫入盤點資料仍使用另外設定的 Apps Script Web App URL。
+5. 優先另開分頁或交由系統可用的 Google Sheets / 瀏覽器處理，避免直接
+   丟失目前 scan 畫面狀態。
+6. 返回 `scan` 後，原本輸入的 Apps Script URL、location 與掃描狀態不得
+   被清除。
 
 ### 與 Apps Script URL 的關係
 
-Google Drive API 可以找到 Google Sheet，但**不能把 Bound Apps Script 已部署的 Web App `/exec` URL 視為該 Sheet 的標準 Drive 欄位直接取得**。
+Google Drive 最近使用頁面只協助使用者找到並開啟 Google Sheet，**不能自動
+取得 Bound Apps Script 已部署的 Web App `/exec` URL**。
 
-因此第一版此功能定位為「快速找到並開啟對應 Google Sheet」，不假裝能由 Sheet 自動推導 Apps Script Web App URL。`scan` 寫入盤點資料時仍以使用者設定的 Apps Script Web App URL 為準。
+因此此功能定位為「快速找到並開啟對應 Google Sheet」，不假裝能由 Sheet
+自動推導 Apps Script Web App URL。`scan` 寫入盤點資料時仍以使用者設定的
+Apps Script Web App URL 為準。
 
-這個快速入口不應阻擋主要盤點流程；Drive API / OAuth 發生錯誤時，使用者仍可直接使用已保存的 Apps Script URL 盤點。
+這個快速入口不應阻擋主要盤點流程；Google Drive 無法開啟時，使用者仍可
+直接使用已保存的 Apps Script URL 盤點。
 
 ---
 
@@ -142,7 +153,9 @@ https://script.google.com/macros/s/xxxxxxxxxxxxxxxx/exec
 
 需求：可手動輸入或貼上、保存到 `localStorage`、下次自動帶入、呼叫失敗時顯示清楚錯誤。
 
-在此欄位附近提供「開啟最近使用的 Google Sheet」，協助使用者快速找到對應的盤點表。
+在此欄位附近提供「開啟最近使用的 Google Sheet」連結，協助使用者快速
+找到對應的盤點表；此連結的操作方式依上方說明，使用者需手動複製並貼回
+Google Sheet URL。
 
 ### 目前位置
 
@@ -167,6 +180,36 @@ https://script.google.com/macros/s/xxxxxxxxxxxxxxxx/exec
 
 ---
 
+## 尚未盤點清單
+
+設定區提供「列出尚未盤點的 ID」功能，使用同一個 Apps Script Web App
+`/exec` URL 發送：
+
+```text
+GET <APPS_SCRIPT_WEB_APP_URL>?action=pending
+```
+
+Apps Script 依 `checked_time` 是否為空白判定尚未盤點，回傳每筆的：
+
+```json
+{
+  "id": "B03",
+  "name": "桌上型電腦",
+  "checked_time": "",
+  "location": "倉庫 2F"
+}
+```
+
+`scan` 顯示人類可識別的 `name` 與 `id`，並依資料原本的 `location` 分組。
+沒有位置的項目統一放在「尚未設定位置」群組。`name` 未填時以 `id` 顯示，
+不會因此遺漏該筆資料。
+
+清單是使用者按下按鈕時重新讀取的結果；盤點成功後，畫面中的該 ID 會從
+尚未盤點清單移除。讀取失敗時必須保留清楚的錯誤文字，不可把空清單誤報
+成「全部完成」。
+
+---
+
 ## localStorage
 
 key 統一使用 `mis.scan.*` prefix：
@@ -177,13 +220,32 @@ mis.scan.location
 mis.scan.location_history
 ```
 
-重新整理或重新開啟 PWA 後保留；可清除歷史位置與所有設定。OAuth access token 不長期保存到 localStorage。
+重新整理或重新開啟 PWA 後保留；可清除歷史位置與所有設定。
 
 ---
 
 ## 主要操作按鈕
 
-第一版兩個主要影像來源按鈕：`拍照`、`讀取相片`。Google Sheet 快速入口屬於設定輔助按鈕，不與這兩個主要掃描動作混在同一層級。
+第一版主要影像操作為 `開始掃描`、`停止相機`、`拍照` 與 `讀取相片`。
+Google Sheet 快速入口屬於設定輔助連結，不與主要掃描動作混在同一層級。
+
+### 即時掃描
+
+即時掃描使用瀏覽器 `getUserMedia()` 取得後置鏡頭影像，並以
+`requestAnimationFrame` 或等效的節流迴圈逐影格交給
+`@undecaf/zbar-wasm` 辨識。
+
+需求：
+
+- 使用者按下「開始掃描」後才請求相機權限。
+- 預設使用後鏡頭，不要求麥克風權限。
+- 提供清楚的「停止相機」按鈕；停止時釋放所有 MediaStream tracks。
+- QR Code 辨識期間顯示文字狀態，不可只顯示 loading 動畫。
+- 同一個 QR Code 持續出現在畫面中時，不得在每個影格重複送出；
+  需在掃描 session 內去重或套用明確的冷卻時間。
+- 一個影格辨識到多個 QR Code 時，先依 `id` 去重，再逐筆送出。
+- 相機權限被拒絕、裝置沒有相機或串流啟動失敗時，顯示可理解的錯誤與
+  下一步提示，並保留「拍照辨識」替代流程。
 
 ### 拍照
 
@@ -191,7 +253,7 @@ mis.scan.location_history
 <input type="file" accept="image/*" capture="environment">
 ```
 
-優先使用後鏡頭，拍照完成後立即辨識，不做即時掃描 camera preview。
+拍照完成後立即辨識，作為即時掃描不可用時的替代流程。
 
 ### 讀取相片
 
@@ -201,16 +263,19 @@ mis.scan.location_history
 
 ## QR Code 圖片辨識
 
-使用 `@undecaf/zbar-wasm` 對圖片轉成的 `ImageData` 進行本機辨識。
+使用 `@undecaf/zbar-wasm` 對相機影格或圖片轉成的 `ImageData` 進行本機
+辨識。
 
 需求：
 
-- 一次取得圖片中所有可辨識 QR Code，不可只取第一個。
+- 即時掃描每次辨識影格中所有可辨識 QR Code，不可只取第一個。
+- 圖片模式一次取得圖片中所有可辨識 QR Code，不可只取第一個。
 - 只接受 QR Code 類型作為盤點 ID。
 - QR Code payload 直接視為 `id`。
 - 去除 ID 前後空白，不修改大小寫。
 - ID 保持字串型態。
-- 同張圖片相同 ID 只送出一次。
+- 同一影格或同一張圖片相同 ID 只送出一次；即時掃描 session 也不得因
+  QR Code 持續停留在畫面中而重複送出。
 - 圖片不離開瀏覽器。
 
 若沒有 QR Code，顯示：`此圖片中沒有辨識到 QR Code`。
@@ -239,6 +304,7 @@ Apps Script 回傳格式依 [`google_sheet/README.md`](../google_sheet/README.md
   "success": true,
   "item": {
     "id": "A01",
+    "name": "印表機",
     "checked_time": "20260829-171000",
     "location": "主機房 A 區"
   },
@@ -276,16 +342,14 @@ Apps Script 回應的 `message` 欄位一律使用英文；畫面若要顯示繁
 src/
 ├── components/
 │   ├── ScanSettings.vue
-│   ├── RecentGoogleSheetsPicker.vue
+│   ├── CameraScanner.vue
 │   ├── ImageSourceButtons.vue
-│   └── ScanResultList.vue
+│   ├── ScanResultList.vue
+│   └── PendingInventoryList.vue
 ├── composables/
-│   ├── useGoogleAuth.ts
 │   ├── useScanSettings.ts
 │   └── useScanSession.ts
 ├── services/
-│   ├── google_auth.ts
-│   ├── google_drive.ts
 │   ├── apps_script.ts
 │   └── qr_decoder.ts
 ├── styles/
@@ -295,7 +359,8 @@ src/
 └── main.ts
 ```
 
-Component 不直接散落 Google OAuth、Drive API、Apps Script `fetch()` 或 QR library 操作；統一透過 service / composable。
+Component 不直接散落 Google Drive 導覽、Apps Script `fetch()` 或 QR library
+操作；統一透過 service / composable。
 
 ---
 
@@ -305,12 +370,11 @@ Component 不直接散落 Google OAuth、Drive API、Apps Script `fetch()` 或 Q
 
 - 未設定 Apps Script URL：`Please enter the Apps Script Web App URL`。
 - 未輸入位置：`Please enter the current location`。
-- Google OAuth 失敗。
-- Drive 最近檔案讀取失敗。
-- 最近沒有 Google Sheet。
+- 相機權限被拒絕、裝置沒有相機或相機啟動失敗。
 - 圖片無 QR Code：`No QR Code was detected in this image`。
 - 圖片讀取失敗：`Unable to read the image. Please select it again`。
 - Apps Script 無法連線：`Unable to connect to the inventory service`。
+- 尚未盤點清單讀取失敗：顯示可理解的錯誤，不能顯示為空清單。
 - ID 不存在：顯示 Apps Script 回傳的英文 `message`。
 - 多筆中的單筆失敗：不得中止其他 ID。
 
@@ -320,9 +384,11 @@ Component 不直接散落 Google OAuth、Drive API、Apps Script `fetch()` 或 Q
 
 只使用必要功能：
 
-- 相機：使用者按「拍照」時由瀏覽器呼叫。
+- 相機：使用者按「開始掃描」或「拍照」時由瀏覽器呼叫，停止即時掃描
+  後釋放串流。
 - 圖片：使用者主動按「讀取相片」時選取。
-- Google Drive 唯讀權限：只有使用者主動按「開啟最近使用的 Google Sheet」時才需要，用於列出最近使用的 Google Sheets。
+- Google Drive 最近使用頁面：透過固定網址開啟，不要求 `scan` 取得
+  Google OAuth 或 Drive API 權限。
 
 不需要 GPS、麥克風、聯絡人或背景持續使用相機。
 
@@ -334,12 +400,14 @@ Component 不直接散落 Google OAuth、Drive API、Apps Script `fetch()` 或 Q
 - [ ] `./frontend.sh build scan` 成功產生 `scan/dist/`。
 - [ ] 手機可開啟 HTTPS 網頁並安裝成 PWA。
 - [ ] 可輸入並保存 Apps Script Web App URL。
-- [ ] 有「開啟最近使用的 Google Sheet」按鈕。
-- [ ] 可透過 Google Drive API 顯示最近開啟的 Google Sheets。
-- [ ] 最近使用清單依 `viewedByMeTime` 由新到舊排序。
-- [ ] 點選 Sheet 後可開啟該 Google Sheet，且返回 scan 後原設定不遺失。
-- [ ] Drive 快速入口失敗不影響已設定 Apps Script URL 的正常盤點。
+- [ ] 有「開啟最近使用的 Google Sheet」連結。
+- [ ] 連結使用 `https://drive.google.com/drive/u/0/recent?q=type:spreadsheet`。
+- [ ] 使用者可從 Google Drive 複製 Sheet URL，再貼回 `print`。
+- [ ] 不需要 Google Cloud Project、OAuth Client ID 或 Google Drive API。
 - [ ] 可輸入並保存目前位置，並有歷史位置下拉選單。
+- [ ] 可啟動後置鏡頭進行即時 QR Code 掃描。
+- [ ] 可停止相機並釋放相機串流。
+- [ ] 即時掃描中同一個 QR Code 不會因持續出現在畫面中而重複送出。
 - [ ] 可按「拍照」取得新照片。
 - [ ] 可按「讀取相片」選擇既有圖片。
 - [ ] 可從一張圖片辨識多個 QR Code。
@@ -348,14 +416,16 @@ Component 不直接散落 Google OAuth、Drive API、Apps Script `fetch()` 或 Q
 - [ ] 每個 ID 都帶 location 呼叫 Apps Script。
 - [ ] 可顯示每個 ID 的等待 / 寫入中 / 成功 / 失敗狀態。
 - [ ] 單筆失敗不影響其他 QR Code。
+- [ ] 可透過同一個 Apps Script `/exec` URL 列出 `checked_time` 空白的 ID。
+- [ ] 尚未盤點清單顯示 `name` 與 `id`，並依 `location` 分組。
+- [ ] 沒有 `location` 的項目會歸入「尚未設定位置」。
 
 ## 第一版不做
 
-- 持續開啟相機的即時 QR Code scanner。
 - 從 Google Sheet 自動推導 Bound Apps Script Web App `/exec` URL。
 - GPS 自動取得位置。
 - 離線盤點 queue。
 - 手動輸入 ID。
-- 修改 Google Sheet 資料結構。
+- 從手機端修改 Google Sheet 欄位定義。
 - 在手機端決定正式 `checked_time`。
 - 自建後端 / CORS proxy。

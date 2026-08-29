@@ -11,15 +11,15 @@
 
 ```mermaid
 flowchart TB
-    A["從範本建立 Google Sheet"] --> B["填入唯一 id"]
-    B --> C["確認欄位<br/>id | checked_time | location"]
+    A["從範本建立 Google Sheet"] --> B["填入唯一 id 與 name"]
+    B --> C["確認欄位<br/>id | name | checked_time | location"]
     C --> D["Extensions > Apps Script<br/>建立 Bound Script"]
     D --> E["Deploy > New deployment<br/>類型選 Web app"]
     E --> F["複製結尾為 /exec 的 Web App URL"]
     C --> G["複製瀏覽器網址列的<br/>Google Sheet URL"]
     G --> H["貼到 print"]
     F --> I["貼到 scan"]
-    I --> J["scan 傳送 id + location"]
+    I --> J["scan 以 GET 讀取清單或傳送 id + location"]
     J --> K["Apps Script 更新 Sheet"]
 ```
 
@@ -35,23 +35,27 @@ Script。兩個網址的詳細取得方式請參考：
 
 ## Google Sheet 欄位
 
-第一版固定使用以下三個欄位：
+盤點表使用以下四個欄位：
 
 |欄位|必填|說明|範例|
 |---|---|---|---|
 |`id`|是|盤點項目的唯一識別碼，也是 QR Code 的內容|`A01`|
+|`name`|否|ID 的人類可識別名稱，顯示在尚未盤點清單|`印表機`|
 |`checked_time`|否|最近一次成功盤點的日期時間，由 Apps Script 寫入|`20260829-171000`|
 |`location`|否|最近一次成功盤點的位置，由掃描端傳入；若傳入空白則保留原值|`主機房 A 區`|
 
 範例：
 
-| `id` | `checked_time` | `location` |
-| --- | --- | --- |
-| `A01` | `20260829-171000` | `主機房 A 區` |
-| `B03` | — | — |
-| `C04` | — | — |
+| `id` | `name` | `checked_time` | `location` |
+| --- | --- | --- | --- |
+| `A01` | 印表機 | `20260829-171000` | `主機房 A 區` |
+| `B03` | 桌上型電腦 | — | 倉庫 2F |
+| `C04` | 筆記型電腦 | — | — |
 
 `—` 表示尚未盤點，實際試算表儲存格應保持空白。
+
+`name` 是建議填寫的資料欄位；若暫時留白，前端會以 `id` 作為顯示名稱。
+欄位標題必須正好使用小寫 `name`。
 
 ### `id` 規則
 
@@ -84,7 +88,7 @@ Script。兩個網址的詳細取得方式請參考：
 
 ## Apps Script 功能
 
-Apps Script 第一版只負責「依 ID 寫入盤點結果」。
+Apps Script 負責「依 ID 寫入盤點結果」以及提供盤點清單讀取 API。
 
 它不負責 QR Code 產生，也不負責手機端圖片辨識。
 
@@ -102,6 +106,43 @@ Apps Script 第一版只負責「依 ID 寫入盤點結果」。
 ```
 
 固定使用 `POST` JSON，讓 `scan` 與 Apps Script 的資料契約一致。
+
+### Web App 讀取尚未盤點清單
+
+`scan` 可對同一個 `/exec` URL 發送：
+
+```text
+GET https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec?action=pending
+```
+
+Apps Script 會讀取所有非空 `id`，只回傳 `checked_time` 為空白的資料列。
+`scan` 再依 `location` 分組；沒有位置的項目歸入「尚未設定位置」。
+
+成功回傳：
+
+```json
+{
+  "success": true,
+  "items": [
+    {
+      "id": "B03",
+      "name": "桌上型電腦",
+      "checked_time": "",
+      "location": "倉庫 2F"
+    },
+    {
+      "id": "C04",
+      "name": "筆記型電腦",
+      "checked_time": "",
+      "location": ""
+    }
+  ],
+  "message": "Pending inventory items loaded"
+}
+```
+
+若要讀取全部資料，可使用 `action=list`。未帶 `action` 的 GET 仍只提供
+部署健康檢查，不會回傳盤點資料。
 
 ### 寫入流程
 
@@ -122,6 +163,7 @@ Apps Script 收到請求後：
   "success": true,
   "item": {
     "id": "A01",
+    "name": "印表機",
     "checked_time": "20260829-171000",
     "location": "主機房 A 區"
   },
@@ -187,9 +229,10 @@ google_sheet/
 ## 第一版完成條件
 
 - [ ] 有可複製的 Google Sheet 範本。
-- [ ] 範本包含 `id`、`checked_time`、`location` 三欄。
+- [ ] 範本包含 `id`、`name`、`checked_time`、`location` 四欄。
 - [ ] Apps Script 可部署成 Web App。
 - [ ] Web App 可接收 `id` 與 `location`。
+- [ ] Web App 的 `GET?action=pending` 可回傳尚未盤點的 ID、名稱與位置。
 - [ ] 找到 ID 時更新 `checked_time`；位置有值時更新 `location`，空白時保留原值。
 - [ ] 找不到 ID 時不修改 Sheet 並回傳錯誤。
 - [ ] 重複 ID 時不修改 Sheet 並回傳錯誤。

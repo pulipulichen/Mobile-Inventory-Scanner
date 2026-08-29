@@ -1,33 +1,27 @@
 <!doctype html>
-<html lang="zh-Hant-TW">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#2457A7">
-  <title>Mobile Inventory Scanner</title>
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./css/app.css">
-</head>
-<body>
-  <header class="app-header">
-    <img src="./assets/favicon.svg" width="32" height="32" alt="">
-    <h1>Mobile Inventory Scanner</h1>
-  </header>
-  <main class="container">
-    <div class="home-grid">
-      <a class="home-card" href="./print.html">
-        <h2>產生 QR Code／列印</h2>
-        <p>電腦使用。從 Google Sheet 讀取 ID，調整 QR Code 大小後產生 PDF 或直接列印。</p>
-      </a>
-      <a class="home-card" href="./scan.html">
-        <h2>手機盤點</h2>
-        <p>輸入目前位置，以手機相機即時掃描或拍照辨識 QR Code，並回寫盤點時間與位置。</p>
-      </a>
-    </div>
-  </main>
-  <script>
-    if ("serviceWorker" in navigator) navigator.serviceWorker.register("./sw.js").catch(() => {});
-  </script>
-</body>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0f766e" />
+    <meta
+      name="description"
+      content="從 Google Sheet 產生盤點用 QR Code 標籤 PDF"
+    />
+    <title>QR Code 標籤產生器｜Mobile Inventory Scanner</title>
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml" />
+    <script
+      src="https://accounts.google.com/gsi/client"
+      async
+      defer
+    ></script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
 </html>
