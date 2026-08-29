@@ -1,0 +1,133 @@
+---
+description: 專案全域命名規範（目錄、檔名、URL、Python、前端、Ansible、環境變數與文件）
+alwaysApply: true
+---
+
+# 命名規範（Naming Conventions）
+
+除非特定第三方/上游標準另有規定，本專案預設使用 **`snake_case`**（底線 `_`）。
+
+## 1. 快速對照總表
+
+| 層級 / 類別 | 命名風格 | 範例 | 說明 |
+|---|---|---|---|
+| **目錄與檔名** | `snake_case` | `host_management/`, `phase_2_6_1_install_k3s.sh`, `sync_to_automation.sh` | 優先底線，禁止新建 `-` 檔名 |
+| **Django URL 路徑** | `snake_case` | `path("host_management/", ...)`, `path("bulk_delete/", ...)` | 新建與重構一律用底線（既有 kebab 逐步遷移） |
+| **URL name / app_name** | `snake_case` | `app_name = "cpt_drcc"`, `name="group_start_services"` | 維持與 Django 慣例一致 |
+| **Python 模組 / 函式 / 變數** | `snake_case` | `orchestration_views.py`, `resolve_params()`, `is_favorite` | |
+| **Python Model 類別** | `PascalCase` | `Host`, `DrTaskTemplate`, `CheckRun` | 主鍵一律為 UUID |
+| **Python TextChoices 常數** | `UPPER_SNAKE` | `CHECK = "check", _("Check")` | 成員全大寫底線、值全小寫底線 |
+| **DB 欄位 / JSON / Wire 格式** | `snake_case` | `created_at`, `group_name`, `automation_job_id` | 跨層 payload 一律 snake_case |
+| **Ansible Playbook 檔名** | `snake_case` | `ansible_ping.yml`, `storage_action.yml` | 放 `ansible/playbooks/` |
+| **Ansible 變數** | `snake_case` | `qristana_ping_serial`, `gm_site`, `_vmid` | 自有參數帶 `qristana_`，暫存帶 `_` |
+| **AWX 資源名稱（JT / WF）** | `target-` + `kebab-case` | `target-icmp-ping`, `target-wf-storage-action` | AWX Job Template / Workflow 宣告 |
+| **前端 JS 函式 / 變數** | `camelCase` | `renderSemiGauge()`, `matrixStatusUrl` | 僅限 JS 內部邏輯識別字 |
+| **前端 DOM id / CSS class / data-\*** | `kebab-case` | `#matrix-check-status`, `.matrix-cell-actions`, `data-task-id` | JS 行為掛鉤 class 帶 `js-` 前綴 |
+| **全域 JS 物件 / 常數** | `PascalCase` / `UPPER_SNAKE` | `window.CptOpsCardGauges`, `window.CPT_DRCC_MATRIX` | |
+| **文件目錄與 Markdown 檔名** | `snake_case` | `doc/zh_tw/awx_and_k3s.md`, `README_zh_tw.md` | 根目錄為 `doc/`（單數），無大寫檔名 |
+| **環境變數** | `{DOMAIN}_UPPER_SNAKE` | `QRISTANA_SITE_NAME`, `POSTGRES_DB`, `AWX_ADMIN_PASSWORD` | 無裸 `PORT` / `HOST` |
+
+---
+
+## 2. 檔案與目錄命名（底線優先）
+
+本專案新增或重新命名檔案／目錄時，**儘量使用 `_`，不要用 `-`**。
+
+### 規則
+- ✅ `phase_2_deployment/`、`phase_2_6_1_install_k3s.sh`、`sync_to_automation.sh`、`podman_images.sh`
+- ❌ `phase-2-deployment/`、`phase-2-5-install-k3s.sh`、`sync-to-automation.sh`
+- 既有第三方／上游固定檔名（如容器映像 tag、外部 URL、發行檔）不在此限。
+- 歷史 changelog 條目可保留舊檔名（`CHANGELOG-0.0.18.md`）；現行文件與腳本引用必須用新命名。
+
+### 腳本慣例
+新增 Lifecycle / Deploy 腳本時沿用風格：`phase_<n>_<step>[_<substep>]_<description>.sh`。
+
+## 3. Cursor Rules 與 Skills
+
+Cursor 專案設定同時受平台格式與本專案路徑規範約束：
+
+- `.cursor/rules/` 下的 Rule 檔名使用小寫 `snake_case.mdc`，Rule 不另加 `name` frontmatter。
+- `.cursor/skills/` 下的 Skill 目錄使用小寫 `snake_case`；Cursor 固定入口檔名維持 `SKILL.md`。
+- Skill `SKILL.md` frontmatter 的 `name` 必須使用小寫 `kebab-case`，這是 Cursor metadata 的平台格式限制；因此目錄 `django_tabulator/` 可對應 `name: django-tabulator`。
+- 文件中的 Skill 識別名稱／觸發名稱使用 metadata 的 `kebab-case`；實際檔案路徑使用 `snake_case` 目錄。
+- Python、HTML、CSS、JavaScript、Django URL、Ansible 等語言／框架規則優先於全域檔名預設；vendor／第三方固定名稱遵循原專案或上游規範。
+- 建立、重新命名或引用 Cursor 設定時，遵循專案 Skill `cursor-naming-conventions`。
+
+---
+
+## 4. Django Web 與 URL 規範
+
+### URL 定義
+- **路徑字串（path segments）**：新寫與重構之路由**一律使用 `snake_case`**。
+  - ✅ `path("host_management/", ...)`、`path("bulk_delete/", ...)`、`path("curl_configs/options/", ...)`
+  - 既有仍為連字號的路徑（如 `/host-management/`、`/cpt-drcc/`）於相關模組維護時逐步向 `snake_case` 遷移。
+- **URL name**：一律使用 `snake_case`，如 `name="host_bulk_delete"`、`name="card_toggle_enabled"`。
+- **app_name / namespace**：一律使用 `snake_case`，對齊 plugin package 名稱（如 `app_name = "host_management"`）。
+
+### Template 與 Static 命名空間
+- Plugin 模板必須置於 `django/qristana/plugins/<plugin_name>/templates/<plugin_name>/`。
+- 模板檔名使用 `snake_case.html`（如 `host_form.html`、`task_start_detail.html`）；局部樣板（partial / include）以底線開頭（如 `_sidebar_menu.html`、`_status_badge.html`）。
+- Plugin 靜態資源置於 `django/qristana/plugins/<plugin_name>/static/<plugin_name>/{js,css}/`，檔名一律 `snake_case.js`、`snake_case.css`。
+
+---
+
+## 5. Python 與後端規範
+
+- **識別字**：模組、函式、方法、實例變數皆用 `snake_case`；類別用 `PascalCase`。
+- **Model 定義**：
+  - 主鍵一律宣告顯式 UUID：`id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)`（pgactive 多主安全）。
+  - 排序優先以 `created_at`（或業務欄位）加 `id` 收尾：`ordering = ["created_at", "id"]`。
+- **TextChoices**：
+  ```python
+  class StepType(models.TextChoices):
+      CHECK = "check", _("Check")
+      MANUAL = "manual", _("Manual checklist")
+      AUTOMATION = "automation", _("Automation script")
+  ```
+- **自動化功能命名**：
+  - AWX 與 AAP 共通流程、欄位、方法一律命名為 **`automation`**（如 `automation_job_id`、`automation_meta`、`refresh_automation_run`）。
+  - 僅當明確專屬於單一控制器時才使用 `awx` 或 `aap`（如 `AWX_NAMESPACE`、`AAP_HOST`）。
+- **資料邊界**：
+  - Django `JsonResponse`、資料庫欄位、Ansible extra_vars、fixture JSON key 皆使用 `snake_case`。
+
+---
+
+## 6. 前端 JavaScript 與 HTML / CSS（AdminLTE 4 + Bootstrap 5）
+
+- **JavaScript 內部識別字**：
+  - 函式、變數、參數：`camelCase`（如 `setQuickButtonsBusy`, `relativeCheckedAt`）。
+  - 全域封裝命名空間物件：`PascalCase`（如 `window.CptOpsCardGauges`）。
+  - 模板注入的全域設定常數：`UPPER_SNAKE`（如 `window.CPT_DRCC_MATRIX`）。
+- **DOM 與樣式識別字**：
+  - DOM `id` 與 CSS class：`kebab-case`（如 `#matrix-check-status`, `.cpt-ops-mini-gauge`）。
+  - JS 行為綁定專用 class 必須以 `js-` 開頭（如 `.js-quick-check-btn`, `.js-stop-check-btn`）。
+  - `data-*` 屬性：`kebab-case`（如 `data-task-id`, `data-checked-at`）。
+- **前後端邊界映射**：
+  - 伺服器傳回的 fetch JSON 為 `snake_case`（如 `data.matrix_rows`, `check.run_id`）。
+  - 模板直接輸出至 JS 全域變數的設定物件允許為 `camelCase` 鍵名。
+
+---
+
+## 7. 文件命名規範（`doc/`）
+
+- **文件根目錄**：名稱為 **`doc/`**（單數），不是 `docs/`。
+- **Markdown 檔名**：一律使用小寫 **`snake_case.md`**（如 `awx_and_k3s.md`、`job_templates_and_workflows.md`）。禁止使用大寫 SCREAMING_SNAKE。
+- **語言對照組織方式**：
+  - 專案架構文件：置於 `doc/zh_tw/` 與 `doc/en/` 雙語目錄。
+  - 目錄說明文件：以同層 `README.md`（英文）與 `README_zh_tw.md`（繁中）成對配置。
+  - Plugin 內部文件：置於 `plugins/<plugin_name>/doc/`，檔名一律英文底線（如 `health_check_flow.md`），內文繁體中文。
+
+---
+
+## 8. 環境變數規範（`.env` / `.env.example`）
+
+- **格式**：`{DOMAIN}_UPPER_SNAKE`。
+- **禁止裸名稱**：不可使用無領域前綴的 `PORT`、`HOST`、`DEBUG`。
+- **主要分群前綴**：
+  - `QRISTANA_*`：本控制中心專屬設定（如 `QRISTANA_SITE_NAME`、`QRISTANA_ENABLED_PLUGINS`）
+  - `POSTGRES_*`：資料庫設定（如 `POSTGRES_DB`、`POSTGRES_USER`）
+  - `DJANGO_*`：Django 框架設定（如 `DJANGO_SECRET_KEY`、`DJANGO_DEBUG`）
+  - `AWX_*` / `AAP_*`：自動化引擎連線與部署設定
+  - `GUACAMOLE_*` / `GUACD_*`：遠端終端控制台設定
+  - `DOTKEEPER_*`：雙機同步設定
+  - 叢集頂層語意變數：`CLUSTER_NODE_IP`、`MASTER_NODE_IP`
