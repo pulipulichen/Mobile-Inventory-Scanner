@@ -20,6 +20,9 @@ export const PAPER_SIZE_DIMENSIONS: Record<PaperSize, PaperSizeDimensions> = {
 export const LABEL_TEXT_MODES = ["hidden", "id", "name"] as const;
 export type LabelTextMode = (typeof LABEL_TEXT_MODES)[number];
 
+export const BARCODE_MODES = ["qr", "code128", "both"] as const;
+export type BarcodeMode = (typeof BARCODE_MODES)[number];
+
 export interface PrintSettings {
   paperSize: PaperSize;
   qrSizeMm: number;
@@ -29,6 +32,7 @@ export interface PrintSettings {
   pageMarginMm: number;
   orientation: Orientation;
   labelText: LabelTextMode;
+  barcodeMode: BarcodeMode;
 }
 
 export interface InventoryItem {
@@ -102,7 +106,31 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   pageMarginMm: 8,
   orientation: "portrait",
   labelText: "id",
+  barcodeMode: "qr",
 };
+
+export function isBarcodeMode(value: unknown): value is BarcodeMode {
+  return (
+    typeof value === "string" &&
+    (BARCODE_MODES as readonly string[]).includes(value)
+  );
+}
+
+export function showsQrCode(mode: BarcodeMode): boolean {
+  return mode === "qr" || mode === "both";
+}
+
+export function showsCode128(mode: BarcodeMode): boolean {
+  return mode === "code128" || mode === "both";
+}
+
+export function getCode128WidthMm(qrSizeMm: number): number {
+  return qrSizeMm * 1.8;
+}
+
+export function getCode128HeightMm(qrSizeMm: number): number {
+  return Math.max(12, qrSizeMm * 0.45);
+}
 
 export function isLabelTextMode(value: unknown): value is LabelTextMode {
   return (
