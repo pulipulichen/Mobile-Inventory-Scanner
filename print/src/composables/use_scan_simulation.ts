@@ -11,6 +11,7 @@ import {
   MIN_SIMULATION_QR_SIZE_PX,
   MIN_SIMULATION_ZOOM,
   type InventoryItem,
+  type PrintSettings,
   type SceneLayout,
   type SimulationSettings,
 } from "../types/print";
@@ -24,6 +25,7 @@ import {
 export type SimulationSourceState =
   | "not_loaded"
   | "duplicates"
+  | "qr_loading"
   | "qr_error"
   | "ready";
 
@@ -31,6 +33,7 @@ interface UseScanSimulationOptions {
   items: Ref<InventoryItem[]>;
   qrSvgs: Ref<Record<string, string>>;
   sourceState: Ref<SimulationSourceState>;
+  printSettings: Ref<PrintSettings>;
 }
 
 function createRandomSeed(): number {
@@ -46,6 +49,8 @@ function sourceStatusKey(state: SimulationSourceState): string {
   switch (state) {
     case "duplicates":
       return "simulation.source_duplicates";
+    case "qr_loading":
+      return "simulation.source_qr_loading";
     case "qr_error":
       return "simulation.source_qr_error";
     case "ready":
@@ -60,6 +65,7 @@ export function useScanSimulation({
   items,
   qrSvgs,
   sourceState,
+  printSettings,
 }: UseScanSimulationOptions) {
   const settings = reactive<SimulationSettings>(loadSimulationSettings());
   const layout = ref<SceneLayout | null>(null);
@@ -137,6 +143,7 @@ export function useScanSimulation({
         items.value,
         qrSvgs.value,
         settings,
+        printSettings.value,
         viewportWidthPx.value,
         viewportHeightPx.value,
       );
@@ -205,9 +212,41 @@ export function useScanSimulation({
   }
 
   watch(
-    [items, qrSvgs, sourceState],
-    () => {
+    [items, sourceState],
+    ([, nextSourceState], [, previousSourceState]) => {
+      if (nextSourceState === "qr_loading") {
+        setStatus("simulation.source_qr_loading");
+        return;
+      }
+      if (previousSourceState === "qr_loading" && nextSourceState === "ready") {
+        if (layout.value) {
+          setStatus(
+            "simulation.scene_created",
+            { count: effectiveItemCount.value },
+            "success",
+          );
+        }
+        return;
+      }
       clearScene();
+    },
+    { deep: true },
+  );
+
+  watch(
+    qrSvgs,
+    () => {
+      if (sourceState.value === "ready" && layout.value) {
+        buildScene(false);
+      }
+    },
+    { deep: true },
+  );
+
+  watch(
+    printSettings,
+    () => {
+      if (layout.value) buildScene(false);
     },
     { deep: true },
   );

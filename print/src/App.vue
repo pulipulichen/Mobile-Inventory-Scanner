@@ -1,23 +1,34 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import {
+  computed,
+  defineAsyncComponent,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
 import { useI18n } from "vue-i18n";
 import GoogleSheetSource from "./components/GoogleSheetSource.vue";
 import PrintPreview from "./components/PrintPreview.vue";
 import PrintSettings from "./components/PrintSettings.vue";
-import ScanSimulator from "./components/scan_simulator.vue";
 import { usePrintSettings } from "./composables/use_print_settings";
 import type { SimulationSourceState } from "./composables/use_scan_simulation";
 import { setLocale, type SupportedLocale } from "./i18n";
-import { generatePdf } from "./services/pdf_generator";
 import { createQrSvg, QrGeneratorError } from "./services/qr_generator";
 import { readSheet, SheetSourceError } from "./services/sheet_source";
-import type {
-  LayoutMetrics,
-  PrintMode,
-  PrintSettings as PrintSettingsModel,
-  SheetData,
+import {
+  getQrPayload,
+  type InventoryItem,
+  type LabelTextMode,
+  type LayoutMetrics,
+  type PrintMode,
+  type PrintSettings as PrintSettingsModel,
+  type SheetData,
 } from "./types/print";
 import { calculateLayout } from "./utils/print_layout";
+
+const ScanSimulator = defineAsyncComponent(
+  () => import("./components/ScanSimulator.vue"),
+);
 
 const { googleSheetUrl, settings, resetSettings } = usePrintSettings();
 const { t, locale, n } = useI18n({ useScope: "global" });
@@ -25,6 +36,7 @@ const { t, locale, n } = useI18n({ useScope: "global" });
 const sheetData = ref<SheetData | null>(null);
 const qrSvgs = ref<Record<string, string>>({});
 const isLoading = ref(false);
+const isGeneratingQr = ref(false);
 const isGeneratingPdf = ref(false);
 const statusKey = ref("status.ready");
 const statusParams = ref<Record<string, unknown>>({});
@@ -55,11 +67,13 @@ const canDownload = computed(
     Object.keys(qrSvgs.value).length ===
       new Set(sheetData.value!.items.map((item) => item.id)).size &&
     !isLoading.value &&
+    !isGeneratingQr.value &&
     !isGeneratingPdf.value,
 );
 const simulationSourceState = computed<SimulationSourceState>(() => {
   if (!sheetData.value) return "not_loaded";
   if (duplicateGroups.value.length > 0) return "duplicates";
+  if (isGeneratingQr.value) return "qr_loading";
   const uniqueIds = new Set(sheetData.value.items.map((item) => item.id));
   if (uniqueIds.size === 0) return "not_loaded";
   if (Object.keys(qrSvgs.value).length !== uniqueIds.size) return "qr_error";
@@ -80,7 +94,13 @@ function setStatus(
 }
 
 watch(canUseSimulation, (available) => {
-  if (!available && mode.value === "simulation") mode.value = "pdf";
+  if (
+    !available &&
+    mode.value === "simulation" &&
+    simulationSourceState.value !== "qr_loading"
+  ) {
+    mode.value = "pdf";
+  }
 });
 
 function setError(error: unknown): void {
@@ -92,10 +112,54 @@ function setError(error: unknown): void {
   setStatus(`errors.${code}`, {}, "error");
 }
 
+async function createQrSvgs(
+  items: InventoryItem[],
+  labelText: LabelTextMode,
+): Promise<Record<string, string>> {
+  const uniqueItems = [
+    ...new Map(items.map((item) => [item.id, item])).values(),
+  ];
+  const svgEntries = await Promise.all(
+    uniqueItems.map(
+      async (item) =>
+        [item.id, await createQrSvg(getQrPayload(item, labelText))] as const,
+    ),
+  );
+  return Object.fromEntries(svgEntries);
+}
+
+let qrGenerationVersion = 0;
+
+async function refreshQrSvgs(
+  items: InventoryItem[],
+  labelText: LabelTextMode,
+): Promise<boolean> {
+  const generationVersion = ++qrGenerationVersion;
+  isGeneratingQr.value = true;
+
+  try {
+    const nextQrSvgs = await createQrSvgs(items, labelText);
+    if (generationVersion !== qrGenerationVersion) return false;
+    qrSvgs.value = nextQrSvgs;
+    return true;
+  } catch (error) {
+    if (generationVersion === qrGenerationVersion) {
+      setError(error);
+    }
+    return false;
+  } finally {
+    if (generationVersion === qrGenerationVersion) {
+      isGeneratingQr.value = false;
+    }
+  }
+}
+
 function handleUrlUpdate(value: string): void {
   googleSheetUrl.value = value;
   lastErrorCode.value = null;
   if (sheetData.value) {
+    qrGenerationVersion += 1;
+    isGeneratingQr.value = false;
     sheetData.value = null;
     qrSvgs.value = {};
     setStatus("status.ready");
@@ -110,6 +174,8 @@ async function loadSheet(): Promise<void> {
   }
 
   isLoading.value = true;
+  qrGenerationVersion += 1;
+  isGeneratingQr.value = false;
   sheetData.value = null;
   qrSvgs.value = {};
   lastErrorCode.value = null;
@@ -128,11 +194,8 @@ async function loadSheet(): Promise<void> {
       return;
     }
 
-    const uniqueIds = [...new Set(data.items.map((item) => item.id))];
-    const svgEntries = await Promise.all(
-      uniqueIds.map(async (id) => [id, await createQrSvg(id)] as const),
-    );
-    qrSvgs.value = Object.fromEntries(svgEntries);
+    const generated = await refreshQrSvgs(data.items, settings.labelText);
+    if (!generated) return;
     setStatus(
       "status.sheet_loaded",
       {
@@ -150,6 +213,14 @@ async function loadSheet(): Promise<void> {
   }
 }
 
+watch(
+  () => settings.labelText,
+  () => {
+    if (!sheetData.value || duplicateGroups.value.length > 0) return;
+    void refreshQrSvgs(sheetData.value.items, settings.labelText);
+  },
+);
+
 async function downloadPdf(): Promise<void> {
   if (!canDownload.value || !sheetData.value) return;
 
@@ -157,6 +228,7 @@ async function downloadPdf(): Promise<void> {
   setStatus("status.pdf_generating");
 
   try {
+    const { generatePdf } = await import("./services/pdf_generator");
     const blob = await generatePdf(sheetData.value.items, settings);
     const objectUrl = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -180,6 +252,8 @@ function updateSettings(value: PrintSettingsModel): void {
 }
 
 function handleResetSettings(): void {
+  qrGenerationVersion += 1;
+  isGeneratingQr.value = false;
   sheetData.value = null;
   qrSvgs.value = {};
   lastErrorCode.value = null;
@@ -193,6 +267,12 @@ function handleLocaleChange(event: Event): void {
     setLocale(value as SupportedLocale);
   }
 }
+
+onMounted(() => {
+  if (googleSheetUrl.value.trim()) {
+    void loadSheet();
+  }
+});
 
 </script>
 
@@ -352,13 +432,13 @@ function handleLocaleChange(event: Event): void {
           </div>
         </section>
 
-        <template v-if="mode === 'pdf'">
-          <PrintSettings
-            :settings="settings"
-            @update="updateSettings"
-            @reset="handleResetSettings"
-          />
+        <PrintSettings
+          :settings="settings"
+          @update="updateSettings"
+          @reset="handleResetSettings"
+        />
 
+        <template v-if="mode === 'pdf'">
           <PrintPreview
             :items="canDownload ? sheetData?.items ?? [] : []"
             :qr-svgs="qrSvgs"
@@ -387,6 +467,8 @@ function handleLocaleChange(event: Event): void {
           :items="sheetData?.items ?? []"
           :qr-svgs="qrSvgs"
           :source-state="simulationSourceState"
+          :print-settings="settings"
+          :metrics="metrics"
         />
 
         <p class="privacy-note">{{ t("print.footer_note") }}</p>

@@ -5,10 +5,12 @@ import {
   MIN_SIMULATION_ZOOM,
   SIMULATION_ITEM_COUNTS,
   type InventoryItem,
+  type PrintSettings,
   type SceneLayout,
   type SceneLayoutItem,
   type SimulationSettings,
 } from "../types/print";
+import { getScaledLabelSizePx } from "./print_layout";
 
 export type SimulationSettingsErrorCode =
   | "SIMULATION_INVALID_ITEM_COUNT"
@@ -25,13 +27,7 @@ export class SceneLayoutError extends Error {
   }
 }
 
-const SCENE_WIDTH_MULTIPLIER = 3;
-const SCENE_HEIGHT_MULTIPLIER = 2;
-const MIN_SCENE_WIDTH_PX = 1_600;
-const MIN_SCENE_HEIGHT_PX = 1_000;
-const LABEL_HORIZONTAL_PADDING_PX = 12;
-const LABEL_VERTICAL_PADDING_PX = 12;
-const ID_TEXT_HEIGHT_PX = 22;
+const TARGET_ITEMS_PER_SCREEN = 10;
 const ITEM_GAP_PX = 24;
 const PLACEMENT_ATTEMPTS = 600;
 const MAX_EXPANSIONS = 24;
@@ -101,16 +97,17 @@ function createLayoutItem(
   qrSizePx: number,
   xPx: number,
   yPx: number,
+  printSettings: PrintSettings,
 ): SceneLayoutItem {
+  const { widthPx, heightPx } = getScaledLabelSizePx(qrSizePx, printSettings);
   return {
     item,
     svgMarkup,
     xPx,
     yPx,
     qrSizePx,
-    widthPx: qrSizePx + LABEL_HORIZONTAL_PADDING_PX * 2,
-    heightPx:
-      qrSizePx + LABEL_VERTICAL_PADDING_PX * 2 + ID_TEXT_HEIGHT_PX,
+    widthPx,
+    heightPx,
   };
 }
 
@@ -140,29 +137,28 @@ function findPosition(
   return null;
 }
 
-export function createSceneLayout(
+function chunkItems<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let start = 0; start < items.length; start += size) {
+    chunks.push(items.slice(start, start + size));
+  }
+  return chunks;
+}
+
+function layoutScreen(
   items: InventoryItem[],
   qrSvgs: Record<string, string>,
   settings: SimulationSettings,
-  viewportWidthPx: number,
-  viewportHeightPx: number,
-): SceneLayout {
-  const settingsError = validateSimulationSettings(settings);
-  if (settingsError) throw new SceneLayoutError(settingsError);
-
-  const selectedItems = selectSimulationItems(items, settings.itemCount);
-  const random = createRandom(settings.seed);
-  let widthPx = Math.max(
-    MIN_SCENE_WIDTH_PX,
-    Math.ceil(viewportWidthPx * SCENE_WIDTH_MULTIPLIER),
-  );
-  let heightPx = Math.max(
-    MIN_SCENE_HEIGHT_PX,
-    Math.ceil(viewportHeightPx * SCENE_HEIGHT_MULTIPLIER),
-  );
+  printSettings: PrintSettings,
+  screenWidthPx: number,
+  screenHeightPx: number,
+  random: () => number,
+): { widthPx: number; heightPx: number; items: SceneLayoutItem[] } {
+  let widthPx = screenWidthPx;
+  let heightPx = screenHeightPx;
   const layoutItems: SceneLayoutItem[] = [];
 
-  selectedItems.forEach((item) => {
+  items.forEach((item) => {
     const svgMarkup = qrSvgs[item.id];
     if (!svgMarkup) throw new SceneLayoutError("QR_GENERATION_FAILED");
 
@@ -176,6 +172,7 @@ export function createSceneLayout(
       qrSizePx,
       0,
       0,
+      printSettings,
     );
     let position: { xPx: number; yPx: number } | null = null;
 
@@ -202,6 +199,7 @@ export function createSceneLayout(
         qrSizePx,
         position.xPx,
         position.yPx,
+        printSettings,
       ),
     );
   });
@@ -211,4 +209,75 @@ export function createSceneLayout(
     heightPx,
     items: layoutItems,
   };
+}
+
+function stitchScreens(
+  screens: Array<{ widthPx: number; heightPx: number; items: SceneLayoutItem[] }>,
+  screenWidthPx: number,
+  screenHeightPx: number,
+): SceneLayout {
+  if (screens.length === 0) {
+    return {
+      widthPx: screenWidthPx,
+      heightPx: screenHeightPx,
+      items: [],
+    };
+  }
+
+  const columnCount = Math.ceil(Math.sqrt(screens.length));
+  const rowCount = Math.ceil(screens.length / columnCount);
+  const cellWidthPx = Math.max(...screens.map((screen) => screen.widthPx));
+  const cellHeightPx = Math.max(...screens.map((screen) => screen.heightPx));
+  const items: SceneLayoutItem[] = [];
+
+  screens.forEach((screen, index) => {
+    const column = index % columnCount;
+    const row = Math.floor(index / columnCount);
+    const offsetX = column * cellWidthPx;
+    const offsetY = row * cellHeightPx;
+    screen.items.forEach((layoutItem) => {
+      items.push({
+        ...layoutItem,
+        xPx: layoutItem.xPx + offsetX,
+        yPx: layoutItem.yPx + offsetY,
+      });
+    });
+  });
+
+  return {
+    widthPx: columnCount * cellWidthPx,
+    heightPx: rowCount * cellHeightPx,
+    items,
+  };
+}
+
+export function createSceneLayout(
+  items: InventoryItem[],
+  qrSvgs: Record<string, string>,
+  settings: SimulationSettings,
+  printSettings: PrintSettings,
+  viewportWidthPx: number,
+  viewportHeightPx: number,
+): SceneLayout {
+  const settingsError = validateSimulationSettings(settings);
+  if (settingsError) throw new SceneLayoutError(settingsError);
+
+  const selectedItems = selectSimulationItems(items, settings.itemCount);
+  const random = createRandom(settings.seed);
+  const screenWidthPx = Math.max(1, Math.floor(viewportWidthPx));
+  const screenHeightPx = Math.max(1, Math.floor(viewportHeightPx));
+  const screens = chunkItems(selectedItems, TARGET_ITEMS_PER_SCREEN).map(
+    (chunk) =>
+      layoutScreen(
+        chunk,
+        qrSvgs,
+        settings,
+        printSettings,
+        screenWidthPx,
+        screenHeightPx,
+        random,
+      ),
+  );
+
+  return stitchScreens(screens, screenWidthPx, screenHeightPx);
 }

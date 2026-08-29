@@ -8,6 +8,7 @@ import {
 } from "../types/print";
 
 const LABEL_PADDING_MM = 3;
+export const CSS_PX_PER_MM = 96 / 25.4;
 
 export function calculateLayout(
   settings: PrintSettings,
@@ -56,6 +57,19 @@ export function calculateLayout(
     rows,
     labelsPerPage,
     pageCount: itemCount ? Math.ceil(itemCount / labelsPerPage) : 0,
+  };
+}
+
+export function getScaledLabelSizePx(
+  qrSizePx: number,
+  settings: PrintSettings,
+): { widthPx: number; heightPx: number } {
+  const metrics = calculateLayout(settings, 0);
+  const qrSizeMm = Math.max(1, settings.qrSizeMm);
+  const pxPerMm = qrSizePx / qrSizeMm;
+  return {
+    widthPx: metrics.labelWidthMm * pxPerMm,
+    heightPx: metrics.labelHeightMm * pxPerMm,
   };
 }
 

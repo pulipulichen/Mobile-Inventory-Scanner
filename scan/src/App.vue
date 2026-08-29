@@ -20,7 +20,6 @@ import {
   saveLocation,
   saveLocationToHistory,
 } from "./services/scan_storage";
-import { decodeQrImageFile } from "./services/qr_decoder";
 import { setLocale, type SupportedLocale } from "./i18n";
 import type {
   InventoryItem,
@@ -48,6 +47,26 @@ let submissionQueue: Promise<void> = Promise.resolve();
 
 const statusMessage = computed(() =>
   t(statusKey.value, statusParams.value),
+);
+const isAppsScriptUrlInvalid = computed(() => {
+  const value = appsScriptUrl.value.trim();
+  return value.length > 0 && !isAppsScriptUrl(value);
+});
+const isInventoryReady = computed(
+  () => isAppsScriptUrl(appsScriptUrl.value) && Boolean(location.value.trim()),
+);
+const showStatusAlert = computed(
+  () =>
+    isAppsScriptUrlInvalid.value ||
+    (isInventoryReady.value && statusKey.value !== "status.ready"),
+);
+const effectiveStatusMessage = computed(() =>
+  isAppsScriptUrlInvalid.value
+    ? t("errors.INVALID_REQUEST")
+    : statusMessage.value,
+);
+const effectiveStatusTone = computed<"info" | "success" | "warning" | "error">(
+  () => (isAppsScriptUrlInvalid.value ? "error" : statusTone.value),
 );
 const canStartCamera = computed(() => !isCameraActive.value);
 const pendingGroups = computed<PendingLocationGroup[]>(() => {
@@ -252,6 +271,7 @@ async function handlePhoto(file: File): Promise<void> {
   isPhotoLoading.value = true;
   setStatus("status.photo_recognizing");
   try {
+    const { decodeQrImageFile } = await import("./services/qr_decoder");
     const ids = await decodeQrImageFile(file);
     if (!ids.length) {
       setStatus("status.no_qr_code", {}, "warning");
@@ -342,102 +362,105 @@ function handleLocaleChange(event: Event): void {
         />
 
         <v-alert
+          v-if="showStatusAlert"
           class="status-alert"
-          :type="statusTone"
+          :type="effectiveStatusTone"
           variant="tonal"
           role="status"
           aria-live="polite"
         >
-          {{ statusMessage }}
+          {{ effectiveStatusMessage }}
         </v-alert>
 
-        <section
-          class="section-card scanner-card"
-          aria-labelledby="scanner-heading"
-        >
-          <div class="section-heading">
-            <h2 id="scanner-heading">{{ t("scan.scanner_heading") }}</h2>
-            <p>{{ t("scan.scanner_description") }}</p>
-          </div>
+        <template v-if="isInventoryReady">
+          <section
+            class="section-card scanner-card"
+            aria-labelledby="scanner-heading"
+          >
+            <div class="section-heading">
+              <h2 id="scanner-heading">{{ t("scan.scanner_heading") }}</h2>
+              <p>{{ t("scan.scanner_description") }}</p>
+            </div>
 
-          <CameraScanner
-            ref="camera"
-            :video-label="t('scan.camera_preview_label')"
-            @detected="queueIds"
-            @status="handleCameraStatus"
-          />
-
-          <div class="scanner-actions">
-            <v-btn
-              type="button"
-              color="primary"
-              size="large"
-              prepend-icon="mdi-qrcode-scan"
-              :disabled="!canStartCamera"
-              @click="startCamera"
-            >
-              {{ t("scan.start_camera") }}
-            </v-btn>
-            <v-btn
-              type="button"
-              color="error"
-              variant="outlined"
-              size="large"
-              stacked
-              block
-              prepend-icon="mdi-camera-off"
-              :disabled="!isCameraActive"
-              @click="stopCamera"
-            >
-              {{ t("scan.stop_camera") }}
-            </v-btn>
-            <ImageSourceButtons
-              :disabled="isPhotoLoading"
-              @file="handlePhoto"
+            <CameraScanner
+              ref="camera"
+              :video-label="t('scan.camera_preview_label')"
+              @detected="queueIds"
+              @status="handleCameraStatus"
             />
-          </div>
 
-          <v-btn
-            v-if="results.length"
-            class="clear-results-button"
-            type="button"
-            variant="text"
-            color="secondary"
-            @click="clearResults"
+            <div class="scanner-actions">
+              <v-btn
+                type="button"
+                color="primary"
+                size="large"
+                prepend-icon="mdi-qrcode-scan"
+                :disabled="!canStartCamera"
+                @click="startCamera"
+              >
+                {{ t("scan.start_camera") }}
+              </v-btn>
+              <v-btn
+                type="button"
+                color="error"
+                variant="outlined"
+                size="large"
+                stacked
+                block
+                prepend-icon="mdi-camera-off"
+                :disabled="!isCameraActive"
+                @click="stopCamera"
+              >
+                {{ t("scan.stop_camera") }}
+              </v-btn>
+              <ImageSourceButtons
+                :disabled="isPhotoLoading"
+                @file="handlePhoto"
+              />
+            </div>
+
+            <v-btn
+              v-if="results.length"
+              class="clear-results-button"
+              type="button"
+              variant="text"
+              color="secondary"
+              @click="clearResults"
+            >
+              {{ t("scan.clear_results") }}
+            </v-btn>
+          </section>
+
+          <section
+            class="section-card pending-control-card"
+            aria-labelledby="pending-control-heading"
           >
-            {{ t("scan.clear_results") }}
-          </v-btn>
-        </section>
+            <div class="section-heading">
+              <h2 id="pending-control-heading">
+                {{ t("scan.pending_heading") }}
+              </h2>
+              <p>{{ t("scan.pending_control_description") }}</p>
+            </div>
+            <v-btn
+              type="button"
+              color="secondary"
+              size="large"
+              :loading="isPendingLoading"
+              @click="loadPending"
+            >
+              {{ t("scan.pending_button") }}
+            </v-btn>
+          </section>
 
-        <section
-          class="section-card pending-control-card"
-          aria-labelledby="pending-control-heading"
-        >
-          <div class="section-heading">
-            <h2 id="pending-control-heading">
-              {{ t("scan.pending_heading") }}
-            </h2>
-            <p>{{ t("scan.pending_control_description") }}</p>
-          </div>
-          <v-btn
-            type="button"
-            color="secondary"
-            size="large"
+          <PendingInventoryList
+            v-if="hasLoadedPending || isPendingLoading"
+            :groups="pendingGroups"
             :loading="isPendingLoading"
-            @click="loadPending"
-          >
-            {{ t("scan.pending_button") }}
-          </v-btn>
-        </section>
+          />
+          <ScanResultList :results="results" />
 
-        <PendingInventoryList
-          v-if="hasLoadedPending || isPendingLoading"
-          :groups="pendingGroups"
-          :loading="isPendingLoading"
-        />
-        <ScanResultList :results="results" />
-
-        <p class="privacy-note">{{ t("scan.privacy_note") }}</p>
+          <p class="privacy-note">{{ t("scan.privacy_note") }}</p>
+        </template>
       </v-container>
     </v-main>
   </v-app>

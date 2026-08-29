@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { onBeforeUnmount, ref } from "vue";
-import { decodeQrImageData } from "../services/qr_decoder";
 
 const props = defineProps<{
   videoLabel: string;
@@ -19,6 +18,13 @@ let lastFrameAt = 0;
 let isDecoding = false;
 let isScanning = false;
 let lastDecodeErrorAt = 0;
+let decoderPromise: Promise<typeof import("../services/qr_decoder")> | null =
+  null;
+
+function loadDecoder(): Promise<typeof import("../services/qr_decoder")> {
+  decoderPromise ??= import("../services/qr_decoder");
+  return decoderPromise;
+}
 
 function stopTracks(): void {
   stream?.getTracks().forEach((track) => track.stop());
@@ -53,6 +59,7 @@ async function processFrame(timestamp: number): Promise<void> {
         throw new Error("CAMERA_FRAME_UNAVAILABLE");
       }
       context.drawImage(currentVideo, 0, 0, canvas.width, canvas.height);
+      const { decodeQrImageData } = await loadDecoder();
       const ids = await decodeQrImageData(
         context.getImageData(0, 0, canvas.width, canvas.height),
       );

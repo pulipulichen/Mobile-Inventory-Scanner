@@ -1,8 +1,8 @@
 name: Frontend build
 
 on:
-  push:
-  pull_request:
+  # push:
+  # pull_request:
   workflow_dispatch:
 
 permissions:
@@ -31,28 +31,10 @@ jobs:
           fi
           podman --version
 
-      - name: Build frontend container image
-        run: ./frontend.sh image
-
-      - name: Install scan dependencies
+      - name: Build scan and print apps
         env:
           MIS_FRONTEND_NON_INTERACTIVE: "1"
-        run: ./frontend.sh ci scan
-
-      - name: Install print dependencies
-        env:
-          MIS_FRONTEND_NON_INTERACTIVE: "1"
-        run: ./frontend.sh ci print
-
-      - name: Build scan app
-        env:
-          MIS_FRONTEND_NON_INTERACTIVE: "1"
-        run: ./frontend.sh build scan
-
-      - name: Build print app
-        env:
-          MIS_FRONTEND_NON_INTERACTIVE: "1"
-        run: ./frontend.sh build print
+        run: ./frontend_build.sh
 
       - name: Upload scan build
         uses: actions/upload-artifact@v4

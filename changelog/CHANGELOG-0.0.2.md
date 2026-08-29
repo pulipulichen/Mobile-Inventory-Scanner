@@ -54,6 +54,24 @@
   stopped showing the layout seed in the simulator UI.
 - Limited `print` scan-simulation fullscreen to the scene canvas, hiding
   the toolbar and other controls, and using Escape to exit.
+- Packed about 10 QR Codes into one scan-simulation screen and placed extra
+  codes on adjacent screens that can be scrolled into view.
+- Made `print` scan-simulation labels follow the current print settings for
+  text size, caption, and QR-to-text spacing.
+- Encoded the selected label caption (`id` or `name`) into QR Codes for print
+  preview, PDF, and scan simulation, falling back to `id` when `name` is blank.
+- Hid the `scan` camera, pending-inventory, and result UI until both a valid
+  Apps Script `/exec` URL and a location are set, and showed an error alert
+  for invalid URLs.
+- Loaded a saved Google Sheet URL automatically when opening `print`.
+- Kept print settings visible in scan-simulation mode and regenerated QR Codes
+  when the label-text setting changes.
+- Lazy-loaded the `print` scan simulator, PDF generator, and `scan` QR decoder
+  to reduce the initial bundle size.
+- Tracked `scan/dist/` and `print/dist/` for GitHub Pages and pointed the
+  published tool URLs at those directories.
+- Limited the frontend GitHub Actions workflow to manual `workflow_dispatch`
+  and ran `./frontend_build.sh` as the single build step.
 
 ## Documentation
 
@@ -70,3 +88,6 @@
   requirements.
 - Added a root landing page and README links for the initialized Google Sheet,
   its copy workflow, and the deployed `print` and `scan` tools.
+- Documented QR Code payload following the label-text setting, scan-simulation
+  packing of about 10 codes per screen, and GitHub Pages URLs under
+  `print/dist/` and `scan/dist/`.

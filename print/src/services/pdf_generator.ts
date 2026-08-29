@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import * as fontkit from "pdflib-fontkit";
 import {
   getLabelCaption,
+  getQrPayload,
   MIN_PAGE_MARGIN_MM,
   showsLabelText,
   type InventoryItem,
@@ -94,7 +95,9 @@ export async function generatePdf(
         color: WHITE,
       });
 
-      const qrMatrix = createQrMatrix(item.id);
+      const qrMatrix = createQrMatrix(
+        getQrPayload(item, settings.labelText),
+      );
       const totalModules = qrMatrix.size + 8;
       const moduleSize = qrSize / totalModules;
       const qrX = x + labelPadding;

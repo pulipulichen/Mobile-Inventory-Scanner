@@ -5,8 +5,8 @@ Mobile-first inventory scanning and QR-code label printing system with Google Sh
 
 ## 目前功能
 
-- `https://pulipulichen.github.io/Mobile-Inventory-Scanner/print/`：從有權限的 Google Sheet 讀取 `id`，批次產生 QR Code 向量 PDF。
-- `https://pulipulichen.github.io/Mobile-Inventory-Scanner/scan/`：手機 PWA；以即時相機、拍照或讀取相片辨識 QR Code，成功後回寫
+- `https://pulipulichen.github.io/Mobile-Inventory-Scanner/print/dist/`：從有權限的 Google Sheet 讀取 `id`，批次產生 QR Code 向量 PDF。
+- `https://pulipulichen.github.io/Mobile-Inventory-Scanner/scan/dist/`：手機 PWA；以即時相機、拍照或讀取相片辨識 QR Code，成功後回寫
   `checked_time` 與 `location`。
 - `scan/` 可透過 Apps Script `/exec?action=pending` 列出尚未盤點的 ID，
   顯示人類可識別名稱，並依既有位置分組。
@@ -49,5 +49,5 @@ google_sheet/
 
 - 初始化 Google Sheet：[開啟 Google Sheet](https://docs.google.com/spreadsheets/d/1XA-VP_7g0Op-1s_LTjNroFOsOA4DvJEyGq8GaytCkCI/edit?gid=0#gid=0)
 - 複製 Google Sheet：[複製試算表](https://docs.google.com/spreadsheets/d/1XA-VP_7g0Op-1s_LTjNroFOsOA4DvJEyGq8GaytCkCI/copy)
-- 開啟 `print/`：[QR Code 列印工具](https://pulipulichen.github.io/Mobile-Inventory-Scanner/print)
-- 開啟 `scan/`：[行動盤點掃描工具](https://pulipulichen.github.io/Mobile-Inventory-Scanner/scan)
+- 開啟 `print/dist/`：[QR Code 列印工具](https://pulipulichen.github.io/Mobile-Inventory-Scanner/print/dist/)
+- 開啟 `scan/dist/`：[行動盤點掃描工具](https://pulipulichen.github.io/Mobile-Inventory-Scanner/scan/dist/)

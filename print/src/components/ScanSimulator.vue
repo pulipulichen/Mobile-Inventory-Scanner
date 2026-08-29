@@ -10,16 +10,22 @@ import {
 } from "vue";
 import { useI18n } from "vue-i18n";
 import { useScanSimulation, type SimulationSourceState } from "../composables/use_scan_simulation";
+import QrLabel from "./QrLabel.vue";
 import {
   isSimulationItemCount,
   SIMULATION_ZOOM_STEP,
   type InventoryItem,
+  type LayoutMetrics,
+  type PrintSettings,
 } from "../types/print";
+import { CSS_PX_PER_MM } from "../utils/print_layout";
 
 const props = defineProps<{
   items: InventoryItem[];
   qrSvgs: Record<string, string>;
   sourceState: SimulationSourceState;
+  printSettings: PrintSettings;
+  metrics: LayoutMetrics;
 }>();
 
 const { t, n } = useI18n({ useScope: "global" });
@@ -27,6 +33,7 @@ const simulation = useScanSimulation({
   items: toRef(props, "items"),
   qrSvgs: toRef(props, "qrSvgs"),
   sourceState: toRef(props, "sourceState"),
+  printSettings: toRef(props, "printSettings"),
 });
 const settings = simulation.settings;
 const layout = simulation.layout;
@@ -136,11 +143,14 @@ function itemStyle(item: {
   };
 }
 
-function qrStyle(item: { qrSizePx: number }): Record<string, string> {
-  const scale = simulation.settings.zoom / 100;
+function scaledLabelStyle(item: { widthPx: number }): Record<string, string> {
+  const displayWidthPx = item.widthPx * (simulation.settings.zoom / 100);
+  const naturalWidthPx = props.metrics.labelWidthMm * CSS_PX_PER_MM;
+  const labelScale = naturalWidthPx > 0 ? displayWidthPx / naturalWidthPx : 1;
   return {
-    width: `${item.qrSizePx * scale}px`,
-    height: `${item.qrSizePx * scale}px`,
+    width: `${props.metrics.labelWidthMm}mm`,
+    height: `${props.metrics.labelHeightMm}mm`,
+    transform: `scale(${labelScale})`,
   };
 }
 
@@ -259,7 +269,7 @@ async function toggleFullscreen(): Promise<void> {
   await enterFullscreen();
 }
 
-async function handleBuildScene(): Promise<void> {
+async function buildScanScene(): Promise<void> {
   const built = simulation.buildScene();
   if (!built) {
     return;
@@ -417,7 +427,7 @@ onBeforeUnmount(() => {
           prepend-icon="mdi-play-circle-outline"
           :disabled="!canBuildScene"
           :loading="isBuilding"
-          @click="handleBuildScene"
+          @click="buildScanScene"
         >
           {{ t("simulation.build_scene") }}
         </v-btn>
@@ -541,19 +551,19 @@ onBeforeUnmount(() => {
               class="simulation-scene-item"
               :style="itemStyle(sceneItem)"
             >
-              <article
-                class="simulation-qr-label"
-                :aria-label="t('print.qr_label', { id: sceneItem.item.id })"
-              >
+              <div class="simulation-qr-scale">
                 <div
-                  class="simulation-qr-image"
-                  role="img"
-                  :aria-label="t('print.qr_label', { id: sceneItem.item.id })"
-                  :style="qrStyle(sceneItem)"
-                  v-html="sceneItem.svgMarkup"
-                />
-                <p class="simulation-qr-id">{{ sceneItem.item.id }}</p>
-              </article>
+                  class="simulation-qr-scale-inner"
+                  :style="scaledLabelStyle(sceneItem)"
+                >
+                  <QrLabel
+                    :item="sceneItem.item"
+                    :svg-markup="sceneItem.svgMarkup"
+                    :metrics="metrics"
+                    :settings="printSettings"
+                  />
+                </div>
+              </div>
             </li>
           </ol>
         </div>

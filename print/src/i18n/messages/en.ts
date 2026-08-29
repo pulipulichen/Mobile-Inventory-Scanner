@@ -26,7 +26,7 @@ export default {
     reload_sheet: "Reload data",
     settings_heading: "2. Print settings",
     settings_hint:
-      "Changes are saved in this browser and update the preview immediately.",
+      "Changes are saved in this browser and update the PDF preview and scan-simulation labels immediately.",
     qr_size: "QR Code size",
     qr_size_hint: "Physical size of each QR Code.",
     id_font_size: "Text size",
@@ -100,6 +100,8 @@ export default {
     source_not_loaded: "Load a Google Sheet before building a scan scene.",
     source_duplicates:
       "Scan simulation is disabled because the loaded Sheet contains duplicate IDs.",
+    source_qr_loading:
+      "QR Codes are being updated to match the print settings. Please wait.",
     source_qr_error:
       "Scan simulation is disabled because one or more QR Codes could not be generated.",
     ready: "Choose the scene settings, then select “Build scene”.",

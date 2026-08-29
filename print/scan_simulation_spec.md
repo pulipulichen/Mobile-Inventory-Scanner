@@ -48,14 +48,14 @@ flowchart TD
 
 模擬器顯示一個可捲動的虛擬牆：
 
-- 場景寬度至少為目前視窗的數倍。
-- 同時支援水平與垂直捲動。
+- 單一畫面大約顯示 10 個 QR Code。
+- 數量超過約 10 個時，其餘 QR Code 放到相鄰畫面，以水平與垂直捲動查看。
 - 使用瀏覽器原生捲軸。
 - 場景可透過鍵盤捲動。
 - QR Code 以隨機位置散佈。
 - QR Code 之間不得重疊。
 - 每張 QR Code 必須完整位於場景範圍內。
-- 場景空間不足時，自動擴大虛擬場景，不讓 QR Code 重疊或消失。
+- 單一畫面空間不足時，自動擴大該畫面，不讓 QR Code 重疊或消失。
 - 第一版不提供滑鼠或觸控拖曳平移。
 
 概念畫面：
@@ -87,14 +87,12 @@ flowchart TD
 
 - 白色標籤背景。
 - 黑白 QR Code。
-- QR Code 下方顯示人類可讀的 ID。
+- 標籤文字、字級、QR／文字間距與顯示內容（隱藏／ID／名稱）跟隨列印設定。
+- 模擬場景的畫面尺寸仍用 `px` 範圍隨機縮放，不修改 PDF 的 `qrSizeMm`。
 - 保留 QR Code quiet zone。
-- 使用現有 `qrcode` 套件產生 SVG。
-- ID 的顯示方式與 PDF 預覽一致。
-- QR Code payload 只放 ID 本身。
+- 使用現有 `qrcode` 套件產生 SVG，並重用列印預覽的標籤元件。
+- QR Code payload 依列印設定的標籤文字模式產生：選擇「ID」或隱藏文字時使用 ID，選擇「名稱」時使用名稱；沒有名稱時退回使用 ID。
 - 不加入 Google Sheet URL、Apps Script URL、`location` 或其他資料。
-
-模擬器的尺寸設定不修改 PDF 的 `qrSizeMm` 等列印設定。
 
 ## 5. 模擬器控制項
 
@@ -186,7 +184,7 @@ Fullscreen API。
 - 不上傳圖片。
 - Sheet 載入失敗時清除或停用舊場景。
 - 有重複 ID 時禁止建立場景。
-- QR Code payload 直接使用有效 ID。
+- QR Code payload 依列印設定的標籤文字模式產生；名稱為空時退回使用有效 ID。
 
 ## 8. 設定保存
 
@@ -257,7 +255,7 @@ print/src/styles/main.scss
 預計新增：
 
 ```text
-print/src/components/scan_simulator.vue
+print/src/components/ScanSimulator.vue
 print/src/composables/use_scan_simulation.ts
 print/src/utils/scene_layout.ts
 ```
@@ -290,12 +288,12 @@ print/src/utils/scene_layout.ts
 - [x] 可放大、縮小與重設場景。
 - [x] 相同 seed 可重現相同場景。
 - [x] 設定會保存到 `mis.print.*`。
-- [x] 每張 QR Code 下方都有可讀 ID。
+- [x] 每張 QR Code 下方依列印設定顯示可讀的 ID 或名稱。
 - [x] 手機 `scan` 可以拍攝模擬器畫面並辨識多張 QR Code。
 - [x] `./frontend.sh build print` 成功。
 
 ## 14. 第一版採用值
 
-1. 虛擬場景初始寬度為視窗寬度至少 3 倍，高度至少 2 倍；空間不足時自動擴大。
+1. 單一畫面大約顯示 10 個 QR Code；超過的數量依約 10 個一組排到相鄰畫面，並以捲動查看。單一畫面空間不足時自動擴大。
 2. QR Code 模擬尺寸使用畫面 `px`，預設範圍為 `96–240 px`，允許範圍為 `48–480 px`。
 3. QR Code 數量選項採用 `5／10／20／全部`，超過有效 ID 數量時取實際可用數量。

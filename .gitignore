@@ -3,6 +3,10 @@
 # Frontend dependencies / build output
 **/node_modules/
 **/dist/
+!scan/dist/
+!scan/dist/**
+!print/dist/
+!print/dist/**
 **/.vite/
 **/coverage/
 *.log
