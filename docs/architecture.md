@@ -1,22 +1,19 @@
 # Mobile Inventory Scanner 系統架構
 
-本文件定義整個專案的整體流程、元件責任與資料流。
+本文件定義整個專案的共通流程、資料契約與元件責任。三個元件的實作細節分別放在：
 
-詳細功能規格分別放在：
+- [`google_sheet/README.md`](../google_sheet/README.md)：Google Sheet 範本、網址取得方式與 Bound Apps Script Web App。
+- [`print/README.md`](../print/README.md)：從 Google Sheet 讀取 ID、產生 QR Code 與 PDF。
+- [`scan/README.md`](../scan/README.md)：手機 QR Code 圖片辨識與盤點寫入 PWA。
+- [`packages.md`](packages.md)：前端 npm 套件與瀏覽器 API 清單。
 
-- `google_sheet/README.md`：Google Sheet 範本與 Apps Script。
-- `print/README.md`：QR Code 列印 / PDF 產生網頁。
-- `scan/README.md`：手機 QR Code 盤點 PWA。
-
-若元件 README 與本文件有衝突，以本文件定義的整體流程為準，再同步修正各元件 README。
+若元件文件與本文件的共通契約不一致，先以本文件為準，再同步修正元件文件。
 
 ---
 
 ## 1. 整體目標
 
-系統以 Google Sheet 作為盤點主資料表。
-
-每一筆盤點資料至少包含：
+系統以 Google Sheet 作為盤點主資料表。每筆資料至少包含：
 
 | 欄位 | 用途 |
 | --- | --- |
@@ -24,139 +21,113 @@
 | `checked_time` | 最近一次成功盤點時間 |
 | `location` | 最近一次成功盤點的位置 |
 
-基本資料流：
+`print` 與 `scan` 都是純前端靜態 Vue App，不建立自有後端。`print` 的預設操作環境是電腦，但版面必須支援平板與手機 RWD；`scan` 則以手機操作為優先，同樣支援較大的螢幕。
 
-```text
-Google Sheet
-   │
-   ├── print 網頁讀取 id
-   │      ↓
-   │   產生 QR Code
-   │      ↓
-   │   列印 / PDF
-   │
-   └── Bound Apps Script Web App
-          ↑
-          │ id + location
-          │
-       scan PWA
-          ↑
-       手機照片
+```mermaid
+flowchart TB
+    operator["使用者"]
+    sheet[("Google Sheet<br/>盤點主資料")]
+    print["print<br/>桌面優先、RWD"]
+    scan["scan<br/>手機優先 PWA"]
+    sheets_api["Google Sheets API<br/>讀取 id"]
+    apps_script["Bound Apps Script<br/>Web App"]
+    pdf["PDF 檔案<br/>pdf-lib 產生"]
+    photo["手機拍照或相片"]
+
+    operator --> print
+    operator --> scan
+    print --> sheets_api
+    sheets_api --> sheet
+    print -->|產生 QR Code 與 PDF| pdf
+    print -.->|提供前往 scan 的入口| scan
+    photo --> scan
+    scan -->|id + location| apps_script
+    apps_script -->|更新 checked_time + location| sheet
 ```
 
-QR Code 只包含 `id`，不包含 URL、JSON、位置或時間。
+QR Code payload 只包含 `id` 本身，不包含 URL、JSON、位置或時間。`print` 可以連結到 `scan`，但不負責更新盤點資料；盤點寫入的唯一入口是 Apps Script。
 
 ---
 
 ## 2. 元件劃分
 
-專案主要分成三個功能元件。
-
 ```text
 Mobile-Inventory-Scanner/
 ├── docs/
-│   └── architecture.md
+│   ├── architecture.md
+│   └── packages.md
 ├── google_sheet/
 │   ├── README.md
-│   └── appscript/
+│   └── main.gs
 ├── print/
 │   └── README.md
 └── scan/
     └── README.md
 ```
 
-### 2.1 `google_sheet/`
+### `google_sheet/`
 
-負責：
+負責 Google Sheet 欄位規格、Bound Apps Script 與 Web App API：
 
-- Google Sheet 範本格式。
-- 欄位定義。
-- Google Apps Script。
-- Apps Script Web App API。
 - 依 `id` 找出對應列。
+- 確認 ID 唯一。
 - 成功盤點時寫入 `checked_time` 與 `location`。
+- 回傳統一 JSON 結果。
+- 在文件中教學如何取得 Google Sheet URL 與 Apps Script Web App URL。
 
-Apps Script 採用綁定在該 Google Sheet 的 Bound Script 為主要設計，因此使用者建立 Sheet 範本後，即可在該 Sheet 內部署對應 Web App。
+### `print/`
 
-### 2.2 `print/`
+負責讀取資料與產生 QR Code PDF：
 
-負責：
+- 以電腦為主要操作環境，支援平板與手機 RWD。
+- 使用者輸入 Google Sheet URL，並以 Google OAuth 讀取有權限的 Sheet。
+- 讀取 `id` 清單並產生 QR Code。
+- 顯示 responsive 預覽。
+- 使用 `qrcode` 產生 QR Code，使用 `pdf-lib` 產生可下載的 PDF 檔案。
+- 提供「前往 scan」的連結或按鈕，方便在手機上切換到盤點頁。
 
-- 在電腦瀏覽器操作。
-- 使用者輸入 Google Sheet URL。
-- 從該 Sheet 取得 `id` 清單。
-- 將每個 `id` 產生 QR Code。
-- 調整列印參數。
-- 顯示列印預覽。
-- 使用瀏覽器列印功能輸出到印表機或另存 PDF。
+`print` 不呼叫 Apps Script 寫入盤點結果，也不把盤點資料寫回 Google Sheet。
 
-`print` 不負責更新盤點資料。
+### `scan/`
 
-### 2.3 `scan/`
+負責手機端圖片辨識與盤點寫入：
 
-負責：
+- 以手機瀏覽器 / PWA 為主要操作環境。
+- 使用者輸入 Apps Script Web App URL 與目前位置。
+- 透過拍照或相片選擇器取得單張圖片。
+- 在瀏覽器本機辨識同一張圖片中的一個或多個 QR Code。
+- 同一張圖片中的重複 ID 只送出一次。
+- 每個 ID 個別呼叫 Apps Script，單筆失敗不能中止其他 ID。
 
-- 在手機瀏覽器 / PWA 操作。
-- 使用者輸入 Apps Script Web App URL。
-- 使用者輸入目前位置。
-- 提供位置歷史記錄下拉選單。
-- 使用手機拍照，或讀取既有相片。
-- 從單張圖片辨識一個或多個 QR Code。
-- 將每個 QR Code 的 `id` 與目前 `location` 傳送給 Apps Script。
-- 顯示每一筆盤點成功或失敗的結果。
-
-第一版不使用持續 Camera Preview 掃描；主要操作方式是「拍照」與「讀取相片」。
+第一版不使用持續開啟的 Camera Preview，主要操作方式是「拍照」與「讀取相片」。
 
 ---
 
-## 3. Google Sheet 建立流程
+## 3. 建立與取得網址流程
 
-使用者先從專案提供的 Google Sheet 範本建立自己的盤點表。
+使用者需要從同一份 Google Sheet 取得兩個網址：`print` 使用 Google Sheet URL；`scan` 使用 Apps Script Web App URL。
 
-基本流程：
-
-```text
-從範本建立 Google Sheet
-        ↓
-取得自己的 Google Sheet
-        ↓
-填入 / 匯入盤點 ID
-        ↓
-確認欄位名稱
-id | checked_time | location
-        ↓
-建立 / 啟用 Bound Apps Script
-        ↓
-部署為 Web App
-        ↓
-取得 Apps Script Web App URL
+```mermaid
+flowchart TB
+    A["從範本建立自己的 Google Sheet"] --> B["填入唯一 id"]
+    B --> C["確認欄位<br/>id | checked_time | location"]
+    C --> D["在 Extensions > Apps Script<br/>建立 Bound Script"]
+    D --> E["部署為 Web App"]
+    E --> F["複製 /exec Web App URL"]
+    C --> G["複製瀏覽器網址列的<br/>Google Sheet URL"]
+    G --> H["貼到 print"]
+    F --> I["貼到 scan"]
+    H --> J["產生 PDF"]
+    I --> K["開始手機盤點"]
 ```
 
-使用者只需要擁有該 Google Sheet 的操作權限。
-
-Google Sheet 範例：
-
-```text
-id  | checked_time | location
-A01 |              |
-B03 |              |
-C04 |              |
-```
-
-`id` 必須視為字串，而且在同一張表中必須唯一。
+完整的畫面操作與權限設定請依 [`google_sheet/README.md`](../google_sheet/README.md) 執行。`id` 必須視為字串，且在同一張表中唯一。
 
 ---
 
-## 4. Apps Script 資料寫入流程
+## 4. Apps Script API 與資料寫入
 
-Apps Script 的主要任務是接收：
-
-```text
-id
-location
-```
-
-例如：
+Apps Script Web App 接收：
 
 ```json
 {
@@ -165,371 +136,216 @@ location
 }
 ```
 
-Apps Script 收到盤點請求後：
+寫入流程：
 
-```text
-收到 id + location
-        ↓
-驗證必要參數
-        ↓
-在 Google Sheet 搜尋 id
-        ↓
- ┌──────┴──────┐
- │             │
-找不到       找到多筆
- │             │
-回傳失敗     回傳失敗
-
-        找到唯一一筆
-              ↓
-      產生伺服器目前時間
-              ↓
-      更新 checked_time
-              ↓
-      更新 location
-              ↓
-          回傳成功
+```mermaid
+flowchart TB
+    A["收到 id + location"] --> B["驗證必要參數"]
+    B --> C["在 Google Sheet 搜尋完全相符的 id"]
+    C --> D{"符合的資料列數量？"}
+    D -->|"0"| E["回傳 ID_NOT_FOUND"]
+    D -->|"多於 1"| F["回傳 DUPLICATE_ID"]
+    D -->|"1"| G["以 Apps Script 伺服器時間產生 checked_time"]
+    G --> H["更新 checked_time"]
+    H --> I["更新 location"]
+    I --> J["回傳成功 JSON"]
 ```
 
-正式 `checked_time` 由 Apps Script 伺服器端產生，不使用手機時間。
-
-預設時區：
+正式 `checked_time` 只由 Apps Script 產生，不使用手機時間。預設時區是 `Asia/Taipei`，規格格式為：
 
 ```text
-Asia/Taipei
+YYYYMMDD-HHmmSS
 ```
 
-預設時間格式：
+Apps Script 使用 `Utilities.formatDate` 時，對應的格式字串為 `yyyyMMdd-HHmmss`。例如：
 
 ```text
-YYYYMMDD-HHmm
+20260829-171000
 ```
 
-例如：
-
-```text
-20260829-1710
-```
-
-成功回傳至少應包含：
+成功回傳：
 
 ```json
 {
   "success": true,
   "item": {
     "id": "A01",
-    "checked_time": "20260829-1710",
+    "checked_time": "20260829-171000",
     "location": "主機房 A 區"
-  }
+  },
+  "message": "Inventory check succeeded"
 }
 ```
 
-失敗回傳採一致格式，例如：
+失敗回傳：
 
 ```json
 {
   "success": false,
-  "error": "ITEM_NOT_FOUND",
-  "message": "找不到 ID: A01"
+  "id": "A99",
+  "error": "ID_NOT_FOUND",
+  "message": "Item ID not found: A99"
 }
 ```
 
+API 的 `message` 欄位一律使用英文，讓不同前端可以穩定處理；前端可另外將錯誤代碼轉成使用者介面文字。
+
+第一版至少區分：
+
+- `INVALID_ID`
+- `INVALID_LOCATION`
+- `ID_NOT_FOUND`
+- `DUPLICATE_ID`
+- `SHEET_NOT_FOUND`
+- `COLUMN_NOT_FOUND`
+- `WRITE_FAILED`
+
 ---
 
-## 5. QR Code 列印流程
+## 5. QR Code 與 PDF 產生流程
 
-列印功能以桌面瀏覽器為主要操作環境。
-
-完整流程：
-
-```text
-開啟 print 網頁
-      ↓
-輸入 Google Sheet URL
-      ↓
-讀取 Google Sheet 的 id
-      ↓
-顯示資料筆數
-      ↓
-設定 QR Code / 紙張參數
-      ↓
-產生列印預覽
-      ↓
-瀏覽器列印
-      ↓
-印表機 或 另存 PDF
+```mermaid
+flowchart TB
+    A["開啟 print"] --> B["輸入 Google Sheet URL"]
+    B --> C["Google OAuth 登入"]
+    C --> D["Google Sheets API 讀取 id"]
+    D --> E["驗證空白與重複 ID"]
+    E --> F["設定 QR Code 與 A4 版面參數"]
+    F --> G["產生 responsive 預覽"]
+    G --> H["qrcode 產生 QR matrix / SVG"]
+    H --> I["pdf-lib 產生向量 PDF"]
+    I --> J["下載 QR Code PDF 檔案"]
+    A -.-> K["前往 scan"]
 ```
 
-QR Code payload：
+每個有效 `id` 產生一個標籤，payload 只有 ID，例如 `A01`。PDF 由瀏覽器本機使用 `pdf-lib` 產生並下載，不透過後端，也不使用瀏覽器 Print 對話框。
 
-```text
-<id>
-```
+第一版 PDF 需求：
 
-例如 ID 為 `A01`，QR Code 內容就是：
-
-```text
-A01
-```
-
-列印頁第一版主要考慮：
-
-- A4。
-- QR Code 實際尺寸。
-- QR Code 間距。
-- ID 文字。
-- 字體大小。
-- 頁面邊界。
-- 紙張方向。
-- 自動換行 / 換頁。
-- QR Code 不可跨頁切斷。
-
-實際 PDF 不另外在後端產生，而是使用瀏覽器 Print 對話框的「另存為 PDF」。
+- A4 直向或橫向。
+- QR Code 使用實體 `mm` 尺寸。
+- QR Code 與 ID 文字保持在同一標籤。
+- 可設定 QR Code 大小、文字大小、標籤間距、頁面邊界。
+- 自動計算每列數量與換頁。
+- 標籤不可跨頁切斷。
+- QR Code 保留足夠 quiet zone，使用向量模組避免放大失真。
 
 ---
 
 ## 6. 手機盤點流程
 
-盤點頁以手機使用為優先，並支援 PWA。
-
-首次設定：
-
-```text
-開啟 scan PWA
-      ↓
-輸入 Apps Script Web App URL
-      ↓
-輸入目前位置
-      ↓
-儲存至 localStorage
+```mermaid
+flowchart TB
+    A["開啟 scan PWA"] --> B["帶入已保存的 Apps Script URL"]
+    B --> C["輸入或選擇 location"]
+    C --> D{"圖片來源"}
+    D -->|"拍照"| E["呼叫手機後鏡頭拍照"]
+    D -->|"讀取相片"| F["選取既有圖片"]
+    E --> G["在瀏覽器本機解碼"]
+    F --> G
+    G --> H["取得圖片中的所有 QR Code"]
+    H --> I["去除前後空白並依 ID 去重"]
+    I --> J["逐筆送出 id + location"]
+    J --> K["Apps Script 更新 Google Sheet"]
+    K --> L["逐筆顯示成功或失敗"]
 ```
 
-日常盤點：
+QR decode 必須支援 multi-code detection，不能只處理第一個結果。影像不離開使用者裝置；若同一張圖片有多筆 ID，其中一筆失敗時仍要繼續處理其他 ID。
 
-```text
-開啟 scan PWA
-      ↓
-自動帶入上次 Apps Script URL
-      ↓
-自動帶入上次位置
-或從位置歷史記錄選擇
-      ↓
-┌─────────────┬─────────────┐
-│             │             │
-拍照         讀取相片
-│             │
-└──────┬──────┘
-       ↓
-辨識圖片中的 QR Code
-       ↓
-可能取得 1 個或多個 id
-       ↓
-同一張圖片內重複 id 去重
-       ↓
-逐筆送出 id + location
-       ↓
-Apps Script 更新 Google Sheet
-       ↓
-逐筆顯示成功 / 失敗結果
-```
-
-一張照片可能同時存在多個 QR Code，因此 QR Code 解碼模組必須支援 multi-code detection；不能只處理第一個結果。
-
-盤點結果區至少顯示：
-
-- ID。
-- 狀態。
-- 成功時的 `checked_time`。
-- 成功時的 `location`。
-- 失敗時 Apps Script 回傳的錯誤訊息。
-
-例如：
-
-```text
-✓ A01  20260829-1710  主機房 A 區
-✓ B03  20260829-1710  主機房 A 區
-✗ C99  找不到 ID
-```
+結果至少顯示 ID、處理狀態、成功時的 `checked_time` 與 `location`，以及失敗時的 API `error` / `message`。
 
 ---
 
-## 7. localStorage 原則
+## 7. `print` 與 `scan` 的連接方式
 
-`print` 與 `scan` 都是純前端網頁。
+兩個 App 仍是獨立部署、獨立設定的靜態網站，但 `print` 必須提供前往 `scan` 的入口：
 
-使用者在網頁輸入的設定應盡量保存在瀏覽器 `localStorage`，避免每次重新輸入。
+- 同網域部署時，優先使用相對路徑連結。
+- 不同網域部署時，由 `VITE_SCAN_APP_URL` 設定 `scan` 網址。
+- 連結可以是按鈕或導覽項目，不得改變 QR Code payload。
+- QR Code 仍只包含 `id`，不可把 `scan` URL、Apps Script URL 或 Sheet URL 編入 QR Code。
+- `scan` 不需要 Google Sheet URL，只需要 Apps Script Web App URL。
 
-### print
-
-至少保存：
-
-- Google Sheet URL。
-- QR Code 大小。
-- 紙張方向。
-- 邊界。
-- 間距。
-- 字體大小。
-- 其他列印參數。
-
-### scan
-
-至少保存：
-
-- Apps Script Web App URL。
-- 最近一次 location。
-- location 歷史記錄。
-
-location 歷史記錄應可由下拉選單直接重新選擇。
-
-`localStorage` 只保存設定，不將它當成正式盤點資料庫。
+因此使用者可以在電腦的 `print` 產生 PDF，也可以在平板或手機開啟 `print` 後直接切換到 `scan`。
 
 ---
 
-## 8. 前端與後端責任界線
+## 8. localStorage 與網路需求
 
-### 前端負責
+`print` 與 `scan` 都是純前端網頁。使用者輸入的設定集中透過 wrapper / composable 保存，不把 `localStorage` 當成正式盤點資料庫。
 
-`print`：
+`print` 至少保存：
 
-- 使用者介面。
-- Google Sheet URL 設定。
-- 讀取 ID。
-- QR Code 產生。
-- 排版與列印。
+- `mis.print.google_sheet_url`
+- `mis.print.qr_size_mm`
+- `mis.print.id_font_size_pt`
+- `mis.print.qr_text_gap_mm`
+- `mis.print.label_gap_mm`
+- `mis.print.page_margin_mm`
+- `mis.print.orientation`
 
-`scan`：
+`scan` 至少保存：
 
-- 使用者介面。
-- 拍照 / 選取圖片。
-- QR Code 圖片辨識。
-- multi-code detection。
-- localStorage。
-- 呼叫 Apps Script。
-- 呈現逐筆結果。
+- `mis.scan.apps_script_url`
+- `mis.scan.location`
+- `mis.scan.location_history`
 
-### Apps Script 負責
+網路需求：
+
+- `print` 讀取 Google Sheet 與 Google API 時需要網路；PDF 產生本身在瀏覽器本機完成。
+- `scan` 的 App shell 與 QR decode 靜態資源可由 PWA cache 再次啟動，但寫入 Apps Script 仍需要網路。
+- 第一版不做離線盤點 queue；無法連線的項目不可標記為成功。
+
+---
+
+## 9. 前端與 Apps Script 責任界線
+
+前端負責：
+
+- 使用者介面與 RWD。
+- `print` 的 Google OAuth、Sheet 讀取、QR Code 預覽與 PDF 產生。
+- `scan` 的圖片取得、multi-code QR decode、去重與結果呈現。
+- localStorage 設定保存。
+- 呼叫 Apps Script 並依回應顯示狀態。
+
+Apps Script 負責：
 
 - 驗證輸入。
-- 查找 ID。
-- 確認 ID 唯一。
+- 查找並確認 ID 唯一。
 - 產生正式盤點時間。
 - 更新 Google Sheet。
-- 回傳成功或錯誤資訊。
+- 回傳成功或錯誤 JSON。
 
-Apps Script 是盤點寫入的唯一權威來源；scan 前端不可在 Apps Script 回傳失敗時自行判定為盤點成功。
-
----
-
-## 9. 資料一致性原則
-
-### ID
-
-- QR Code 與 Sheet 中的 `id` 必須完全一致。
-- ID 視為字串。
-- 不自行轉大寫或小寫。
-- 去除掃描結果前後空白後再送出。
-- Sheet 中重複 ID 視為資料錯誤。
-
-### checked_time
-
-- 只由 Apps Script 寫入。
-- scan 不自行產生正式盤點時間。
-
-### location
-
-- 由使用者在 scan 頁手動指定。
-- 每次盤點送出當下選定的位置。
-- Apps Script 將收到的 location 寫入 Sheet。
+Apps Script 是盤點寫入的唯一權威來源；`scan` 不可在 API 回傳失敗時自行判定為成功，`print` 也不可直接修改 Sheet。
 
 ---
 
-## 10. 網路需求
+## 10. 安全性與第一版範圍
 
-### print
+安全性原則：
 
-讀取 Google Sheet 時需要網路。
+- Repository 不存 Google 帳號密碼、OAuth Client Secret 或 service account private key。
+- Google OAuth Client ID 可以作為前端公開設定，但 Client Secret 不得進入 bundle。
+- URL 與使用者偏好只保存於瀏覽器 localStorage。
+- Google Sheet 不因 `print` 而被迫設為完全公開；存取權限依 `print/README.md` 的 OAuth 流程設定。
+- Apps Script Web App 存取權限依實際環境設定，組織環境優先限制在組織帳號。
 
-### scan
+第一版不做：
 
-PWA 靜態頁面可透過 Service Worker cache 提升再次開啟速度，但正式盤點寫入 Apps Script 時仍需要網路。
-
-若 Apps Script 無法連線：
-
-- 該筆不可標示為成功。
-- 第一版不做離線 queue。
-- 使用者可在網路恢復後重新送出。
-
----
-
-## 11. 安全性原則
-
-- Git repository 不存 Google 帳號密碼。
-- Git repository 不存 OAuth Client Secret。
-- Apps Script URL 與 Google Sheet URL 屬於使用者端設定，保存在各自瀏覽器的 localStorage。
-- Apps Script 的部署權限應依實際使用環境設定。
-- Sheet 本身不應因為 QR Code 列印功能而被迫設為完全公開；print 的實際存取方式依 `print/README.md` 定義。
-
----
-
-## 12. 第一版完整操作流程
-
-### A. 建立盤點表
-
-```text
-1. 從範本建立 Google Sheet
-2. 填入 id
-3. 建立 / 啟用 Bound Apps Script
-4. 部署 Apps Script Web App
-5. 取得：
-   - Google Sheet URL
-   - Apps Script Web App URL
-```
-
-### B. 產生 QR Code
-
-```text
-1. 電腦開啟 print
-2. 輸入 Google Sheet URL
-3. 系統讀取 id
-4. 設定 QR Code 大小等列印參數
-5. 預覽
-6. 列印或另存 PDF
-7. 將 QR Code 貼到對應盤點物件
-```
-
-### C. 現場盤點
-
-```text
-1. 手機開啟 scan PWA
-2. 輸入 Apps Script URL（第一次）
-3. 輸入或選擇 location
-4. 按「拍照」或「讀取相片」
-5. 系統找出圖片內全部 QR Code
-6. 逐筆將 id + location 傳給 Apps Script
-7. Apps Script 更新 checked_time / location
-8. 手機逐筆顯示盤點結果
-```
-
----
-
-## 13. 第一版不做的功能
-
-除非後續規格另外加入，第一版不要求：
-
-- 即時持續 Camera Preview 掃描。
+- 持續 Camera Preview 即時掃描。
 - GPS 自動定位。
-- 手機端正式盤點時間。
+- 手機端產生正式 `checked_time`。
 - 離線盤點 queue。
 - 自建後端伺服器或資料庫。
 - 將 QR Code 內容做成 URL 或 JSON。
 - 保存完整盤點歷史資料表。
-- 在 scan 前端直接修改 Google Sheet。
+- 在 `scan` 前端直接修改 Google Sheet。
 
-整個第一版維持：
+第一版的責任關係固定為：
 
 ```text
 Google Sheet = 主資料
-Apps Script = 寫入 API
-print = QR Code 列印工具
+Apps Script = 盤點寫入 API
+print = QR Code PDF 產生工具
 scan = 手機圖片掃描 / 盤點工具
 ```
