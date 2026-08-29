@@ -30,15 +30,17 @@ function statusText(result: ScanResult): string {
 
 <template>
   <section
-    v-if="results.length"
     class="section-card result-card"
     aria-labelledby="scan-results-heading"
   >
     <div class="section-heading">
       <h2 id="scan-results-heading">{{ t("scan.results_heading") }}</h2>
-      <p>{{ t("scan.results_description", { count: results.length }) }}</p>
+      <p v-if="results.length">
+        {{ t("scan.results_description", { count: results.length }) }}
+      </p>
+      <p v-else>{{ t("scan.results_empty") }}</p>
     </div>
-    <ol class="scan-results">
+    <ol v-if="results.length" class="scan-results">
       <li v-for="result in results" :key="result.id" class="scan-result">
         <div>
           <strong>{{ result.name }}</strong>

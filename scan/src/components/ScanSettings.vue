@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
+import CurrentLocationField from "./CurrentLocationField.vue";
 
 defineProps<{
   appsScriptUrl: string;
@@ -31,7 +32,6 @@ const { t } = useI18n({ useScope: "global" });
         :model-value="appsScriptUrl"
         :label="t('scan.apps_script_url_label')"
         :placeholder="t('scan.apps_script_url_placeholder')"
-        aria-describedby="apps-script-url-hint recent-apps-script-hint"
         type="url"
         autocomplete="url"
         aria-required="true"
@@ -54,26 +54,12 @@ const { t } = useI18n({ useScope: "global" });
           />
         </template>
       </v-text-field>
-      <p id="apps-script-url-hint" class="field-description">
-        {{ t("scan.apps_script_url_hint") }}
-      </p>
-      <p id="recent-apps-script-hint" class="field-description">
-        {{ t("scan.recent_sheets_hint") }}
-      </p>
 
-      <v-combobox
+      <CurrentLocationField
         id="current-location"
         :model-value="location"
-        :items="locationHistory"
-        :label="t('scan.location_label')"
-        :placeholder="t('scan.location_placeholder')"
-        menu-icon="mdi-history"
-        persistent-placeholder
-        :hint="t('scan.location_hint')"
-        autocomplete="off"
-        variant="outlined"
-        persistent-hint
-        @update:model-value="emit('update:location', String($event ?? ''))"
+        :location-history="locationHistory"
+        @update:model-value="emit('update:location', $event)"
       />
 
       <v-btn

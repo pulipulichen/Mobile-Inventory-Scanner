@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import CameraScanner from "./components/CameraScanner.vue";
+import CurrentLocationField from "./components/CurrentLocationField.vue";
 import ImageSourceButtons from "./components/ImageSourceButtons.vue";
 import PendingInventoryList from "./components/PendingInventoryList.vue";
 import ScanResultList from "./components/ScanResultList.vue";
 import ScanSettings from "./components/ScanSettings.vue";
+import SettingsRequiredCard from "./components/SettingsRequiredCard.vue";
 import {
   AppsScriptError,
   findConfirmedInventoryItem,
@@ -31,6 +33,8 @@ import type {
   ScanResult,
 } from "./types/scan";
 
+type AppTab = "settings" | "scan" | "checked" | "pending";
+
 const { t, locale } = useI18n({ useScope: "global" });
 
 const appsScriptUrl = ref(loadAppsScriptUrl());
@@ -43,8 +47,10 @@ const isPendingLoading = ref(false);
 const isPhotoLoading = ref(false);
 const isCameraActive = ref(false);
 const camera = ref<InstanceType<typeof CameraScanner> | null>(null);
-const scannerSection = ref<HTMLElement | null>(null);
 const isInventoryConfirmed = ref(isAppsScriptUrl(appsScriptUrl.value));
+const activeTab = ref<AppTab>(
+  isInventoryConfirmed.value ? "scan" : "settings",
+);
 const statusKey = ref(
   isInventoryConfirmed.value ? "status.settings_confirmed" : "status.ready",
 );
@@ -96,7 +102,10 @@ const isInventoryReady = computed(
     isAppsScriptUrl(appsScriptUrl.value),
 );
 const showStatusAlert = computed(
-  () => isAppsScriptUrlInvalid.value || statusKey.value !== "status.ready",
+  () =>
+    isAppsScriptUrlInvalid.value ||
+    (statusKey.value !== "status.ready" &&
+      statusKey.value !== "status.all_complete"),
 );
 const effectiveStatusMessage = computed(() =>
   isAppsScriptUrlInvalid.value
@@ -250,29 +259,29 @@ function validateAppsScriptUrl(): boolean {
   return false;
 }
 
-async function scrollToScanner(): Promise<void> {
-  await nextTick();
-  window.requestAnimationFrame(() => {
-    scannerSection.value?.scrollIntoView({
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        ? "auto"
-        : "smooth",
-      block: "start",
-    });
-  });
-}
-
 async function confirmSettings(): Promise<void> {
   isInventoryConfirmed.value = false;
   if (!validateAppsScriptUrl()) return;
 
   isInventoryConfirmed.value = true;
-  setStatus("status.settings_confirmed", {}, "success");
-  await scrollToScanner();
+  setStatus("status.ready");
+  showToast(t("status.settings_confirmed"), "success");
+  activeTab.value = "scan";
 }
 
-onMounted(() => {
-  if (isInventoryConfirmed.value) void scrollToScanner();
+watch(activeTab, (tab, previous) => {
+  if (previous === "scan" && tab !== "scan") {
+    stopCamera();
+  }
+  if (
+    tab === "pending" &&
+    isAppsScriptUrl(appsScriptUrl.value) &&
+    isInventoryConfirmed.value &&
+    !hasLoadedPending.value &&
+    !isPendingLoading.value
+  ) {
+    void loadPending();
+  }
 });
 
 onBeforeUnmount(() => {
@@ -293,17 +302,6 @@ function resetCurrentCheck(): void {
   clearToasts();
 }
 
-function resetSession(): void {
-  resetCurrentCheck();
-}
-
-function clearResults(): void {
-  camera.value?.stop();
-  isCameraActive.value = false;
-  resetSession();
-  setStatus("status.session_cleared", {}, "success");
-}
-
 function handleCameraStatus(
   state: "starting" | "active" | "stopped" | "error",
   errorCode?: string,
@@ -319,7 +317,9 @@ function handleCameraStatus(
   }
   if (state === "stopped") {
     isCameraActive.value = false;
-    setStatus("status.camera_stopped");
+    if (activeTab.value === "scan") {
+      setStatus("status.camera_stopped");
+    }
     return;
   }
   if (errorCode === "QR_DECODE_FAILED") {
@@ -474,10 +474,16 @@ function announceBatchComplete(): void {
     }
     return;
   }
-  setStatus(
-    "status.all_complete",
-    { success, failed },
-    failed ? "warning" : "success",
+
+  const tone = failed ? "warning" : "success";
+  const alreadyAnnounced = statusKey.value === "status.all_complete";
+  setStatus("status.all_complete", { success, failed }, tone);
+  if (alreadyAnnounced) return;
+
+  showToast(
+    t("status.all_complete", { success, failed }),
+    tone,
+    failed ? 8000 : 6000,
   );
 }
 
@@ -701,16 +707,6 @@ function handleLocaleChange(event: Event): void {
 
     <v-main id="main-content" tag="main" class="app-main">
       <v-container class="app-container" fluid>
-        <ScanSettings
-          :apps-script-url="appsScriptUrl"
-          :location="location"
-          :location-history="locationHistory"
-          :settings-locked="isCameraActive"
-          @update:apps-script-url="updateAppsScriptUrl"
-          @update:location="updateLocation"
-          @confirm="confirmSettings"
-        />
-
         <v-alert
           v-if="showStatusAlert"
           class="status-alert"
@@ -722,78 +718,150 @@ function handleLocaleChange(event: Event): void {
           {{ effectiveStatusMessage }}
         </v-alert>
 
-        <template v-if="isInventoryReady">
-          <section
-            ref="scannerSection"
-            class="section-card scanner-card"
-            aria-labelledby="scanner-heading"
-          >
-            <div class="section-heading">
-              <h2 id="scanner-heading">{{ t("scan.scanner_heading") }}</h2>
-              <p>{{ t("scan.scanner_description") }}</p>
-            </div>
+        <ScanSettings
+          v-if="activeTab === 'settings'"
+          :apps-script-url="appsScriptUrl"
+          :location="location"
+          :location-history="locationHistory"
+          :settings-locked="isCameraActive"
+          @update:apps-script-url="updateAppsScriptUrl"
+          @update:location="updateLocation"
+          @confirm="confirmSettings"
+        />
 
-            <CameraScanner
-              ref="camera"
-              :video-label="t('scan.camera_preview_label')"
-              @detected="queueIds"
-              @status="handleCameraStatus"
-            />
-
-            <div class="scanner-actions">
-              <v-btn
-                type="button"
-                color="primary"
-                size="large"
-                prepend-icon="mdi-qrcode-scan"
-                :disabled="!canStartCamera"
-                @click="startCamera"
-              >
-                {{ t("scan.start_camera") }}
-              </v-btn>
-              <v-btn
-                type="button"
-                color="error"
-                variant="outlined"
-                size="large"
-                stacked
-                block
-                prepend-icon="mdi-camera-off"
-                :disabled="!isCameraActive"
-                @click="stopCamera"
-              >
-                {{ t("scan.stop_camera") }}
-              </v-btn>
-              <ImageSourceButtons
-                :disabled="isPhotoLoading"
-                @file="handlePhoto"
-              />
-            </div>
-
-            <v-btn
-              v-if="results.length"
-              class="clear-results-button"
-              type="button"
-              variant="text"
-              color="secondary"
-              @click="clearResults"
+        <template v-else-if="activeTab === 'scan'">
+          <template v-if="isInventoryReady">
+            <section
+              class="section-card scanner-card"
+              aria-labelledby="scanner-heading"
             >
-              {{ t("scan.clear_results") }}
-            </v-btn>
-          </section>
+              <div class="section-heading">
+                <h2 id="scanner-heading">{{ t("scan.scanner_heading") }}</h2>
+                <p>{{ t("scan.scanner_description") }}</p>
+              </div>
 
-          <ScanResultList :results="results" />
+              <CameraScanner
+                ref="camera"
+                :video-label="t('scan.camera_preview_label')"
+                @detected="queueIds"
+                @status="handleCameraStatus"
+              />
+
+              <div class="scanner-actions">
+                <v-btn
+                  type="button"
+                  color="primary"
+                  size="large"
+                  prepend-icon="mdi-qrcode-scan"
+                  :disabled="!canStartCamera"
+                  @click="startCamera"
+                >
+                  {{ t("scan.start_camera") }}
+                </v-btn>
+                <v-btn
+                  type="button"
+                  color="error"
+                  variant="outlined"
+                  size="large"
+                  stacked
+                  block
+                  prepend-icon="mdi-camera-off"
+                  :disabled="!isCameraActive"
+                  @click="stopCamera"
+                >
+                  {{ t("scan.stop_camera") }}
+                </v-btn>
+                <ImageSourceButtons
+                  :disabled="isPhotoLoading"
+                  @file="handlePhoto"
+                />
+              </div>
+
+              <CurrentLocationField
+                id="scanner-current-location"
+                class="scanner-location-field"
+                :model-value="location"
+                :location-history="locationHistory"
+                @update:model-value="updateLocation"
+              />
+            </section>
+            <p class="privacy-note">{{ t("scan.privacy_note") }}</p>
+          </template>
+          <SettingsRequiredCard
+            v-else
+            @go-to-settings="activeTab = 'settings'"
+          />
+        </template>
+
+        <template v-else-if="activeTab === 'checked'">
+          <ScanResultList v-if="isInventoryReady" :results="results" />
+          <SettingsRequiredCard
+            v-else
+            @go-to-settings="activeTab = 'settings'"
+          />
+        </template>
+
+        <template v-else-if="activeTab === 'pending'">
           <PendingInventoryList
+            v-if="isInventoryReady"
             :groups="pendingGroups"
             :loading="isPendingLoading"
             :has-loaded="hasLoadedPending"
             @load="loadPending"
           />
-
-          <p class="privacy-note">{{ t("scan.privacy_note") }}</p>
+          <SettingsRequiredCard
+            v-else
+            @go-to-settings="activeTab = 'settings'"
+          />
         </template>
       </v-container>
     </v-main>
+
+    <v-bottom-navigation
+      v-model="activeTab"
+      class="app-bottom-nav"
+      tag="nav"
+      :aria-label="t('scan.tab_navigation')"
+      grow
+      mandatory
+      color="primary"
+      bg-color="surface"
+      elevation="4"
+      height="72"
+    >
+      <v-btn
+        type="button"
+        value="settings"
+        :aria-current="activeTab === 'settings' ? 'page' : undefined"
+      >
+        <v-icon icon="mdi-cog-outline" aria-hidden="true" />
+        {{ t("scan.tab_settings") }}
+      </v-btn>
+      <v-btn
+        type="button"
+        value="scan"
+        :aria-current="activeTab === 'scan' ? 'page' : undefined"
+      >
+        <v-icon icon="mdi-qrcode-scan" aria-hidden="true" />
+        {{ t("scan.tab_scan") }}
+      </v-btn>
+      <v-btn
+        type="button"
+        value="checked"
+        :aria-current="activeTab === 'checked' ? 'page' : undefined"
+      >
+        <v-icon icon="mdi-clipboard-check-outline" aria-hidden="true" />
+        {{ t("scan.tab_checked") }}
+      </v-btn>
+      <v-btn
+        type="button"
+        value="pending"
+        :aria-current="activeTab === 'pending' ? 'page' : undefined"
+      >
+        <v-icon icon="mdi-clipboard-list-outline" aria-hidden="true" />
+        {{ t("scan.tab_pending") }}
+      </v-btn>
+    </v-bottom-navigation>
 
     <v-snackbar
       :model-value="isToastVisible"

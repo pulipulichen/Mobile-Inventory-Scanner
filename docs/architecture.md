@@ -267,10 +267,10 @@ flowchart TB
 flowchart TB
     A["開啟 scan PWA"] --> B["帶入已保存的 Apps Script URL"]
     B --> C["輸入或選擇 location"]
-    C --> D{"掃描或查詢"}
-    D -->|"列出尚未盤點"| E["GET /exec?action=pending"]
+    C --> D{"底部功能分頁"}
+    D -->|"未盤點"| E["GET /exec?action=pending"]
     E --> F["依 location 分組顯示 id + name"]
-    D -->|"開始掃描"| G{"圖片來源"}
+    D -->|"掃描"| G{"圖片來源"}
     G -->|"拍照"| H["呼叫手機後鏡頭拍照"]
     G -->|"讀取相片"| I["選取既有圖片"]
     G -->|"即時掃描"| J["取得後置鏡頭影格"]

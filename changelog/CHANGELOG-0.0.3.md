@@ -7,6 +7,10 @@
 - Added a static `scan` PWA manifest for installable standalone display.
 - Added tap-to-focus on the `scan` camera preview, with a visible reticle and
   keyboard activation that focuses the center of the frame.
+- Added a current-location field on the `scan` screen so location can be
+  changed without going back to Settings.
+- Added a mobile-app bottom navigation bar in `scan` for Settings, Scan,
+  Checked, and Unchecked.
 
 ## Changed
 
@@ -15,8 +19,8 @@
 - Added localized settings-confirmation status messages and guidance.
 - Standardized `print` production asset filenames for predictable static
   deployments.
-- Opened `scan` directly at the inventory controls when a saved Apps Script
-  `/exec` URL is already valid, and scrolled to the start-inventory section.
+- Opened `scan` on the scan tab when a saved Apps Script `/exec` URL is
+  already valid.
 - Improved live QR scanning on phones by requesting the rear camera at a
   moderate resolution, enabling continuous autofocus when the browser allows
   it, downscaling frames before decode, retrying a center crop, and merging
@@ -34,6 +38,11 @@
 - Cleared the current `scan` results when the location changes, so a new
   place starts a new check.
 - Replaced the in-page status alert for unrecognized QR Codes and photo decode errors with bottom toast notifications.
+- Showed batch-complete summaries as a bottom toast instead of a persistent
+  in-page alert.
+- Gave `scan` a mobile-app layout with a bottom navigation bar for Settings,
+  Scan, Checked, and Unchecked. Confirming settings switches to the Scan tab;
+  leaving Scan stops the camera.
 
 ## Fixed
 
@@ -57,15 +66,19 @@
 - Removed `vite-plugin-pwa`, generated Service Worker registration, and runtime
   asset caching. The app now performs best-effort cleanup of legacy Service
   Workers and Cache Storage entries during startup.
+- Removed the in-page “clear results” action, the extra “open location
+  history” button, duplicated current-location cards, and the Apps Script URL
+  helper copy on the `scan` settings screen.
 
 ## Documentation
 
-- Updated frontend architecture, package, and `scan` documentation to describe
-  the static-manifest PWA behavior and optional location workflow.
+- Documented the static-manifest PWA behavior, optional location workflow, and
+  the `scan` bottom-tab mobile layout.
 - Documented bounded frontend build verification and the requirement to report
   build timeouts instead of waiting indefinitely.
-- Documented `scan` auto-confirm of a saved `/exec` URL, camera tap-to-focus,
-  live-frame downscaling, and native `BarcodeDetector` fallback alongside zbar.
+- Documented `scan` auto-confirm of a saved `/exec` URL, the bottom feature
+  tabs, camera tap-to-focus, live-frame downscaling, and native
+  `BarcodeDetector` fallback alongside zbar.
 - Documented batch inventory POST (`ids` + location), GET confirmation, the
   10-second rescan cooldown, and resetting current results after a location
   change. Apps Script must be redeployed for the batch contract.

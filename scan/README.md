@@ -58,15 +58,15 @@ live region 與螢幕閱讀器要求。
 ```mermaid
 flowchart TD
     A["手機開啟 scan 網頁 / PWA"] --> B{"localStorage 已有正確 /exec 網址？"}
-    B -->|"是"| C["自動確認設定並捲到開始盤點"]
+    B -->|"是"| C["自動確認設定並切到掃描分頁"]
     B -->|"否"| D{"取得 Apps Script /exec URL"}
     D -->|"手動輸入"| E["輸入 /exec 網址"]
     D -->|"開啟最近使用頁面"| F["開啟 Google Drive 最近使用的試算表"]
     F --> G["選取試算表並複製網址"]
     G --> E
     E --> H["輸入或選擇目前 location"]
-    H --> I["確認設定並進入盤點"]
-    C --> J{"選擇掃描方式"}
+    H --> I["確認設定並切到掃描分頁"]
+    C --> J{"掃描分頁：選擇掃描方式"}
     I --> J
     J -->|"即時掃描"| K["啟動後置鏡頭"]
     K --> L["持續取得相機影格"]
@@ -83,13 +83,22 @@ flowchart TD
     S -->|"否"| T["一次 POST ids + location"]
     T --> U["Apps Script 批次更新 Google Sheet"]
     U --> V["GET 確認寫入並顯示成功 / 失敗"]
-    C --> W["按下列出尚未盤點的 ID"]
+    C --> W["未盤點分頁：列出尚未盤點的 ID"]
     I --> W
     W --> X["GET Apps Script?action=pending"]
     X --> Y["依 location 分成小卡片，目前位置優先，兩欄顯示 id 與 name"]
 ```
 
 網頁中所有一般使用者設定都必須保存到 `localStorage`。
+
+畫面採手機 App 底部四個功能分頁，不使用 Vue Router：
+
+- **設定**：Apps Script `/exec` 網址與目前位置。
+- **掃描**：即時相機、拍照、讀取相片，以及目前位置。
+- **已盤點**：本次掃描結果。
+- **未盤點**：Google Sheet 中尚未盤點的項目。
+
+離開掃描分頁時會停止相機並釋放鏡頭。
 
 ---
 
@@ -124,7 +133,7 @@ https://script.google.com/macros/s/xxxxxxxxxxxxxxxx/exec
 
 需求：只能使用部署後的 `/exec` 網址，不使用 `/dev` 測試網址；可手動輸入或
 貼上、保存到 `localStorage`、下次自動帶入。若重新開啟時網址已存在且格式
-正確，會自動完成「確認設定」並捲動到開始盤點。呼叫失敗時顯示清楚錯誤。
+正確，會自動完成「確認設定」並切到掃描分頁。呼叫失敗時顯示清楚錯誤。
 `scan` 不提供 Google 登入功能，權限與資料存取由 Apps Script Web App 處理。
 使用者也可以先開啟「最近使用的 Google Sheet」連結，選取試算表後複製網址。
 
@@ -171,7 +180,7 @@ https://script.google.com/macros/s/xxxxxxxxxxxxxxxx/exec
 
 ## 尚未盤點清單
 
-設定區提供「列出尚未盤點的 ID」功能，使用同一個 Apps Script Web App
+設定區與未盤點分頁提供「列出尚未盤點的 ID」功能，使用同一個 Apps Script Web App
 `/exec` URL 發送：
 
 ```text
@@ -412,6 +421,7 @@ service / composable。
 - [ ] 連結使用 `https://drive.google.com/drive/u/0/recent?q=type:spreadsheet`。
 - [ ] 使用者可從 Google Sheet 的 Apps Script 部署複製 `/exec` URL，再貼回 `scan`。
 - [ ] 不需要 Google Cloud Project、OAuth Client ID 或 Google Drive API。
+- [ ] 底部四個功能分頁可切換設定、掃描、已盤點與未盤點。
 - [ ] 可輸入並保存目前位置，並有歷史位置下拉選單。
 - [ ] 可啟動後置鏡頭進行即時 QR Code 掃描。
 - [ ] 可停止相機並釋放相機串流。

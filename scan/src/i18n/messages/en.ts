@@ -17,18 +17,15 @@ export default {
     apps_script_url_label: "Apps Script /exec URL",
     apps_script_url_placeholder:
       "https://script.google.com/macros/s/…/exec",
-    apps_script_url_hint:
-      "Use the deployed URL ending in /exec, not the /dev test URL.",
     recent_sheets: "Open recently used Google Sheets",
-    recent_sheets_hint:
-      "Google Drive opens in a new tab. Select a spreadsheet and copy its URL back here.",
     location_label: "Current location",
     location_placeholder: "Science Laboratory",
-    location_hint:
-      "Optional. Leave it blank to keep the existing Google Sheets location; enter a value to update it.",
-    confirm_settings: "Confirm settings and enter inventory",
+    location_history_heading: "Location history",
+    location_history_empty:
+      "No location history yet. Locations appear here after a successful check.",
+    confirm_settings: "Confirm settings and start scanning",
     confirm_settings_hint:
-      "Confirm the Apps Script URL to show the inventory controls; current location is optional. A saved valid URL opens the inventory controls automatically.",
+      "Confirm the Apps Script URL to start scanning; current location is optional. A saved valid URL opens the scan tab automatically.",
     scanner_heading: "Start inventory check",
     scanner_description:
       "Place QR Codes in front of the camera and start scanning. You can also take or choose a photo; multiple QR Codes are supported. After scanning, the app waits 3 seconds with no new IDs, then sends one batch. The same ID is not sent again within 10 seconds.",
@@ -41,7 +38,6 @@ export default {
       "Tap the preview to focus, or press Enter to focus on the center",
     camera_tap_to_focus_hint: "Tap the preview to focus",
     camera_focused: "Focused on the selected point.",
-    clear_results: "Clear results and start a new check",
     pending_button: "List unchecked IDs",
     pending_control_description:
       "Read items with a blank checked_time from Google Sheets, show them in one list card, and label their existing locations.",
@@ -62,10 +58,20 @@ export default {
     result_error: "Check failed ({error})",
     privacy_note:
       "QR Code images are decoded locally in this browser. Photos and camera frames are not uploaded.",
+    tab_navigation: "Main features",
+    tab_settings: "Settings",
+    tab_scan: "Scan",
+    tab_checked: "Checked",
+    tab_pending: "Unchecked",
+    tab_needs_settings_heading: "Finish setup first",
+    tab_needs_settings:
+      "Confirm the Apps Script /exec URL in Settings before using this feature.",
+    go_to_settings: "Go to Settings",
+    results_empty: "No checked items yet. Scanned QR Codes will appear here.",
   },
   status: {
     ready: "Set the Apps Script URL to begin; current location is optional.",
-    settings_confirmed: "Settings confirmed. You can start the inventory check.",
+    settings_confirmed: "Settings confirmed. You can start scanning.",
     camera_starting: "Starting camera…",
     camera_active:
       "Camera is active. Place a QR Code in front of the camera. Tap the preview to focus.",
@@ -86,7 +92,6 @@ export default {
     all_complete: "Inventory check complete: {success} succeeded and {failed} failed.",
     pending_loaded: "Loaded {count} unchecked IDs.",
     pending_empty: "There are no unchecked IDs right now.",
-    session_cleared: "Current results were cleared. You can start a new check.",
     location_changed_results_cleared:
       "The location changed, so the current check results were reset.",
   },

@@ -16,18 +16,15 @@ export default {
     apps_script_url_label: "Apps Script /exec 網址",
     apps_script_url_placeholder:
       "https://script.google.com/macros/s/…/exec",
-    apps_script_url_hint:
-      "請貼上部署後結尾為 /exec 的網址，不要使用 /dev 測試網址。",
     recent_sheets: "開啟最近使用的 Google Sheet",
-    recent_sheets_hint:
-      "Google Drive 會在新分頁開啟。選取試算表後，將網址複製回這裡。",
     location_label: "目前位置",
     location_placeholder: "理科實驗室",
-    location_hint:
-      "可留白；留白時會保留 Google Sheet 中原本的位置，有輸入內容才會更新位置。",
-    confirm_settings: "確認設定並進入盤點",
+    location_history_heading: "歷史位置",
+    location_history_empty:
+      "尚無歷史位置。成功盤點後，曾使用的位置會出現在這裡。",
+    confirm_settings: "確認設定並開始掃描",
     confirm_settings_hint:
-      "確認 Apps Script 網址後即可進入盤點；目前位置可選填。若網址已保存且正確，開啟頁面會自動進入盤點。",
+      "確認 Apps Script 網址後即可開始掃描；目前位置可選填。若網址已保存且正確，開啟頁面會自動進入掃描。",
     scanner_heading: "開始盤點",
     scanner_description:
       "請將 QR Code 放在鏡頭前方並開始掃描，也可以拍照或讀取相片；一次可辨識多個 QR Code。掃描後會等 3 秒沒有新項目，再一次送出。同一 ID 10 秒內不會重複送出。",
@@ -39,7 +36,6 @@ export default {
     camera_tap_to_focus: "點擊預覽畫面以對焦，或按 Enter 對準畫面中央對焦",
     camera_tap_to_focus_hint: "點擊畫面可對焦",
     camera_focused: "已對準點選位置對焦。",
-    clear_results: "清除本次結果並開始新盤點",
     pending_button: "列出尚未盤點的 ID",
     pending_control_description:
       "讀取 Google Sheet 中 checked_time 為空白的項目，集中顯示在同一張清單卡片，並標示既有位置。",
@@ -59,10 +55,20 @@ export default {
       "盤點成功；時間 {checked_time}；位置 {location}",
     result_error: "盤點失敗（{error}）",
     privacy_note: "QR Code 影像只在此瀏覽器本機辨識，不會上傳照片或相機影像。",
+    tab_navigation: "主要功能",
+    tab_settings: "設定",
+    tab_scan: "掃描",
+    tab_checked: "已盤點",
+    tab_pending: "未盤點",
+    tab_needs_settings_heading: "請先完成設定",
+    tab_needs_settings:
+      "請先在設定確認 Apps Script /exec 網址，才能使用這個功能。",
+    go_to_settings: "前往設定",
+    results_empty: "目前沒有已盤點項目。掃描 QR Code 後會顯示在這裡。",
   },
   status: {
     ready: "請先設定 Apps Script URL；目前位置可選填。",
-    settings_confirmed: "設定完成，可以開始盤點。",
+    settings_confirmed: "設定完成，可以開始掃描。",
     camera_starting: "正在啟動相機…",
     camera_active: "相機已啟動，請將 QR Code 對準鏡頭；可點擊畫面對焦。",
     camera_stopped: "相機已停止。",
@@ -81,7 +87,6 @@ export default {
     all_complete: "盤點完成：成功 {success} 筆，失敗 {failed} 筆。",
     pending_loaded: "已載入 {count} 個尚未盤點 ID。",
     pending_empty: "目前沒有尚未盤點的 ID。",
-    session_cleared: "本次盤點結果已清除，可以開始新的盤點。",
     location_changed_results_cleared:
       "位置已變更，本次盤點結果已重新開始。",
   },

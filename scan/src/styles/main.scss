@@ -187,7 +187,7 @@ a {
 .app-container {
   width: 100%;
   max-width: none;
-  padding: 1rem 1rem calc(1.5rem + env(safe-area-inset-bottom));
+  padding: 1rem 1rem 1.25rem;
 }
 
 .scanner-card {
@@ -246,8 +246,18 @@ a {
 }
 
 .settings-card .v-text-field,
-.settings-card .v-combobox {
+.settings-card .v-combobox,
+.current-location-field .v-combobox {
   margin-bottom: 0.15rem;
+}
+
+.current-location-field {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.scanner-location-field {
+  margin-top: 0.85rem;
 }
 
 .confirm-settings-button {
@@ -269,10 +279,6 @@ a {
 .field-description {
   margin: 0.5rem 0 0;
   font-size: 0.9rem;
-}
-
-.settings-fields > .field-description + .field-description {
-  margin-bottom: 0.85rem;
 }
 
 .secondary-link {
@@ -391,11 +397,6 @@ a {
   text-align: center;
 }
 
-.clear-results-button {
-  width: 100%;
-  margin-top: 0.4rem;
-}
-
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -407,7 +408,8 @@ a {
   border: 0;
 }
 
-.pending-card .v-btn {
+.pending-card .v-btn,
+.settings-required-button {
   width: 100%;
 }
 
@@ -551,6 +553,28 @@ a {
   margin: 1rem 0 0;
   font-size: 0.85rem;
   text-align: center;
+}
+
+.app-bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.app-bottom-nav.v-bottom-navigation {
+  height: calc(72px + env(safe-area-inset-bottom)) !important;
+}
+
+.app-bottom-nav .v-btn {
+  min-width: 44px;
+  min-height: 44px;
+  white-space: normal;
+}
+
+.inventory-app .v-main {
+  padding-bottom: calc(72px + env(safe-area-inset-bottom)) !important;
+}
+
+.inventory-app .app-toast {
+  margin-bottom: calc(4.75rem + env(safe-area-inset-bottom));
 }
 
 @media (min-width: 36rem) {
