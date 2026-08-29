@@ -32,6 +32,7 @@ const { t } = useI18n({ useScope: "global" });
         :hint="t('scan.apps_script_url_hint')"
         type="url"
         autocomplete="url"
+        aria-required="true"
         variant="outlined"
         persistent-hint
         :disabled="disabled"
@@ -46,21 +47,12 @@ const { t } = useI18n({ useScope: "global" });
         :placeholder="t('scan.location_placeholder')"
         :hint="t('scan.location_hint')"
         autocomplete="off"
+        aria-required="true"
         variant="outlined"
         persistent-hint
         :disabled="disabled"
         @update:model-value="emit('update:location', String($event ?? ''))"
       />
     </div>
-
-    <a
-      class="secondary-link"
-      href="https://drive.google.com/drive/u/0/recent?q=type:spreadsheet"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      {{ t("scan.recent_sheets") }}
-    </a>
-    <p class="field-description">{{ t("scan.recent_sheets_hint") }}</p>
   </section>
 </template>

@@ -1,6 +1,6 @@
 # Mobile Inventory Scanner 系統架構
 
-本文件定義整個專案的共通流程、資料契約與元件責任。三個元件的實作細節分別放在：
+本文件定義整個專案的共通流程、資料契約與元件責任。各元件的實作細節分別放在：
 
 - [`google_sheet/README.md`](../google_sheet/README.md)：Google Sheet 範本、網址取得方式與 Bound Apps Script Web App。
 - [`print/README.md`](../print/README.md)：從 Google Sheet 讀取 ID、產生 QR Code 與 PDF。
@@ -30,17 +30,16 @@ flowchart TB
     sheet[("Google Sheet<br/>盤點主資料")]
     print["print<br/>桌面優先、RWD"]
     scan["scan<br/>手機優先 PWA"]
-    sheets_api["Google Sheets API<br/>讀取 id"]
+    csv_export["Google Sheet CSV export<br/>下載 id"]
     apps_script["Bound Apps Script<br/>Web App"]
     pdf["PDF 檔案<br/>pdf-lib 產生"]
     photo["手機拍照或相片"]
 
     operator --> print
     operator --> scan
-    print --> sheets_api
-    sheets_api --> sheet
+    print --> csv_export
+    csv_export --> sheet
     print -->|產生 QR Code 與 PDF| pdf
-    print -.->|提供前往 scan 的入口| scan
     photo --> scan
     scan -->|id + location| apps_script
     apps_script -->|更新 checked_time + location| sheet
@@ -48,7 +47,9 @@ flowchart TB
     apps_script -->|回傳未盤點 id + name + location| scan
 ```
 
-QR Code payload 只包含 `id` 本身，不包含 URL、JSON、位置或時間。`print` 可以連結到 `scan`，但不負責更新盤點資料；盤點寫入的唯一入口是 Apps Script。
+QR Code payload 只包含 `id` 本身，不包含 URL、JSON、位置或時間。`print` 與
+`scan` 彼此獨立，不互相嵌入或導向；`print` 不負責更新盤點資料，盤點寫入的
+唯一入口是 Apps Script。
 
 ---
 
@@ -86,11 +87,10 @@ Mobile-Inventory-Scanner/
 負責讀取資料與產生 QR Code PDF：
 
 - 以電腦為主要操作環境，支援平板與手機 RWD。
-- 使用者輸入 Google Sheet URL，並以 Google OAuth 讀取有權限的 Sheet。
+- 使用者輸入 Google Sheet URL，解析 Spreadsheet ID 後下載公開 CSV。
 - 讀取 `id` 清單並產生 QR Code。
 - 顯示 responsive 預覽。
 - 使用 `qrcode` 產生 QR Code，使用 `pdf-lib` 產生可下載的 PDF 檔案。
-- 提供「前往 scan」的連結或按鈕，方便在手機上切換到盤點頁。
 
 `print` 不呼叫 Apps Script 寫入盤點結果，也不把盤點資料寫回 Google Sheet。
 
@@ -215,22 +215,22 @@ API 的 `message` 欄位一律使用英文，讓不同前端可以穩定處理�
 ```mermaid
 flowchart TB
     A["開啟 print"] --> B["輸入 Google Sheet URL"]
-    B --> C["Google OAuth 登入"]
-    C --> D["Google Sheets API 讀取 id"]
+    B --> C["下載 Google Sheet CSV"]
+    C --> D["分析 id 欄位"]
     D --> E["驗證空白與重複 ID"]
-    E --> F["設定 QR Code 與 A4 版面參數"]
+    E --> F["設定 QR Code 與紙張版面參數"]
     F --> G["產生 responsive 預覽"]
     G --> H["qrcode 產生 QR matrix / SVG"]
     H --> I["pdf-lib 產生向量 PDF"]
     I --> J["下載 QR Code PDF 檔案"]
-    A -.-> K["前往 scan"]
 ```
 
 每個有效 `id` 產生一個標籤，payload 只有 ID，例如 `A01`。PDF 由瀏覽器本機使用 `pdf-lib` 產生並下載，不透過後端，也不使用瀏覽器 Print 對話框。
 
 第一版 PDF 需求：
 
-- A4 直向或橫向。
+- 紙張尺寸可選 A4、A3、A5、B4、B5，預設 A4，並可切換直向或橫向。
+- 可選擇是否在標籤上顯示 ID 文字。
 - QR Code 使用實體 `mm` 尺寸。
 - QR Code 與 ID 文字保持在同一標籤。
 - 可設定 QR Code 大小、文字大小、標籤間距、頁面邊界。
@@ -269,17 +269,15 @@ QR decode 必須支援 multi-code detection，不能只處理第一個結果。�
 
 ---
 
-## 7. `print` 與 `scan` 的連接方式
+## 7. `print` 與 `scan` 的獨立邊界
 
-兩個 App 仍是獨立部署、獨立設定的靜態網站，但 `print` 必須提供前往 `scan` 的入口：
+兩個 App 是獨立部署、獨立設定的靜態網站，各自只提供自己的主要流程：
 
-- 同網域部署時，優先使用相對路徑連結。
-- 不同網域部署時，由 `VITE_SCAN_APP_URL` 設定 `scan` 網址。
-- 連結可以是按鈕或導覽項目，不得改變 QR Code payload。
-- QR Code 仍只包含 `id`，不可把 `scan` URL、Apps Script URL 或 Sheet URL 編入 QR Code。
-- `scan` 不需要 Google Sheet URL，只需要 Apps Script Web App URL。
-
-因此使用者可以在電腦的 `print` 產生 PDF，也可以在平板或手機開啟 `print` 後直接切換到 `scan`。
+- `print` 只讀取 Google Sheet、產生 QR Code 預覽與下載 PDF。
+- `scan` 只取得相機或照片、辨識 QR Code，並透過 Apps Script 寫入盤點結果。
+- 兩個 App 不互相嵌入、不提供跨 App 導覽，也不把另一個 App 的 URL
+  編入 QR Code。
+- `print` 使用 Google Sheet URL；`scan` 只使用 Apps Script Web App URL。
 
 ---
 
@@ -290,12 +288,14 @@ QR decode 必須支援 multi-code detection，不能只處理第一個結果。�
 `print` 至少保存：
 
 - `mis.print.google_sheet_url`
+- `mis.print.paper_size`
 - `mis.print.qr_size_mm`
 - `mis.print.id_font_size_pt`
 - `mis.print.qr_text_gap_mm`
 - `mis.print.label_gap_mm`
 - `mis.print.page_margin_mm`
 - `mis.print.orientation`
+- `mis.print.show_id_text`
 
 `scan` 至少保存：
 
@@ -305,7 +305,7 @@ QR decode 必須支援 multi-code detection，不能只處理第一個結果。�
 
 網路需求：
 
-- `print` 讀取 Google Sheet 與 Google API 時需要網路；PDF 產生本身在瀏覽器本機完成。
+- `print` 下載 Google Sheet CSV 時需要網路；PDF 產生本身在瀏覽器本機完成。
 - `scan` 的 App shell 與 QR decode 靜態資源可由 PWA cache 再次啟動，但寫入 Apps Script 仍需要網路。
 - `scan` 的尚未盤點清單透過同一個 Apps Script `/exec?action=pending` 讀取。
 - 第一版不做離線盤點 queue；無法連線的項目不可標記為成功。
@@ -317,7 +317,7 @@ QR decode 必須支援 multi-code detection，不能只處理第一個結果。�
 前端負責：
 
 - 使用者介面與 RWD。
-- `print` 的 Google OAuth、Sheet 讀取、QR Code 預覽與 PDF 產生。
+- `print` 的 CSV 下載、Sheet 讀取、QR Code 預覽與 PDF 產生。
 - `scan` 的圖片取得、multi-code QR decode、去重與結果呈現。
 - localStorage 設定保存。
 - 呼叫 Apps Script 並依回應顯示狀態。
@@ -343,9 +343,8 @@ Apps Script 是盤點寫入的唯一權威來源；`scan` 不可在 API 回傳�
 安全性原則：
 
 - Repository 不存 Google 帳號密碼、OAuth Client Secret 或 service account private key。
-- Google OAuth Client ID 可以作為前端公開設定，但 Client Secret 不得進入 bundle。
 - URL 與使用者偏好只保存於瀏覽器 localStorage。
-- Google Sheet 不因 `print` 而被迫設為完全公開；存取權限依 `print/README.md` 的 OAuth 流程設定。
+- `print` 使用 Google Sheet CSV export，因此來源 Sheet 必須能由瀏覽器直接下載 CSV。
 - Apps Script Web App 存取權限依實際環境設定，組織環境優先限制在組織帳號。
 
 第一版不做：

@@ -9,21 +9,18 @@ export default {
     english: "English",
   },
   scan: {
-    settings_heading: "Inventory settings",
+    app_bar_subtitle: "Mobile QR Code inventory",
+    settings_heading: "Connection and location",
     settings_description:
-      "Enter the Apps Script Web App URL and current location. Settings are saved in this browser.",
-    print_link: "Go to QR Code printing",
-    apps_script_url_label: "Apps Script Web App URL",
+      "Enter the deployed Apps Script /exec URL and current location. Google sign-in is not required.",
+    apps_script_url_label: "Apps Script /exec URL",
     apps_script_url_placeholder:
       "https://script.google.com/macros/s/…/exec",
     apps_script_url_hint:
       "Use the deployed URL ending in /exec, not the /dev test URL.",
     location_label: "Current location",
-    location_placeholder: "For example: Server room A",
+    location_placeholder: "Science Laboratory",
     location_hint: "Successful checks save this location to Google Sheets.",
-    recent_sheets: "Open recently used Google Sheets",
-    recent_sheets_hint:
-      "Google Drive opens in a new tab. The Apps Script URL must still be entered separately.",
     scanner_heading: "Start inventory check",
     scanner_description:
       "Place QR Codes in front of the camera and start scanning. You can also take or choose a photo; multiple QR Codes are supported.",
@@ -59,6 +56,10 @@ export default {
     photo_recognizing: "Recognizing QR Codes in the photo…",
     ids_found: "Recognition complete. Found {count} QR Codes.",
     no_qr_code: "No QR Code was detected. Take another photo or choose a different one.",
+    ids_duplicate_ignored:
+      "All detected QR Codes were already processed in this check. Duplicates were ignored.",
+    ids_found_with_duplicates:
+      "Recognition complete. Found {count} new QR Codes; {ignored} duplicates were ignored.",
     sending: "Sending the inventory result for {id}…",
     all_complete: "Inventory check complete: {success} succeeded and {failed} failed.",
     pending_loaded: "Loaded {count} unchecked IDs.",

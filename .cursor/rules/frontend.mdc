@@ -136,10 +136,11 @@ mis.print.qr_size_mm
 - QR Code 產生優先使用 npm `qrcode` 套件。
 - 預覽使用 SVG QR Code；PDF 使用 `qrcode` 的 QR matrix 搭配 `pdf-lib` 繪製向量模組。
 - PDF 在瀏覽器本機由 `pdf-lib` 產生並下載，不使用 `window.print()` 或瀏覽器另存 PDF。
-- Google Sheet 讀取使用 Google Identity Services OAuth + Google Sheets API。
-- Google OAuth Client ID 可使用 `VITE_GOOGLE_CLIENT_ID` 注入，Client ID 是公開識別值；不可出現 Client Secret。
-- 使用者輸入 Google Sheet URL，前端解析 Spreadsheet ID。
-- 不要求 Google Sheet 公開分享，只要求登入帳號有讀取權限。
+- Google Sheet 讀取使用公開 CSV export URL 搭配瀏覽器 `fetch`。
+- 使用者輸入 Google Sheet URL，前端解析 Spreadsheet ID，再下載
+  `https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv`。
+- Sheet 必須能由瀏覽器直接下載 CSV；不使用 Google OAuth、Google Identity
+  Services 或 Google Sheets API。
 
 ## 9. 網路層
 

@@ -1,16 +1,15 @@
 import type { DuplicateGroup, InventoryItem, SheetData } from "../types/print";
 import { parseSpreadsheetId, toA1Column } from "../utils/sheet_url";
 
-const API_BASE_URL = "https://sheets.googleapis.com/v4/spreadsheets";
-const GOOGLE_IDENTITY_SCRIPT =
-  "https://accounts.google.com/gsi/client";
-const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly";
+const CSV_EXPORT_URL = "https://docs.google.com/spreadsheets/d";
+
+interface CsvDownload {
+  csv: string;
+  spreadsheetTitle: string;
+}
 
 type SheetSourceErrorCode =
-  | "CONFIG_MISSING"
   | "INVALID_SHEET_URL"
-  | "GOOGLE_IDENTITY_UNAVAILABLE"
-  | "GOOGLE_AUTH_FAILED"
   | "SHEET_NOT_FOUND"
   | "SHEET_ACCESS_DENIED"
   | "SHEET_READ_FAILED"
@@ -27,166 +26,137 @@ export class SheetSourceError extends Error {
   }
 }
 
-interface SpreadsheetMetadata {
-  properties?: {
-    title?: unknown;
-  };
-  sheets?: Array<{
-    properties?: {
-      title?: unknown;
-    };
-  }>;
-}
-
-interface ValuesResponse {
-  values?: unknown;
-}
-
-let accessToken: string | null = null;
-let tokenClient: GoogleTokenClient | null = null;
-let identityScriptPromise: Promise<void> | null = null;
-
-function getClientId(): string {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID?.trim();
-  if (!clientId) {
-    throw new SheetSourceError("CONFIG_MISSING");
-  }
-  return clientId;
-}
-
-function waitForGoogleIdentity(timeoutMs = 10000): Promise<void> {
-  if (window.google?.accounts?.oauth2) {
-    return Promise.resolve();
-  }
-
-  if (identityScriptPromise) {
-    return identityScriptPromise;
-  }
-
-  identityScriptPromise = new Promise<void>((resolve, reject) => {
-    const startedAt = Date.now();
-    const script = document.querySelector<HTMLScriptElement>(
-      `script[src="${GOOGLE_IDENTITY_SCRIPT}"]`,
-    );
-
-    const finish = (error?: SheetSourceError) => {
-      window.clearInterval(timer);
-      script?.removeEventListener("load", handleLoad);
-      script?.removeEventListener("error", handleError);
-      identityScriptPromise = null;
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    };
-
-    const handleLoad = () => {
-      if (window.google?.accounts?.oauth2) {
-        finish();
-      }
-    };
-    const handleError = () => finish(new SheetSourceError("GOOGLE_IDENTITY_UNAVAILABLE"));
-    const timer = window.setInterval(() => {
-      if (window.google?.accounts?.oauth2) {
-        finish();
-      } else if (Date.now() - startedAt > timeoutMs) {
-        finish(new SheetSourceError("GOOGLE_IDENTITY_UNAVAILABLE"));
-      }
-    }, 100);
-
-    if (script) {
-      script.addEventListener("load", handleLoad, { once: true });
-      script.addEventListener("error", handleError, { once: true });
-    } else {
-      const dynamicScript = document.createElement("script");
-      dynamicScript.src = GOOGLE_IDENTITY_SCRIPT;
-      dynamicScript.async = true;
-      dynamicScript.defer = true;
-      dynamicScript.addEventListener("load", handleLoad, { once: true });
-      dynamicScript.addEventListener("error", handleError, { once: true });
-      document.head.append(dynamicScript);
-    }
-  });
-
-  return identityScriptPromise;
-}
-
-async function signIn(): Promise<void> {
-  await waitForGoogleIdentity();
-
-  if (!tokenClient) {
-    tokenClient = window.google!.accounts.oauth2.initTokenClient({
-      client_id: getClientId(),
-      scope: SHEETS_SCOPE,
-      callback: () => undefined,
-    });
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    tokenClient!.callback = (response) => {
-      if (response.error || !response.access_token) {
-        reject(new SheetSourceError("GOOGLE_AUTH_FAILED"));
-        return;
-      }
-      accessToken = response.access_token;
-      resolve();
-    };
-
-    tokenClient!.requestAccessToken({
-      prompt: accessToken ? "" : "consent",
-    });
-  });
-}
-
-function getApiErrorCode(status: number): SheetSourceErrorCode {
-  if (status === 403) return "SHEET_ACCESS_DENIED";
+function getFetchErrorCode(status: number): SheetSourceErrorCode {
+  if (status === 401 || status === 403) return "SHEET_ACCESS_DENIED";
   if (status === 404) return "SHEET_NOT_FOUND";
   return "SHEET_READ_FAILED";
 }
 
-async function apiGet<T>(path: string): Promise<T> {
-  if (!accessToken) {
-    await signIn();
-  }
+function decodeFilename(value: string): string | null {
+  const trimmed = value.trim().replace(/^"(.*)"$/, "$1");
 
-  let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}/${path}`, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    return decodeURIComponent(trimmed);
+  } catch {
+    return trimmed || null;
+  }
+}
+
+function getSpreadsheetTitle(response: Response, spreadsheetId: string): string {
+  const contentDisposition = response.headers.get("Content-Disposition");
+  if (!contentDisposition) return spreadsheetId;
+
+  const extendedMatch = contentDisposition.match(
+    /filename\*\s*=\s*[^']*'[^']*'([^;]+)/i,
+  );
+  const plainMatch = contentDisposition.match(
+    /filename\s*=\s*"([^"]+)"|filename\s*=\s*([^;]+)/i,
+  );
+  const filename = decodeFilename(
+    extendedMatch?.[1] ?? plainMatch?.[1] ?? plainMatch?.[2] ?? "",
+  );
+  if (!filename) return spreadsheetId;
+
+  const titleWithExtension = filename.replace(/\.[^.]+$/, "").trim();
+  const separatorIndex = titleWithExtension.lastIndexOf(" - ");
+  const title =
+    separatorIndex > 0
+      ? titleWithExtension.slice(0, separatorIndex).trim()
+      : titleWithExtension;
+
+  return title || spreadsheetId;
+}
+
+async function downloadCsv(spreadsheetId: string): Promise<CsvDownload> {
+  const exportUrl = `${CSV_EXPORT_URL}/${encodeURIComponent(spreadsheetId)}/export?format=csv`;
+  let response: Response;
+
+  try {
+    response = await fetch(exportUrl);
   } catch (error) {
     throw new SheetSourceError("SHEET_READ_FAILED", error);
-  }
-
-  if (response.status === 401) {
-    accessToken = null;
-    throw new SheetSourceError("GOOGLE_AUTH_FAILED");
   }
 
   if (!response.ok) {
-    throw new SheetSourceError(getApiErrorCode(response.status));
+    throw new SheetSourceError(getFetchErrorCode(response.status));
   }
 
+  let csv: string;
   try {
-    return (await response.json()) as T;
+    csv = await response.text();
   } catch (error) {
     throw new SheetSourceError("SHEET_READ_FAILED", error);
   }
+
+  if (!csv.trim()) {
+    throw new SheetSourceError("SHEET_READ_FAILED");
+  }
+
+  if (/<(?:html|body)\b/i.test(csv.slice(0, 500))) {
+    throw new SheetSourceError("SHEET_ACCESS_DENIED");
+  }
+
+  return {
+    csv,
+    spreadsheetTitle: getSpreadsheetTitle(response, spreadsheetId),
+  };
 }
 
-function quoteSheetName(name: string): string {
-  return `'${name.replaceAll("'", "''")}'`;
-}
+function parseCsv(csv: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let inQuotes = false;
 
-function getRows(response: ValuesResponse): string[][] {
-  if (!Array.isArray(response.values)) return [];
+  for (let index = 0; index < csv.length; index += 1) {
+    const character = csv[index];
 
-  return response.values
-    .filter((row): row is unknown[] => Array.isArray(row))
-    .map((row) => row.map((cell) => String(cell ?? "")));
+    if (inQuotes) {
+      if (character === '"') {
+        if (csv[index + 1] === '"') {
+          cell += '"';
+          index += 1;
+        } else {
+          inQuotes = false;
+        }
+      } else {
+        cell += character;
+      }
+      continue;
+    }
+
+    if (character === '"') {
+      inQuotes = true;
+    } else if (character === ",") {
+      row.push(cell);
+      cell = "";
+    } else if (character === "\n" || character === "\r") {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+      if (character === "\r" && csv[index + 1] === "\n") {
+        index += 1;
+      }
+    } else {
+      cell += character;
+    }
+  }
+
+  if (inQuotes) {
+    throw new SheetSourceError("SHEET_READ_FAILED");
+  }
+
+  if (cell.length > 0 || row.length > 0) {
+    row.push(cell);
+    rows.push(row);
+  }
+
+  if (rows[0]?.[0]?.startsWith("\uFEFF")) {
+    rows[0][0] = rows[0][0].slice(1);
+  }
+
+  return rows;
 }
 
 function isNonEmptyRow(row: string[]): boolean {
@@ -214,27 +184,8 @@ export async function readSheet(url: string): Promise<SheetData> {
     throw new SheetSourceError("INVALID_SHEET_URL", error);
   }
 
-  const metadata = await apiGet<SpreadsheetMetadata>(
-    `${encodeURIComponent(spreadsheetId)}?fields=properties.title,sheets.properties.title`,
-  );
-  const spreadsheetTitle =
-    typeof metadata.properties?.title === "string"
-      ? metadata.properties.title
-      : spreadsheetId;
-  const sheetName =
-    typeof metadata.sheets?.[0]?.properties?.title === "string"
-      ? metadata.sheets[0].properties.title
-      : "";
-
-  if (!sheetName) {
-    throw new SheetSourceError("SHEET_NOT_FOUND");
-  }
-
-  const range = `${quoteSheetName(sheetName)}!A:Z`;
-  const valuesResponse = await apiGet<ValuesResponse>(
-    `${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(range)}?majorDimension=ROWS`,
-  );
-  const rows = getRows(valuesResponse);
+  const csvDownload = await downloadCsv(spreadsheetId);
+  const rows = parseCsv(csvDownload.csv);
   const headers = rows[0] ?? [];
   const idColumnIndex = headers.findIndex((header) => header.trim() === "id");
 
@@ -267,18 +218,11 @@ export async function readSheet(url: string): Promise<SheetData> {
 
   return {
     spreadsheetId,
-    spreadsheetTitle,
-    sheetName,
+    spreadsheetTitle: csvDownload.spreadsheetTitle,
+    sheetName: "CSV export",
     items,
     totalRows: Math.max(0, rows.length - 1),
     dataErrorCount,
     duplicateGroups: buildDuplicateGroups(items),
   };
-}
-
-export function signOut(): void {
-  if (accessToken && window.google?.accounts?.oauth2) {
-    window.google.accounts.oauth2.revoke(accessToken, () => undefined);
-  }
-  accessToken = null;
 }

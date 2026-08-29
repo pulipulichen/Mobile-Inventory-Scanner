@@ -10,21 +10,33 @@
 ```text
 Containerfile.frontend
 frontend.sh
+frontend_dev.sh
+frontend_build.sh
 ```
 
-## 統一命令
+## 開發
 
 ```bash
-./frontend.sh image
-./frontend.sh install <scan|print>
-./frontend.sh dev <scan|print>
-./frontend.sh build <scan|print>
+./frontend_dev.sh
 ```
+
+`frontend_dev.sh` 會自動建立 Podman 編譯環境、安裝 `scan` 與 `print`
+的 npm 依賴，並同時啟動兩個 Vite 開發伺服器。程式碼變更會持續
+watch 並由 Vite 重新編譯。
 
 開發預設網址：
 
 - `scan`：`http://localhost:5173`
 - `print`：`http://localhost:5174`
+
+## 正式編譯
+
+```bash
+./frontend_build.sh
+```
+
+`frontend_build.sh` 會自動建立 Podman 編譯環境、安裝兩個 App 的 npm
+依賴，並以 Vite production mode 編譯及壓縮正式靜態資源。
 
 正式輸出目錄：
 

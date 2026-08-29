@@ -28,6 +28,9 @@ function handleFile(event: Event): void {
       type="button"
       color="secondary"
       size="large"
+      stacked
+      block
+      prepend-icon="mdi-camera"
       :disabled="disabled"
       @click="cameraInput?.click()"
     >
@@ -38,6 +41,9 @@ function handleFile(event: Event): void {
       variant="outlined"
       color="secondary"
       size="large"
+      stacked
+      block
+      prepend-icon="mdi-image"
       :disabled="disabled"
       @click="photoInput?.click()"
     >

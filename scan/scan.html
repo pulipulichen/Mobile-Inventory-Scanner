@@ -1,42 +1,19 @@
 <!doctype html>
-<html lang="zh-Hant-TW">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#13795B">
-  <title>手機盤點｜Mobile Inventory Scanner</title>
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./css/app.css">
-</head>
-<body>
-  <header class="app-header">
-    <a href="./index.html">← 首頁</a>
-    <h1>手機盤點</h1>
-  </header>
-  <main class="container scan-layout">
-    <section class="toolbar">
-      <button id="sign-in">登入 Google</button>
-      <label class="field">
-        <span>目前位置</span>
-        <input id="location" type="text" autocomplete="off" placeholder="例如：倉庫 A／3F 機房">
-      </label>
-      <button id="start-camera" disabled>開始掃描</button>
-      <button id="stop-camera" class="danger" disabled>停止相機</button>
-      <button id="photo-button" class="secondary" disabled>拍照辨識 QR Code</button>
-      <input id="photo-input" type="file" accept="image/*" capture="environment" hidden>
-    </section>
-
-    <div id="status" class="status">請先登入 Google。</div>
-    <div id="reader"></div>
-    <div id="reader-file"></div>
-    <section id="last-result" class="last-result" aria-live="polite"></section>
-  </main>
-
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="./config/google-sheet.js"></script>
-  <script src="./js/google-sheet.js"></script>
-  <script src="./js/scan.js"></script>
-</body>
+<html lang="zh-TW">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta http-equiv="refresh" content="0; url=./">
+    <title>手機 QR Code 盤點</title>
+  </head>
+  <body>
+    <main>
+      <h1>手機 QR Code 盤點</h1>
+      <p>手機盤點 App 已更新，正在開啟新版介面。</p>
+      <p><a href="./">如果沒有自動開啟，請按此進入手機盤點 App。</a></p>
+    </main>
+    <script>
+      window.location.replace("./");
+    </script>
+  </body>
 </html>

@@ -35,6 +35,19 @@ export class AppsScriptError extends Error {
   }
 }
 
+export function isAppsScriptUrl(url: string): boolean {
+  try {
+    const endpoint = new URL(url.trim());
+    return (
+      endpoint.protocol === "https:" &&
+      endpoint.hostname === "script.google.com" &&
+      /^\/macros\/s\/[^/]+\/exec\/?$/.test(endpoint.pathname)
+    );
+  } catch {
+    return false;
+  }
+}
+
 function getEndpoint(url: string, action?: string): URL {
   let endpoint: URL;
   try {
@@ -43,7 +56,7 @@ function getEndpoint(url: string, action?: string): URL {
     throw new AppsScriptError("INVALID_REQUEST", error);
   }
 
-  if (endpoint.protocol !== "https:" || !endpoint.hostname.endsWith("google.com")) {
+  if (!isAppsScriptUrl(url)) {
     throw new AppsScriptError("INVALID_REQUEST");
   }
 

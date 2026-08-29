@@ -21,13 +21,13 @@ const { t } = useI18n({ useScope: "global" });
       <v-card-title id="source-heading">
         {{ t("print.source_heading") }}
       </v-card-title>
-      <v-card-subtitle>{{ t("print.sheet_url_hint") }}</v-card-subtitle>
     </v-card-item>
 
     <v-card-text>
       <form class="source-form" @submit.prevent="emit('load')">
         <v-text-field
           id="google-sheet-url"
+          class="sheet-url-field"
           :model-value="modelValue"
           :label="t('print.sheet_url_label')"
           :placeholder="t('print.sheet_url_placeholder')"
@@ -37,9 +37,24 @@ const { t } = useI18n({ useScope: "global" });
           autocomplete="url"
           type="url"
           variant="outlined"
+          hide-details="auto"
           clearable
           @update:model-value="emit('update:modelValue', String($event ?? ''))"
-        />
+        >
+          <template #prepend>
+            <v-btn
+              class="recent-sheet-button"
+              icon="mdi-history"
+              color="secondary"
+              variant="outlined"
+              :aria-label="t('print.recent_sheets')"
+              :title="t('print.recent_sheets')"
+              href="https://drive.google.com/drive/u/0/recent?q=type:spreadsheet"
+              target="_blank"
+              rel="noopener noreferrer"
+            />
+          </template>
+        </v-text-field>
         <p id="google-sheet-url-hint" class="field-description">
           {{ t("print.sheet_url_hint") }}
         </p>
@@ -54,14 +69,6 @@ const { t } = useI18n({ useScope: "global" });
           >
             {{ t("print.load_sheet") }}
           </v-btn>
-          <a
-            class="secondary-link"
-            href="https://drive.google.com/drive/u/0/recent?q=type:spreadsheet"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {{ t("print.recent_sheets") }}
-          </a>
         </div>
         <p class="field-description">{{ t("print.recent_sheets_hint") }}</p>
       </form>

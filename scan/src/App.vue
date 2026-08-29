@@ -8,6 +8,7 @@ import ScanResultList from "./components/ScanResultList.vue";
 import ScanSettings from "./components/ScanSettings.vue";
 import {
   AppsScriptError,
+  isAppsScriptUrl,
   loadPendingInventory,
   submitInventoryCheck,
 } from "./services/apps_script";
@@ -34,6 +35,7 @@ const location = ref(loadLocation());
 const locationHistory = ref(loadLocationHistory());
 const results = ref<ScanResult[]>([]);
 const pendingItems = ref<InventoryItem[]>([]);
+const hasLoadedPending = ref(false);
 const isPendingLoading = ref(false);
 const isPhotoLoading = ref(false);
 const isCameraActive = ref(false);
@@ -116,7 +118,7 @@ function updateLocation(value: string): void {
 }
 
 function validateAppsScriptUrl(): boolean {
-  if (appsScriptUrl.value.trim()) return true;
+  if (isAppsScriptUrl(appsScriptUrl.value)) return true;
   setStatus("errors.INVALID_REQUEST", {}, "error");
   return false;
 }
@@ -164,7 +166,6 @@ async function startCamera(): Promise<void> {
   if (!canStartCamera.value) return;
   if (!validateAppsScriptUrl() || !validateLocation()) return;
   resetSession();
-  locationHistory.value = saveLocationToHistory(location.value);
   camera.value?.start();
 }
 
@@ -173,10 +174,18 @@ function stopCamera(): void {
 }
 
 function queueIds(ids: string[]): void {
-  const newIds = ids
+  const normalizedIds = ids
     .map((id) => id.trim())
-    .filter((id) => id && !sessionIds.has(id));
-  if (!newIds.length) return;
+    .filter(Boolean);
+  const uniqueIds = [...new Set(normalizedIds)];
+  const newIds = uniqueIds.filter((id) => !sessionIds.has(id));
+  const ignoredCount = normalizedIds.length - newIds.length;
+  if (!newIds.length) {
+    if (ignoredCount) {
+      setStatus("status.ids_duplicate_ignored", { count: ignoredCount }, "warning");
+    }
+    return;
+  }
 
   newIds.forEach((id) => {
     sessionIds.add(id);
@@ -186,7 +195,13 @@ function queueIds(ids: string[]): void {
       state: "queued",
     });
   });
-  setStatus("status.ids_found", { count: newIds.length }, "info");
+  setStatus(
+    ignoredCount
+      ? "status.ids_found_with_duplicates"
+      : "status.ids_found",
+    { count: newIds.length, ignored: ignoredCount },
+    "info",
+  );
 
   const queuedResults = results.value.filter((result) =>
     newIds.includes(result.id),
@@ -208,16 +223,18 @@ function queueIds(ids: string[]): void {
 async function sendResult(result: ScanResult): Promise<void> {
   result.state = "sending";
   setStatus("status.sending", { id: result.id });
+  const submittedLocation = location.value.trim();
   try {
     const item = await submitInventoryCheck(
       appsScriptUrl.value,
       result.id,
-      location.value.trim(),
+      submittedLocation,
     );
     result.name = item.name;
     result.state = "success";
     result.checked_time = item.checked_time;
     result.location = item.location;
+    locationHistory.value = saveLocationToHistory(submittedLocation);
     pendingItems.value = pendingItems.value.filter(
       (pendingItem) => pendingItem.id !== result.id,
     );
@@ -255,6 +272,7 @@ async function loadPending(): Promise<void> {
   setStatus("status.pending_loading");
   try {
     pendingItems.value = await loadPendingInventory(appsScriptUrl.value);
+    hasLoadedPending.value = true;
     if (!pendingItems.value.length) {
       setStatus("status.pending_empty", {}, "success");
       return;
@@ -265,7 +283,6 @@ async function loadPending(): Promise<void> {
       "success",
     );
   } catch (error) {
-    pendingItems.value = [];
     setError(error);
   } finally {
     isPendingLoading.value = false;
@@ -281,39 +298,40 @@ function handleLocaleChange(event: Event): void {
 </script>
 
 <template>
-  <v-app>
+  <v-app class="inventory-app">
     <a class="skip-link" href="#main-content">
       {{ t("common.skip_to_content") }}
     </a>
 
-    <header class="site-header">
-      <div class="header-inner">
-        <div class="brand">
-          <p class="eyebrow">MOBILE INVENTORY SCANNER</p>
-          <h1>{{ t("common.app_title") }}</h1>
-          <p>{{ t("common.app_description") }}</p>
-        </div>
-        <div class="header-actions">
-          <a class="scan-link" href="../print/">
-            {{ t("scan.print_link") }}
-          </a>
-          <div class="locale-control">
-            <label for="locale-select">{{ t("common.language") }}</label>
-            <select
-              id="locale-select"
-              :value="locale"
-              @change="handleLocaleChange"
-            >
-              <option value="zh-TW">{{ t("common.chinese") }}</option>
-              <option value="en">{{ t("common.english") }}</option>
-            </select>
+    <header class="app-bar">
+      <div class="app-bar-inner">
+        <div class="app-brand">
+          <span class="app-brand-mark" aria-hidden="true">⌗</span>
+          <div>
+            <p class="app-brand-title">{{ t("common.app_title") }}</p>
+            <p class="app-brand-subtitle">{{ t("scan.app_bar_subtitle") }}</p>
           </div>
+        </div>
+
+        <div class="locale-control">
+          <label for="locale-select" class="locale-trigger">
+            <span class="language-icon" aria-hidden="true">🌐</span>
+            <span class="language-label-text">{{ t("common.language") }}</span>
+          </label>
+          <select
+            id="locale-select"
+            :value="locale"
+            @change="handleLocaleChange"
+          >
+            <option value="zh-TW">{{ t("common.chinese") }}</option>
+            <option value="en">{{ t("common.english") }}</option>
+          </select>
         </div>
       </div>
     </header>
 
-    <v-main id="main-content" tag="main">
-      <v-container class="app-container">
+    <v-main id="main-content" tag="main" class="app-main">
+      <v-container class="app-container" fluid>
         <ScanSettings
           :apps-script-url="appsScriptUrl"
           :location="location"
@@ -354,6 +372,7 @@ function handleLocaleChange(event: Event): void {
               type="button"
               color="primary"
               size="large"
+              prepend-icon="mdi-qrcode-scan"
               :disabled="!canStartCamera"
               @click="startCamera"
             >
@@ -364,6 +383,9 @@ function handleLocaleChange(event: Event): void {
               color="error"
               variant="outlined"
               size="large"
+              stacked
+              block
+              prepend-icon="mdi-camera-off"
               :disabled="!isCameraActive"
               @click="stopCamera"
             >
@@ -377,6 +399,7 @@ function handleLocaleChange(event: Event): void {
 
           <v-btn
             v-if="results.length"
+            class="clear-results-button"
             type="button"
             variant="text"
             color="secondary"
@@ -408,6 +431,7 @@ function handleLocaleChange(event: Event): void {
         </section>
 
         <PendingInventoryList
+          v-if="hasLoadedPending || isPendingLoading"
           :groups="pendingGroups"
           :loading="isPendingLoading"
         />

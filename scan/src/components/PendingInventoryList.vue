@@ -24,7 +24,7 @@ const { t } = useI18n({ useScope: "global" });
           groups: groups.length,
         }) }}
       </p>
-      <p v-else>{{ t("scan.pending_empty") }}</p>
+      <p v-else-if="!loading">{{ t("scan.pending_empty") }}</p>
     </div>
 
     <div v-if="loading" class="loading-text" role="status" aria-live="polite">

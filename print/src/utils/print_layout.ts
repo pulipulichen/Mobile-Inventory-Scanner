@@ -1,29 +1,31 @@
-import type {
-  InventoryItem,
-  LayoutMetrics,
-  PrintSettings,
+import {
+  getPaperSizeMm,
+  MIN_PAGE_MARGIN_MM,
+  type InventoryItem,
+  type LayoutMetrics,
+  type PrintSettings,
 } from "../types/print";
 
-const A4_WIDTH_MM = 210;
-const A4_HEIGHT_MM = 297;
 const LABEL_PADDING_MM = 3;
 
 export function calculateLayout(
   settings: PrintSettings,
   itemCount: number,
 ): LayoutMetrics {
-  const isPortrait = settings.orientation === "portrait";
-  const pageWidthMm = isPortrait ? A4_WIDTH_MM : A4_HEIGHT_MM;
-  const pageHeightMm = isPortrait ? A4_HEIGHT_MM : A4_WIDTH_MM;
-  const textHeightMm = Math.max(5, settings.idFontSizePt * 0.42);
+  const { widthMm: pageWidthMm, heightMm: pageHeightMm } = getPaperSizeMm(
+    settings.paperSize,
+    settings.orientation,
+  );
+  const textHeightMm = settings.showIdText
+    ? Math.max(5, settings.idFontSizePt * 0.42)
+    : 0;
+  const textGapMm = settings.showIdText ? settings.qrTextGapMm : 0;
   const labelWidthMm = settings.qrSizeMm + LABEL_PADDING_MM * 2;
   const labelHeightMm =
-    settings.qrSizeMm +
-    settings.qrTextGapMm +
-    textHeightMm +
-    LABEL_PADDING_MM * 2;
-  const contentWidthMm = pageWidthMm - settings.pageMarginMm * 2;
-  const contentHeightMm = pageHeightMm - settings.pageMarginMm * 2;
+    settings.qrSizeMm + textGapMm + textHeightMm + LABEL_PADDING_MM * 2;
+  const pageMarginMm = Math.max(MIN_PAGE_MARGIN_MM, settings.pageMarginMm);
+  const contentWidthMm = pageWidthMm - pageMarginMm * 2;
+  const contentHeightMm = pageHeightMm - pageMarginMm * 2;
   const columns = Math.max(
     1,
     Math.floor(

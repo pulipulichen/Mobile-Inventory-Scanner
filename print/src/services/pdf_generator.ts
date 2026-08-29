@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import type { InventoryItem, PrintSettings } from "../types/print";
+import { MIN_PAGE_MARGIN_MM, type InventoryItem, type PrintSettings } from "../types/print";
 import { calculateLayout, getPageItems } from "../utils/print_layout";
 import { createQrMatrix } from "./qr_generator";
 
@@ -27,14 +27,20 @@ export async function generatePdf(
       mmToPoints(metrics.pageHeightMm),
     ]);
     const pageHeight = mmToPoints(metrics.pageHeightMm);
-    const pageMargin = mmToPoints(settings.pageMarginMm);
+    const pageMargin = mmToPoints(
+      Math.max(MIN_PAGE_MARGIN_MM, settings.pageMarginMm),
+    );
     const labelWidth = mmToPoints(metrics.labelWidthMm);
     const labelHeight = mmToPoints(metrics.labelHeightMm);
     const labelGap = mmToPoints(settings.labelGapMm);
     const labelPadding = mmToPoints(metrics.labelPaddingMm);
     const qrSize = mmToPoints(settings.qrSizeMm);
-    const textHeight = mmToPoints(metrics.textHeightMm);
-    const textGap = mmToPoints(settings.qrTextGapMm);
+    const textHeight = settings.showIdText
+      ? mmToPoints(metrics.textHeightMm)
+      : 0;
+    const textGap = settings.showIdText
+      ? mmToPoints(settings.qrTextGapMm)
+      : 0;
 
     pageItems.forEach((item, index) => {
       const column = index % metrics.columns;
@@ -73,14 +79,16 @@ export async function generatePdf(
         });
       });
 
-      const textWidth = font.widthOfTextAtSize(item.id, fontSize);
-      page.drawText(item.id, {
-        x: x + (labelWidth - textWidth) / 2,
-        y: y + labelPadding,
-        size: fontSize,
-        font,
-        color: BLACK,
-      });
+      if (settings.showIdText) {
+        const textWidth = font.widthOfTextAtSize(item.id, fontSize);
+        page.drawText(item.id, {
+          x: x + (labelWidth - textWidth) / 2,
+          y: y + labelPadding,
+          size: fontSize,
+          font,
+          color: BLACK,
+        });
+      }
     });
   });
 

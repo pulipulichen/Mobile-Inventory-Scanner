@@ -19,8 +19,9 @@ description: >-
 `scan/` 與 `print/` 是純靜態 Vite App。套件必須透過各 App 的
 `package.json`／`package-lock.json` 管理，並在 build 時由 Vite 打包；
 正式執行時不可依賴 Node.js runtime、自建 API server 或執行期 CDN
-下載。主機上的 Node.js／npm 不是必要條件，請透過根目錄的 `frontend.sh`
-執行 npm 與 build 命令。
+下載。主機上的 Node.js／npm 不是必要條件，請透過根目錄的
+`frontend_dev.sh`／`frontend_build.sh` 執行開發與正式編譯；單一 App
+npm 維護命令仍使用 `frontend.sh`。
 
 ## 先查這張表：規格已指定的功能不要重寫
 
@@ -32,7 +33,7 @@ description: >-
 | UI 元件與互動 | `vuetify` + `vite-plugin-vuetify` | `scan/`、`print/`；共用 Vuetify 4.x，Vite 編譯時按需載入 |
 | 版面與元件樣式 | SCSS 與 component scoped styles | `src/styles/` 或元件內 `<style scoped lang="scss">` |
 | 圖片取得 | `<input type="file" accept="image/*">` | `scan/`；拍照入口使用 `capture="environment"` |
-| Google Sheet 讀取 | Google Identity Services OAuth + Google Sheets API | `print/`；集中在 `src/services/` |
+| Google Sheet 讀取 | Google Sheet CSV export + `fetch` | `print/`；集中在 `src/services/` |
 | HTTP 請求 | 瀏覽器 `fetch` | `src/services/`；不建立 CORS proxy |
 | 設定保存 | 集中的 localStorage wrapper／composable | 使用 `mis.scan.*` 或 `mis.print.*` prefix |
 | QR Code PDF 產生 | `qrcode` + `pdf-lib` | `print/`；在瀏覽器本機產生向量 PDF |
@@ -51,8 +52,8 @@ description: >-
   component 內散落 `fetch()`、localStorage 或 QR 解碼邏輯。
 - UI framework 已定案為 Vuetify 4.x；不要再引入第二套 UI framework。
   小型專案特有介面仍使用 Vue component 或 composable 補足。
-- 修改 `scan/` 或 `print/` 後，至少執行對應的
-  `./frontend.sh build <scan|print>` 確認可以成功打包。
+- 修改 `scan/` 或 `print/` 後，至少執行 `./frontend_build.sh` 確認兩個 App
+  都可以成功打包。
 
 ## 不該做
 

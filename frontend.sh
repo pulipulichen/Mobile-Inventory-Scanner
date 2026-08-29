@@ -59,11 +59,16 @@ ensure_image() {
 
 run_app() {
   local app="$1"
+  local podman_tty_args=()
   shift
+
+  if [[ "${MIS_FRONTEND_NON_INTERACTIVE:-0}" != "1" ]]; then
+    podman_tty_args=(-it)
+  fi
 
   ensure_image
 
-  podman run --rm -it \
+  podman run --rm "${podman_tty_args[@]}" \
     --userns=keep-id \
     --volume "$ROOT_DIR:/workspace:Z" \
     --workdir "/workspace/$app" \
@@ -74,15 +79,22 @@ run_app() {
 run_dev() {
   local app="$1"
   local port
+  local podman_tty_args=()
 
   case "$app" in
     scan) port=5173 ;;
     print) port=5174 ;;
   esac
 
+  if [[ "${MIS_FRONTEND_NON_INTERACTIVE:-0}" != "1" ]]; then
+    podman_tty_args=(-it)
+  fi
+
   ensure_image
 
-  podman run --rm -it \
+  echo "INFO: $app 開發伺服器網址：http://localhost:$port/"
+
+  exec podman run --rm "${podman_tty_args[@]}" \
     --userns=keep-id \
     --volume "$ROOT_DIR:/workspace:Z" \
     --workdir "/workspace/$app" \

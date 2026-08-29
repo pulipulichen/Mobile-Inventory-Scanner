@@ -26,7 +26,7 @@ npm 命令。
 
 Vuetify 只負責 App 操作介面。`scan` 的即時掃描使用瀏覽器
 `MediaDevices.getUserMedia()`，拍照／讀取相片仍使用規格指定的原生
-`<input type="file">`；`print` 的 QR label、A4 預覽實體尺寸與
+`<input type="file">`；`print` 的 QR label、紙張預覽實體尺寸與
 `pdf-lib` PDF 繪製仍由專案自己的元件、SCSS 與 service 負責，不以 UI
 framework 取代實體輸出邏輯。語系選擇器等規格指定原生元素的控制項也必須
 保留原生 HTML 語意。
@@ -42,6 +42,7 @@ framework 取代實體輸出邏輯。語系選擇器等規格指定原生元素�
 | `vue` | `scan`、`print` | Vue 3 UI 與 Composition API | [官方文件](https://vuejs.org/guide/introduction.html) | [官方 Examples](https://vuejs.org/examples/) |
 | `vuetify` | `scan`、`print` | 共用 Vue 3 UI framework 與 responsive 元件 | [官方文件](https://vuetifyjs.com/en/getting-started/installation/) | [全部元件展示](https://vuetifyjs.com/en/components/all/) |
 | `vite-plugin-vuetify` | `scan`、`print` | Vite 編譯時按需載入 Vuetify 元件與 tree-shaking | [GitHub README](https://github.com/vuetifyjs/vuetify-loader/tree/master/packages/vite-plugin) | —（建置工具，無獨立 UI Demo） |
+| `@mdi/font` | `scan`、`print` | Material Design Icons；`scan` 掃描操作按鈕與 `print`「最近使用」等 Vuetify 圖示 | [GitHub README](https://github.com/Templarian/MaterialDesign-Webfont) | [Material Design Icons](https://pictogrammers.com/library/mdi/) |
 | `vue-i18n` | `scan`、`print` | Vue 3 Composition API 的多語系、插值、複數與 locale 格式化 | [Composition API 文件](https://vue-i18n.intlify.dev/guide/advanced/composition) | [官方 CodeSandbox 範例](https://codesandbox.io/s/vue-i18n-9-template-h28c0) |
 | `typescript` | `scan`、`print` | 業務資料、API 回應與元件型別 | [官方 Handbook](https://www.typescriptlang.org/docs/handbook/intro.html) | [TypeScript Playground](https://www.typescriptlang.org/play/) |
 | `vite` | `scan`、`print` | 開發伺服器與正式 bundle | [官方文件](https://vite.dev/guide/) | [Vite 線上 Playground](https://vite.new/vue-ts) |
@@ -60,21 +61,22 @@ framework 取代實體輸出邏輯。語系選擇器等規格指定原生元素�
 
 - `MediaDevices.getUserMedia()`：取得後置鏡頭串流，供瀏覽器內即時掃描。
 - `<input type="file" accept="image/*" capture="environment">`：取得手機相片或拍照。
-- `fetch`：由 service 呼叫 Apps Script Web App。
+- `fetch`：由 service 下載 Google Sheet CSV，或呼叫 Apps Script Web App。
 - `localStorage`：保存 `mis.scan.*` 與 `mis.print.*` 設定。
 - `Blob`、`URL.createObjectURL`：下載 PDF 與處理本機圖片。
 - Vue Composition API：管理元件狀態與互動，不引入 Pinia。
 
-## Google 外部 API
+## Google 外部服務
 
-`print` 直接使用下列瀏覽器 API，不把 Google Client Secret 或 service account
-private key 放入前端：
+`print` 不使用 Google OAuth、Google Identity Services 或 Google Sheets API。
+前端只使用瀏覽器 `fetch` 下載 Google Sheet 的 CSV 匯出網址：
 
-- Google Identity Services：取得 OAuth access token。
-- Google Sheets API：讀取使用者有權限的 Google Sheet。
+```text
+https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv
+```
 
-這些服務的網址與 OAuth Client ID 是公開前端設定；access token 只保留在
-必要的 session / memory 範圍，不長期保存到 localStorage。
+因此 Sheet 必須能由瀏覽器直接下載 CSV；`scan` 仍透過 Google Apps Script
+Web App 讀取與寫入盤點資料。
 
 ## 不引入的套件
 
@@ -84,7 +86,8 @@ private key 放入前端：
 - Pinia：狀態量小，以 composable 管理即可。
 - Bootstrap、PrimeVue、Quasar、Element Plus 或其他第二套 UI framework：
   UI 元件統一使用 Vuetify。
-- `googleapis`：前端直接使用 Google Sheets API，不建立 Node.js 中介層。
+- `googleapis`：不引入 Google API client 或 Node.js 中介層；`print` 使用
+  Google Sheet CSV export。
 - `jsPDF` 或瀏覽器列印：PDF 統一由 `pdf-lib` 產生。
 - QR decode CDN：`@undecaf/zbar-wasm` 的 WASM 必須隨 Vite build 部署。
 
@@ -105,6 +108,5 @@ private key 放入前端：
 用途、所屬 App 與替代方案。修改完成後至少執行：
 
 ```bash
-./frontend.sh build print
-./frontend.sh build scan
+./frontend_build.sh
 ```

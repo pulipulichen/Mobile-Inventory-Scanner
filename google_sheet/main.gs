@@ -6,8 +6,6 @@
  */
 
 var CONFIG = {
-  // Rename this value if the inventory data is stored in another worksheet.
-  SHEET_NAME: "盤點",
   HEADER_ROW: 1,
   TIMEZONE: "Asia/Taipei",
   CHECKED_TIME_FORMAT: "yyyyMMdd-HHmmss",
@@ -279,7 +277,7 @@ function processInventoryList_(onlyPending) {
 }
 
 /**
- * Gets the configured worksheet from the bound spreadsheet.
+ * Gets the first worksheet from the bound spreadsheet.
  *
  * @param {GoogleAppsScript.Spreadsheet.Spreadsheet} spreadsheet Bound sheet.
  * @return {GoogleAppsScript.Spreadsheet.Sheet} Target worksheet.
@@ -292,11 +290,12 @@ function getTargetSheet_(spreadsheet) {
     );
   }
 
-  var sheet = spreadsheet.getSheetByName(CONFIG.SHEET_NAME);
+  var sheets = spreadsheet.getSheets();
+  var sheet = sheets.length > 0 ? sheets[0] : null;
   if (!sheet) {
     throw apiError_(
       "SHEET_NOT_FOUND",
-      "Target worksheet not found: " + CONFIG.SHEET_NAME
+      "The bound spreadsheet does not contain a worksheet."
     );
   }
 

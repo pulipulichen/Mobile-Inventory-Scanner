@@ -8,21 +8,18 @@ export default {
     english: "English",
   },
   scan: {
-    settings_heading: "盤點設定",
+    app_bar_subtitle: "QR Code 行動盤點",
+    settings_heading: "連線與位置",
     settings_description:
-      "請填入 Apps Script Web App URL 與目前位置；設定會保存在此瀏覽器。",
-    print_link: "前往 QR Code 列印",
-    apps_script_url_label: "Apps Script Web App URL",
+      "輸入 Apps Script 部署後的 /exec 網址與目前位置，不需要登入 Google。",
+    apps_script_url_label: "Apps Script /exec 網址",
     apps_script_url_placeholder:
       "https://script.google.com/macros/s/…/exec",
     apps_script_url_hint:
-      "請使用部署後結尾為 /exec 的網址，不要使用 /dev 測試網址。",
+      "請貼上部署後結尾為 /exec 的網址，不要使用 /dev 測試網址。",
     location_label: "目前位置",
-    location_placeholder: "例如：主機房 A 區",
+    location_placeholder: "理科實驗室",
     location_hint: "成功盤點時會將此位置寫入 Google Sheet。",
-    recent_sheets: "開啟最近使用的 Google Sheet",
-    recent_sheets_hint:
-      "Google Drive 會在新分頁開啟；選取試算表後，Apps Script URL 仍需另外貼上。",
     scanner_heading: "開始盤點",
     scanner_description:
       "請將 QR Code 放在鏡頭前方並開始掃描，也可以拍照或讀取相片；一次可辨識多個 QR Code。",
@@ -57,6 +54,9 @@ export default {
     photo_recognizing: "正在辨識照片中的 QR Code…",
     ids_found: "辨識完成，共找到 {count} 個 QR Code。",
     no_qr_code: "未辨識到 QR Code，請重新拍照或選擇其他相片。",
+    ids_duplicate_ignored: "辨識到的 QR Code 都已在本次盤點中處理，重複項目已忽略。",
+    ids_found_with_duplicates:
+      "辨識完成，新增 {count} 個 QR Code；另有 {ignored} 個重複項目已忽略。",
     sending: "正在送出 {id} 的盤點結果…",
     all_complete: "盤點完成：成功 {success} 筆，失敗 {failed} 筆。",
     pending_loaded: "已載入 {count} 個尚未盤點 ID。",

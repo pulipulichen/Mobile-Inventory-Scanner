@@ -34,10 +34,15 @@ const { t } = useI18n({ useScope: "global" });
     />
     <p
       class="qr-id"
-      :style="{
-        marginTop: `${settings.qrTextGapMm}mm`,
-        fontSize: `${settings.idFontSizePt}pt`,
-      }"
+      :class="{ 'visually-hidden': !settings.showIdText }"
+      :style="
+        settings.showIdText
+          ? {
+              marginTop: `${settings.qrTextGapMm}mm`,
+              fontSize: `${settings.idFontSizePt}pt`,
+            }
+          : undefined
+      "
     >
       {{ item.id }}
     </p>

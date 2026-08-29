@@ -1,0 +1,14 @@
+---
+description: 禁止代理導覽至開發環境或 Apps Script /dev 網址
+alwaysApply: true
+---
+
+# 禁止導覽至 dev 網址
+
+- 不得使用瀏覽器工具導覽至開發伺服器網址，例如 `localhost`、
+  `127.0.0.1`、`0.0.0.0` 或其他本機 dev server；使用者會自行開啟與檢查。
+- 不得導覽、測試或在使用者介面中使用 Apps Script `/dev` 測試網址。
+  `scan` 只接受部署後的 `https://script.google.com/macros/s/<deployment_id>/exec`。
+- 不得為了驗證畫面而自動開啟 dev URL；改用 Podman 執行型別檢查與正式 build。
+- 文件、範例、placeholder 與設定驗證都應優先使用 `/exec`，不可把 `/dev`
+  當成可用的正式端點。

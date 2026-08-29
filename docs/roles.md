@@ -11,7 +11,8 @@
 
 - 保存專案原始碼。
 - 透過 `Containerfile.frontend` 建立前端編譯環境。
-- 使用 `frontend.sh` 執行安裝、開發伺服器與 build。
+- 使用 `frontend_dev.sh` 啟動開發伺服器，使用 `frontend_build.sh` 產生正式
+  靜態檔案；`frontend.sh` 保留給進階的單一 App npm 操作。
 - 產生 `print/dist/` 與 `scan/dist/`，交給靜態網站服務使用。
 
 開發環境不是正式盤點資料庫，也不是使用者執行盤點的必要後端。主機不需要
@@ -62,7 +63,6 @@ Django、PHP、Express 或其他自建後端。
 - 取得使用者提供的 Google Sheet URL。
 - 讀取盤點項目的 `id`，檢查空白與重複資料。
 - 在瀏覽器產生 QR Code 預覽與 PDF。
-- 提供前往 `scan` 的導覽入口。
 
 `print` 不更新 `checked_time` 或 `location`，也不直接寫入 Google Sheet。
 最近使用的 Google Sheet 只透過固定網址開啟：

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onBeforeUnmount, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
-import type {
-  InventoryItem,
-  LayoutMetrics,
-  PrintSettings,
+import {
+  MIN_PAGE_MARGIN_MM,
+  type InventoryItem,
+  type LayoutMetrics,
+  type PrintSettings,
 } from "../types/print";
 import { getPageItems } from "../utils/print_layout";
 import QrLabel from "./QrLabel.vue";
@@ -22,13 +23,25 @@ const pages = computed(() => getPageItems(props.items, props.metrics));
 const pageStyle = computed(() => ({
   width: `${props.metrics.pageWidthMm}mm`,
   height: `${props.metrics.pageHeightMm}mm`,
-  padding: `${props.settings.pageMarginMm}mm`,
+  padding: `${Math.max(MIN_PAGE_MARGIN_MM, props.settings.pageMarginMm)}mm`,
 }));
 const labelListStyle = computed(() => ({
   gridTemplateColumns: `repeat(${props.metrics.columns}, ${props.metrics.labelWidthMm}mm)`,
   gridTemplateRows: `repeat(${props.metrics.rows}, ${props.metrics.labelHeightMm}mm)`,
   gap: `${props.settings.labelGapMm}mm`,
 }));
+
+const printPageStyle = document.createElement("style");
+printPageStyle.dataset.printPageSize = "true";
+document.head.append(printPageStyle);
+
+watchEffect(() => {
+  printPageStyle.textContent = `@media print { @page { size: ${props.metrics.pageWidthMm}mm ${props.metrics.pageHeightMm}mm; margin: 0; } }`;
+});
+
+onBeforeUnmount(() => {
+  printPageStyle.remove();
+});
 </script>
 
 <template>
@@ -66,14 +79,8 @@ const labelListStyle = computed(() => ({
           :key="pageIndex"
           class="print-page"
           :style="pageStyle"
-          :aria-labelledby="`preview-page-heading-${pageIndex + 1}`"
+          :aria-label="t('print.page', { page: pageIndex + 1, pages: pages.length })"
         >
-          <h3
-            :id="`preview-page-heading-${pageIndex + 1}`"
-            class="page-heading"
-          >
-            {{ t("print.page", { page: pageIndex + 1, pages: pages.length }) }}
-          </h3>
           <ol class="qr-label-list" :style="labelListStyle">
             <li
               v-for="item in pageItems"
