@@ -157,7 +157,9 @@ export async function submitInventoryCheck(
   const response = await request(getEndpoint(url), {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      // Apps Script Web Apps do not reliably handle the OPTIONS preflight
+      // triggered by application/json. The body remains JSON for doPost().
+      "Content-Type": "text/plain;charset=utf-8",
     },
     body: JSON.stringify({ id, location }),
   });

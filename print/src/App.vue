@@ -18,7 +18,6 @@ import { readSheet, SheetSourceError } from "./services/sheet_source";
 import {
   getQrPayload,
   type InventoryItem,
-  type LabelTextMode,
   type LayoutMetrics,
   type PrintMode,
   type PrintSettings as PrintSettingsModel,
@@ -117,7 +116,6 @@ function setError(error: unknown): void {
 
 async function createQrSvgs(
   items: InventoryItem[],
-  labelText: LabelTextMode,
 ): Promise<Record<string, string>> {
   const uniqueItems = [
     ...new Map(items.map((item) => [item.id, item])).values(),
@@ -125,7 +123,7 @@ async function createQrSvgs(
   const svgEntries = await Promise.all(
     uniqueItems.map(
       async (item) =>
-        [item.id, await createQrSvg(getQrPayload(item, labelText))] as const,
+        [item.id, await createQrSvg(getQrPayload(item))] as const,
     ),
   );
   return Object.fromEntries(svgEntries);
@@ -135,13 +133,12 @@ let qrGenerationVersion = 0;
 
 async function refreshQrSvgs(
   items: InventoryItem[],
-  labelText: LabelTextMode,
 ): Promise<boolean> {
   const generationVersion = ++qrGenerationVersion;
   isGeneratingQr.value = true;
 
   try {
-    const nextQrSvgs = await createQrSvgs(items, labelText);
+    const nextQrSvgs = await createQrSvgs(items);
     if (generationVersion !== qrGenerationVersion) return false;
     qrSvgs.value = nextQrSvgs;
     return true;
@@ -228,7 +225,7 @@ async function loadSheet(options: { force?: boolean } = {}): Promise<void> {
       return;
     }
 
-    const generated = await refreshQrSvgs(data.items, settings.labelText);
+    const generated = await refreshQrSvgs(data.items);
     if (!generated) return;
     setStatus(
       "status.sheet_loaded",
@@ -268,14 +265,6 @@ function scheduleSheetLoad(immediate = false): void {
     void loadSheet();
   }, delay);
 }
-
-watch(
-  () => settings.labelText,
-  () => {
-    if (!sheetData.value || duplicateGroups.value.length > 0) return;
-    void refreshQrSvgs(sheetData.value.items, settings.labelText);
-  },
-);
 
 async function downloadPdf(): Promise<void> {
   if (!canDownload.value || !sheetData.value) return;

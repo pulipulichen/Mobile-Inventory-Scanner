@@ -124,11 +124,7 @@ export function getLabelCaption(
   return item.id;
 }
 
-export function getQrPayload(
-  item: InventoryItem,
-  mode: LabelTextMode,
-): string {
-  if (mode === "name" && item.name) return item.name;
+export function getQrPayload(item: InventoryItem): string {
   return item.id;
 }
 

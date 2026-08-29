@@ -114,9 +114,8 @@ https://docs.google.com/spreadsheets/d/{spreadsheet_id}/export?format=csv
 id | name | checked_time | location
 ```
 
-`name` 是 ID 的人類可識別名稱，可留白；QR Code payload 依標籤文字設定產生：
-選擇 `id` 或不顯示文字時使用 `id`，選擇 `name` 時使用 `name`，`name` 空白時
-退回使用 `id`。標籤文字可選擇顯示 `id`、`name` 或不顯示。列印功能載入時也
+`name` 是 ID 的人類可識別名稱，可留白；QR Code payload 一律使用 `id`，與標籤
+文字顯示設定無關。標籤文字可選擇顯示 `id`、`name` 或不顯示。列印功能載入時也
 必須保留每筆資料的實際列號，以便指出重複 ID 位於哪些儲存格。
 
 ### Google Sheet 權限
@@ -132,8 +131,8 @@ id | name | checked_time | location
 
 ## QR Code 內容與產生方式
 
-每一筆有效 `id` 產生一張 QR Code。payload 只放選定的 `id` 或 `name` 本身；
-選擇 `name` 但名稱空白時使用 `id`。
+每一筆有效 `id` 產生一張 QR Code。payload 一律只放 `id`，不受標籤文字顯示
+設定影響。
 
 不可加入 Google Sheet URL、Apps Script URL、JSON、`checked_time`、`location` 或
 額外前後綴。
@@ -229,8 +228,8 @@ PDF 產生器必須：
 - 使用選定紙張的實體尺寸與 `mm` / `pt` 轉換。
 - 依預覽使用的同一組版面參數計算欄列、間距與換頁。
 - 以 `qrcode` 的 QR matrix 繪製向量模組，保留足夠 quiet zone。
-- 依標籤文字設定，在 QR Code 下方繪製 ID 或 name，並使用相同設定決定 QR Code
-  payload；選擇不顯示時不把文字畫進 PDF。中文 name 使用內嵌的 Noto Sans TC。
+- 依標籤文字設定，在 QR Code 下方繪製 ID 或 name；QR Code payload 一律使用
+  ID。選擇不顯示時不把文字畫進 PDF。中文 name 使用內嵌的 Noto Sans TC。
 - 確保每個標籤完整位於單一頁面內。
 - 產生 `Blob` 後提供全寬、含圖示的「下載 PDF」按鈕。
 
@@ -304,7 +303,7 @@ Component 不直接散落資料來源讀取或 QR library 操作；統一透過 
 - [ ] 可從 URL 解析 Spreadsheet ID。
 - [ ] 可依輸入的 Google Sheet URL 下載可公開取得的 CSV。
 - [ ] 有效 Google Sheet URL 會自動載入資料；來源按鈕改為重新載入。
-- [ ] 可接受額外的 `name` 欄位，並可在標籤文字選擇 `name` 時作為 QR Code payload。
+- [ ] 可接受額外的 `name` 欄位，並可在標籤文字選擇 `name` 時顯示在 QR Code 下方。
 - [ ] 可從 `id` 欄取得所有有效 ID。
 - [ ] 載入時可找出重複 ID，並指出每個重複 ID 所在的 A1 儲存格位置。
 - [ ] 有重複 ID 時不產生 QR Code 預覽、PDF 或直接列印結果。

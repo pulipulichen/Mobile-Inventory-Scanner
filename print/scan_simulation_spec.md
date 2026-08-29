@@ -91,7 +91,7 @@ flowchart TD
 - 模擬場景的畫面尺寸仍用 `px` 範圍隨機縮放，不修改 PDF 的 `qrSizeMm`。
 - 保留 QR Code quiet zone。
 - 使用現有 `qrcode` 套件產生 SVG，並重用列印預覽的標籤元件。
-- QR Code payload 依列印設定的標籤文字模式產生：選擇「ID」或隱藏文字時使用 ID，選擇「名稱」時使用名稱；沒有名稱時退回使用 ID。
+- QR Code payload 一律使用 ID，與列印設定的標籤文字模式無關。
 - 不加入 Google Sheet URL、Apps Script URL、`location` 或其他資料。
 
 ## 5. 模擬器控制項
@@ -184,7 +184,7 @@ Fullscreen API。
 - 不上傳圖片。
 - Sheet 載入失敗時清除或停用舊場景。
 - 有重複 ID 時禁止建立場景。
-- QR Code payload 依列印設定的標籤文字模式產生；名稱為空時退回使用有效 ID。
+- QR Code payload 一律使用有效 ID，與列印設定的標籤文字模式無關。
 
 ## 8. 設定保存
 

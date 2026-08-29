@@ -95,9 +95,7 @@ export async function generatePdf(
         color: WHITE,
       });
 
-      const qrMatrix = createQrMatrix(
-        getQrPayload(item, settings.labelText),
-      );
+      const qrMatrix = createQrMatrix(getQrPayload(item));
       const totalModules = qrMatrix.size + 8;
       const moduleSize = qrSize / totalModules;
       const qrX = x + labelPadding;
