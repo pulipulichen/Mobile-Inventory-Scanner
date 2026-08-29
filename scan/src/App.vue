@@ -92,17 +92,34 @@ const failureToastMessage = computed(() => {
 });
 const canStartCamera = computed(() => !isCameraActive.value);
 const pendingGroups = computed<PendingLocationGroup[]>(() => {
+  const currentLocation = location.value.trim();
   const groups = new Map<string, InventoryItem[]>();
   pendingItems.value.forEach((item) => {
-    const key = item.location || t("scan.unassigned_location");
+    const key = item.location.trim();
     const group = groups.get(key) ?? [];
     group.push(item);
     groups.set(key, group);
   });
-  return [...groups.entries()].map(([groupLocation, items]) => ({
-    location: groupLocation,
-    items,
-  }));
+  return [...groups.entries()]
+    .map(([locationKey, items]) => ({
+      locationKey,
+      location: locationKey || t("scan.unassigned_location"),
+      isCurrent: locationKey === currentLocation,
+      items: [...items].sort((left, right) =>
+        left.id.localeCompare(right.id, locale.value),
+      ),
+    }))
+    .sort((left, right) => {
+      if (left.isCurrent !== right.isCurrent) {
+        return left.isCurrent ? -1 : 1;
+      }
+      const leftUnassigned = left.locationKey === "";
+      const rightUnassigned = right.locationKey === "";
+      if (leftUnassigned !== rightUnassigned) {
+        return leftUnassigned ? 1 : -1;
+      }
+      return left.location.localeCompare(right.location, locale.value);
+    });
 });
 
 const errorCodes = new Set([
@@ -533,33 +550,13 @@ function handleLocaleChange(event: Event): void {
             </v-btn>
           </section>
 
-          <section
-            class="section-card pending-control-card"
-            aria-labelledby="pending-control-heading"
-          >
-            <div class="section-heading">
-              <h2 id="pending-control-heading">
-                {{ t("scan.pending_heading") }}
-              </h2>
-              <p>{{ t("scan.pending_control_description") }}</p>
-            </div>
-            <v-btn
-              type="button"
-              color="secondary"
-              size="large"
-              :loading="isPendingLoading"
-              @click="loadPending"
-            >
-              {{ t("scan.pending_button") }}
-            </v-btn>
-          </section>
-
+          <ScanResultList :results="results" />
           <PendingInventoryList
-            v-if="hasLoadedPending || isPendingLoading"
             :groups="pendingGroups"
             :loading="isPendingLoading"
+            :has-loaded="hasLoadedPending"
+            @load="loadPending"
           />
-          <ScanResultList :results="results" />
 
           <p class="privacy-note">{{ t("scan.privacy_note") }}</p>
         </template>

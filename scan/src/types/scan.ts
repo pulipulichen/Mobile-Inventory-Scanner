@@ -25,6 +25,8 @@ export interface ScanResult {
 }
 
 export interface PendingLocationGroup {
+  locationKey: string;
   location: string;
+  isCurrent: boolean;
   items: InventoryItem[];
 }

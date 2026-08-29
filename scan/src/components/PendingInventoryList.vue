@@ -1,13 +1,22 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import type { PendingLocationGroup } from "../types/scan";
 
-defineProps<{
+const props = defineProps<{
   groups: PendingLocationGroup[];
   loading: boolean;
+  hasLoaded: boolean;
+}>();
+
+const emit = defineEmits<{
+  load: [];
 }>();
 
 const { t } = useI18n({ useScope: "global" });
+const itemCount = computed(() =>
+  props.groups.reduce((total, group) => total + group.items.length, 0),
+);
 </script>
 
 <template>
@@ -18,38 +27,59 @@ const { t } = useI18n({ useScope: "global" });
   >
     <div class="section-heading">
       <h2 id="pending-heading">{{ t("scan.pending_heading") }}</h2>
-      <p v-if="groups.length">
-        {{ t("scan.pending_summary", {
-          count: groups.reduce((total, group) => total + group.items.length, 0),
-          groups: groups.length,
-        }) }}
-      </p>
-      <p v-else-if="!loading">{{ t("scan.pending_empty") }}</p>
+      <p>{{ t("scan.pending_control_description") }}</p>
     </div>
 
-    <div v-if="loading" class="loading-text" role="status" aria-live="polite">
+    <v-btn
+      type="button"
+      color="secondary"
+      size="large"
+      :loading="loading"
+      @click="emit('load')"
+    >
+      {{ t("scan.pending_button") }}
+    </v-btn>
+
+    <p v-if="groups.length" class="pending-summary">
+      {{ t("scan.pending_summary", { count: itemCount }) }}
+    </p>
+    <p v-else-if="hasLoaded && !loading" class="pending-summary">
+      {{ t("scan.pending_empty") }}
+    </p>
+
+    <div
+      v-if="loading && !groups.length"
+      class="loading-text"
+      role="status"
+      aria-live="polite"
+    >
       {{ t("scan.pending_loading") }}
     </div>
 
     <div v-else-if="groups.length" class="pending-groups">
       <section
-        v-for="group in groups"
-        :key="group.location"
-        class="pending-group"
-        :aria-labelledby="`pending-location-${group.location}`"
+        v-for="(group, groupIndex) in groups"
+        :key="group.locationKey"
+        class="pending-location-card"
+        :class="{ 'is-current': group.isCurrent }"
+        :aria-labelledby="`pending-location-${groupIndex}`"
       >
-        <h3 :id="`pending-location-${group.location}`">
+        <h3 :id="`pending-location-${groupIndex}`">
           {{ group.location }}
+          <span
+            v-if="group.isCurrent && group.locationKey"
+            class="pending-current-badge"
+          >
+            {{ t("scan.pending_current_location_badge") }}
+          </span>
           <span class="group-count">
             {{ t("scan.pending_group_count", { count: group.items.length }) }}
           </span>
         </h3>
-        <ul>
+        <ul class="pending-items">
           <li v-for="item in group.items" :key="item.id">
-            <strong>{{ item.id }}</strong>
-            <span v-if="item.name !== item.id" class="pending-item-name">
-              {{ item.name }}
-            </span>
+            <span class="pending-item-id">{{ item.id }}</span>
+            <span class="pending-item-name">{{ item.name }}</span>
           </li>
         </ul>
       </section>

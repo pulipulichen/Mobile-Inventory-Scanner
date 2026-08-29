@@ -21,6 +21,9 @@
   moderate resolution, enabling continuous autofocus when the browser allows
   it, downscaling frames before decode, retrying a center crop, and merging
   native `BarcodeDetector` results with `@undecaf/zbar-wasm`.
+- Combined the `scan` pending-inventory action and result list into one card,
+  showed each location as a nested card, listed ID and name in two columns,
+  and moved the current location group to the top.
 
 ## Removed
 
