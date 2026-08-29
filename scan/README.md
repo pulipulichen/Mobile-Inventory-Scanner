@@ -18,60 +18,26 @@
 - Vite。
 - SCSS / Sass。
 - `vite-plugin-pwa`：產生 PWA manifest / Service Worker。
-- `@undecaf/zbar-wasm`：在瀏覽器本機辨識 QR Code，並支援同張圖片多個 QR Code。
+- `@undecaf/zbar-wasm`：在瀏覽器本機辨識 QR Code，支援同張圖片多個 QR Code。
+- Google Identity Services：僅在使用「最近使用的 Google Sheet」快速入口時進行 Google OAuth。
+- Google Drive API：列出最近開啟的 Google Sheets，方便快速開啟對應盤點表。
 
-第一版不使用 Vue Router、Pinia、Nuxt 或大型 UI framework。
-
-影像只在使用者裝置內處理，不把照片上傳到伺服器。
+第一版不使用 Vue Router、Pinia、Nuxt 或大型 UI framework。影像只在使用者裝置內處理，不把照片上傳到伺服器。
 
 ### 編譯方式
 
 主機只需要安裝 Podman，不要求安裝 Node.js / npm。
 
-專案根目錄提供：
-
-```text
-Containerfile.frontend
-frontend.sh
-```
-
-第一次建立前端編譯 image：
-
 ```bash
 ./frontend.sh image
-```
-
-安裝依賴：
-
-```bash
 ./frontend.sh install scan
-```
-
-開發模式：
-
-```bash
 ./frontend.sh dev scan
-```
-
-預設從主機開啟：
-
-```text
-http://localhost:5173
-```
-
-正式編譯：
-
-```bash
 ./frontend.sh build scan
 ```
 
-輸出目錄：
+開發預設網址：`http://localhost:5173`。
 
-```text
-scan/dist/
-```
-
-`dist/` 是可直接部署到 HTTPS 靜態網站的成品，不需要 Node.js runtime。
+正式輸出目錄：`scan/dist/`，可直接部署到 HTTPS 靜態網站，不需要 Node.js runtime。
 
 ---
 
@@ -81,6 +47,7 @@ scan/dist/
 手機開啟 scan 網頁 / PWA
     ↓
 輸入 Apps Script Web App 網址
+（需要時可按「開啟最近使用的 Google Sheet」快速找到盤點表）
     ↓
 輸入目前位置
     ↓
@@ -97,17 +64,13 @@ Apps Script 更新 Google Sheet
 畫面下方列出每筆 QR Code 與盤點結果
 ```
 
-網頁中所有使用者輸入的內容都必須保存到 `localStorage`。
+網頁中所有一般使用者設定都必須保存到 `localStorage`；OAuth access token 除外。
 
 ---
 
 ## 使用裝置
 
-第一版主要針對：
-
-- Android Chrome。
-- iPhone Safari。
-- 可安裝成 PWA 使用。
+第一版主要針對 Android Chrome、iPhone Safari，並可安裝成 PWA 使用。
 
 拍照透過瀏覽器檔案 / 相機輸入介面呼叫手機相機，不需要長時間保持 camera preview。
 
@@ -115,19 +78,51 @@ Apps Script 更新 Google Sheet
 
 ## PWA
 
-至少包含：
+至少包含 manifest、Service Worker、App icon、可加入手機主畫面與 Standalone 顯示模式。
 
-- `manifest.webmanifest`。
-- Service Worker。
-- App icon。
-- 可加入手機主畫面。
-- Standalone 顯示模式。
-
-PWA 快取的目的，是讓 App shell 與 QR decode 靜態資源可以再次啟動；第一版 **不代表支援離線盤點**。
-
-Apps Script 寫入仍需要網路。
+PWA 快取的目的，是讓 App shell 與 QR decode 靜態資源可以再次啟動；第一版 **不代表支援離線盤點**。Apps Script 寫入與 Google Drive 最近檔案查詢仍需要網路。
 
 `@undecaf/zbar-wasm` 所需 WASM 資源要跟著 build 部署，不把第三方 CDN 當成必要 runtime dependency。
+
+---
+
+## Google Drive 最近使用的 Sheet 快速入口
+
+設定區必須提供明顯按鈕：
+
+```text
+開啟最近使用的 Google Sheet
+```
+
+用途是讓使用者在手機盤點時快速找到目前要操作的 Google Sheet，不必先手動進入 Google Drive 搜尋。
+
+按下後：
+
+1. 若尚未取得 Google OAuth 權限，先執行登入 / 授權。
+2. 使用 Google Drive API `files.list` 讀取目前帳號最近開啟的檔案。
+3. 只顯示 MIME type 為 `application/vnd.google-apps.spreadsheet` 的 Google Sheets。
+4. 依 `viewedByMeTime desc` 排序，最近開啟的 Sheet 放最前面。
+5. 第一版預設顯示最近 20 筆，可視需要提供「載入更多」。
+6. 每筆至少顯示檔名與最近開啟時間。
+7. 點選某一筆後，以該檔案的 `webViewLink` / Google Sheet URL 開啟 Google Sheet；手機上優先另開分頁或交由系統可用的 Google Sheets / 瀏覽器處理，避免直接丟失目前 scan 畫面狀態。
+8. 返回 `scan` 後，原本輸入的 Apps Script URL、location 與掃描狀態不得被清除。
+9. 取消選取不得改動任何 scan 設定。
+
+Drive 查詢概念：
+
+```text
+q: mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false
+orderBy: viewedByMeTime desc
+fields: nextPageToken, files(id,name,viewedByMeTime,modifiedTime,webViewLink)
+```
+
+### 與 Apps Script URL 的關係
+
+Google Drive API 可以找到 Google Sheet，但**不能把 Bound Apps Script 已部署的 Web App `/exec` URL 視為該 Sheet 的標準 Drive 欄位直接取得**。
+
+因此第一版此功能定位為「快速找到並開啟對應 Google Sheet」，不假裝能由 Sheet 自動推導 Apps Script Web App URL。`scan` 寫入盤點資料時仍以使用者設定的 Apps Script Web App URL 為準。
+
+這個快速入口不應阻擋主要盤點流程；Drive API / OAuth 發生錯誤時，使用者仍可直接使用已保存的 Apps Script URL 盤點。
 
 ---
 
@@ -141,12 +136,9 @@ Apps Script 寫入仍需要網路。
 https://script.google.com/macros/s/xxxxxxxxxxxxxxxx/exec
 ```
 
-需求：
+需求：可手動輸入或貼上、保存到 `localStorage`、下次自動帶入、呼叫失敗時顯示清楚錯誤。
 
-- 可手動輸入或貼上。
-- 保存到 `localStorage`。
-- 下次開啟自動帶入。
-- 呼叫失敗時顯示清楚錯誤。
+在此欄位附近提供「開啟最近使用的 Google Sheet」，協助使用者快速找到對應的盤點表。
 
 ### 目前位置
 
@@ -173,9 +165,7 @@ https://script.google.com/macros/s/xxxxxxxxxxxxxxxx/exec
 
 ## localStorage
 
-key 統一使用 `mis.scan.*` prefix。
-
-至少保存：
+key 統一使用 `mis.scan.*` prefix：
 
 ```text
 mis.scan.apps_script_url
@@ -183,45 +173,25 @@ mis.scan.location
 mis.scan.location_history
 ```
 
-原則：
-
-- 重新整理後保留。
-- 關閉再開啟 PWA 後保留。
-- 可清除歷史位置。
-- 可清除所有設定。
-
-掃描結果是否跨重新整理保存，第一版不是必要條件。
+重新整理或重新開啟 PWA 後保留；可清除歷史位置與所有設定。OAuth access token 不長期保存到 localStorage。
 
 ---
 
 ## 主要操作按鈕
 
-第一版只有兩個主要影像來源按鈕：
-
-- `拍照`
-- `讀取相片`
+第一版兩個主要影像來源按鈕：`拍照`、`讀取相片`。Google Sheet 快速入口屬於設定輔助按鈕，不與這兩個主要掃描動作混在同一層級。
 
 ### 拍照
-
-可使用：
 
 ```html
 <input type="file" accept="image/*" capture="environment">
 ```
 
-需求：
-
-- 優先使用後鏡頭。
-- 拍照完成後立即辨識。
-- 不做即時掃描 camera preview。
+優先使用後鏡頭，拍照完成後立即辨識，不做即時掃描 camera preview。
 
 ### 讀取相片
 
-需求：
-
-- 開啟手機照片 / 檔案選擇器。
-- 第一版一次處理一張圖片。
-- 選取後立即辨識。
+開啟手機照片 / 檔案選擇器；第一版一次處理一張圖片，選取後立即辨識。
 
 ---
 
@@ -232,29 +202,14 @@ mis.scan.location_history
 需求：
 
 - 一次取得圖片中所有可辨識 QR Code，不可只取第一個。
-- 只接受 QR Code 類型作為盤點 ID；若 library 同時辨識到其他 barcode，可忽略非 QR Code。
+- 只接受 QR Code 類型作為盤點 ID。
 - QR Code payload 直接視為 `id`。
-- 去除 ID 前後空白。
-- 不修改大小寫。
+- 去除 ID 前後空白，不修改大小寫。
 - ID 保持字串型態。
 - 同張圖片相同 ID 只送出一次。
 - 圖片不離開瀏覽器。
 
-例如辨識出：
-
-```text
-A01
-B03
-C04
-```
-
-就需要處理三筆盤點。
-
-若沒有 QR Code：
-
-```text
-此圖片中沒有辨識到 QR Code
-```
+若沒有 QR Code，顯示：`此圖片中沒有辨識到 QR Code`。
 
 ---
 
@@ -269,54 +224,17 @@ C04
 }
 ```
 
-實際 HTTP transport 由 `src/services/` 封裝，必須能由瀏覽器直接呼叫 Apps Script，不建立自建 proxy server。
-
-第一版建議逐筆或低併發處理，讓 UI 可明確對應每一筆狀態。
+實際 HTTP transport 由 `src/services/` 封裝，必須能由瀏覽器直接呼叫 Apps Script，不建立自建 proxy server。第一版建議逐筆或低併發處理，讓 UI 可明確對應每一筆狀態。
 
 Apps Script 回傳格式依 [`google_sheet/README.md`](../google_sheet/README.md) 定義。
-
-成功範例：
-
-```json
-{
-  "success": true,
-  "id": "A01",
-  "checked_time": "2026-08-29 17:10:00",
-  "location": "主機房 A 區",
-  "message": "盤點成功"
-}
-```
-
-失敗範例：
-
-```json
-{
-  "success": false,
-  "id": "A99",
-  "error": "ID_NOT_FOUND",
-  "message": "找不到 ID: A99"
-}
-```
 
 ---
 
 ## 掃描結果列表
 
-每筆至少顯示：
+每筆至少顯示 ID、等待送出 / 寫入中 / 成功 / 失敗、Apps Script 回傳訊息；成功時顯示 `checked_time` 與 `location`。
 
-- ID。
-- 等待送出 / 寫入中 / 成功 / 失敗。
-- Apps Script 回傳訊息。
-- 成功時顯示 `checked_time`。
-- 成功時顯示 `location`。
-
-同一張圖片即使部分 ID 失敗，也必須繼續處理其他 ID。
-
-全部完成後顯示本次統計，例如：
-
-```text
-成功 5 / 失敗 1
-```
+同一張圖片即使部分 ID 失敗，也必須繼續處理其他 ID。全部完成後顯示本次成功 / 失敗統計。
 
 ---
 
@@ -326,12 +244,16 @@ Apps Script 回傳格式依 [`google_sheet/README.md`](../google_sheet/README.md
 src/
 ├── components/
 │   ├── ScanSettings.vue
+│   ├── RecentGoogleSheetsPicker.vue
 │   ├── ImageSourceButtons.vue
 │   └── ScanResultList.vue
 ├── composables/
+│   ├── useGoogleAuth.ts
 │   ├── useScanSettings.ts
 │   └── useScanSession.ts
 ├── services/
+│   ├── google_auth.ts
+│   ├── google_drive.ts
 │   ├── apps_script.ts
 │   └── qr_decoder.ts
 ├── styles/
@@ -341,21 +263,13 @@ src/
 └── main.ts
 ```
 
-Component 不直接散落 Apps Script `fetch()` 或 QR library 操作；統一透過 service / composable。
+Component 不直接散落 Google OAuth、Drive API、Apps Script `fetch()` 或 QR library 操作；統一透過 service / composable。
 
 ---
 
 ## 錯誤處理
 
-至少處理：
-
-- 未設定 Apps Script URL：`請先輸入 Apps Script 網址`。
-- 未輸入位置：`請先輸入目前位置`。
-- 圖片無 QR Code：`此圖片中沒有辨識到 QR Code`。
-- 圖片讀取失敗：`無法讀取相片，請重新選擇`。
-- Apps Script 無法連線：`無法連線到盤點服務`。
-- ID 不存在：直接顯示 Apps Script 回傳訊息。
-- 多筆中的單筆失敗：不得中止其他 ID。
+至少處理：未設定 Apps Script URL、未輸入位置、Google OAuth 失敗、Drive 最近檔案讀取失敗、最近沒有 Google Sheet、圖片無 QR Code、圖片讀取失敗、Apps Script 無法連線、ID 不存在，以及多筆中的單筆失敗不得中止其他 ID。
 
 ---
 
@@ -365,13 +279,9 @@ Component 不直接散落 Apps Script `fetch()` 或 QR library 操作；統一�
 
 - 相機：使用者按「拍照」時由瀏覽器呼叫。
 - 圖片：使用者主動按「讀取相片」時選取。
+- Google Drive 唯讀權限：只有使用者主動按「開啟最近使用的 Google Sheet」時才需要，用於列出最近使用的 Google Sheets。
 
-不需要：
-
-- GPS。
-- 麥克風。
-- 聯絡人。
-- 背景持續使用相機。
+不需要 GPS、麥克風、聯絡人或背景持續使用相機。
 
 ---
 
@@ -379,11 +289,14 @@ Component 不直接散落 Apps Script `fetch()` 或 QR library 操作；統一�
 
 - [ ] Vue 3 + TypeScript + Vite + SCSS 專案可用 Podman build。
 - [ ] `./frontend.sh build scan` 成功產生 `scan/dist/`。
-- [ ] 手機可開啟 HTTPS 網頁。
-- [ ] 可安裝成 PWA。
+- [ ] 手機可開啟 HTTPS 網頁並安裝成 PWA。
 - [ ] 可輸入並保存 Apps Script Web App URL。
-- [ ] 可輸入並保存目前位置。
-- [ ] 有歷史位置下拉選單。
+- [ ] 有「開啟最近使用的 Google Sheet」按鈕。
+- [ ] 可透過 Google Drive API 顯示最近開啟的 Google Sheets。
+- [ ] 最近使用清單依 `viewedByMeTime` 由新到舊排序。
+- [ ] 點選 Sheet 後可開啟該 Google Sheet，且返回 scan 後原設定不遺失。
+- [ ] Drive 快速入口失敗不影響已設定 Apps Script URL 的正常盤點。
+- [ ] 可輸入並保存目前位置，並有歷史位置下拉選單。
 - [ ] 可按「拍照」取得新照片。
 - [ ] 可按「讀取相片」選擇既有圖片。
 - [ ] 可從一張圖片辨識多個 QR Code。
@@ -396,6 +309,7 @@ Component 不直接散落 Apps Script `fetch()` 或 QR library 操作；統一�
 ## 第一版不做
 
 - 持續開啟相機的即時 QR Code scanner。
+- 從 Google Sheet 自動推導 Bound Apps Script Web App `/exec` URL。
 - GPS 自動取得位置。
 - 離線盤點 queue。
 - 手動輸入 ID。
