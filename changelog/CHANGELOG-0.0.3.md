@@ -33,6 +33,7 @@
   same ID can be checked again later.
 - Cleared the current `scan` results when the location changes, so a new
   place starts a new check.
+- Replaced the in-page status alert for unrecognized QR Codes and photo decode errors with bottom toast notifications.
 
 ## Fixed
 

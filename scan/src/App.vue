@@ -58,9 +58,10 @@ const VERIFY_TIMEOUT_MS = 25_000;
 const VERIFY_POLL_MS = 1_000;
 const CLOCK_SKEW_MS = 3_000;
 
-type FailureToast = {
-  id: string;
-  errorCode: string;
+type ToastItem = {
+  message: string;
+  color: "info" | "success" | "warning" | "error";
+  timeout: number;
 };
 type PendingConfirmation = {
   result: ScanResult;
@@ -69,11 +70,11 @@ type PendingConfirmation = {
   submittedAt: number;
   minCheckedTime: string;
 };
-const failureToastQueue = ref<FailureToast[]>([]);
-const activeFailureToast = ref<FailureToast | null>(null);
-const isFailureToastVisible = ref(false);
-let resolveActiveFailureToast: (() => void) | null = null;
-let isFailureToastProcessing = false;
+const toastQueue = ref<ToastItem[]>([]);
+const activeToast = ref<ToastItem | null>(null);
+const isToastVisible = ref(false);
+let resolveActiveToast: (() => void) | null = null;
+let isToastProcessing = false;
 const recentScanAt = new Map<string, number>();
 const inFlight = new Map<string, PendingConfirmation>();
 let submitGeneration = 0;
@@ -105,13 +106,6 @@ const effectiveStatusMessage = computed(() =>
 const effectiveStatusTone = computed<"info" | "success" | "warning" | "error">(
   () => (isAppsScriptUrlInvalid.value ? "error" : statusTone.value),
 );
-const failureToastMessage = computed(() => {
-  if (!activeFailureToast.value) return "";
-  return t("status.inventory_failed_item", {
-    id: activeFailureToast.value.id,
-    error: t(`errors.${activeFailureToast.value.errorCode}`),
-  });
-});
 const canStartCamera = computed(() => !isCameraActive.value);
 const pendingGroups = computed<PendingLocationGroup[]>(() => {
   const currentLocation = location.value.trim();
@@ -187,44 +181,49 @@ function setError(error: unknown): string {
   return code;
 }
 
-function updateFailureToastVisibility(visible: boolean): void {
-  isFailureToastVisible.value = visible;
+function updateToastVisibility(visible: boolean): void {
+  isToastVisible.value = visible;
   if (!visible) {
-    const resolve = resolveActiveFailureToast;
-    resolveActiveFailureToast = null;
+    const resolve = resolveActiveToast;
+    resolveActiveToast = null;
     resolve?.();
   }
 }
 
-async function processFailureToasts(): Promise<void> {
-  if (isFailureToastProcessing) return;
+async function processToasts(): Promise<void> {
+  if (isToastProcessing) return;
 
-  isFailureToastProcessing = true;
-  while (failureToastQueue.value.length) {
-    activeFailureToast.value = failureToastQueue.value.shift() ?? null;
-    isFailureToastVisible.value = true;
+  isToastProcessing = true;
+  while (toastQueue.value.length) {
+    activeToast.value = toastQueue.value.shift() ?? null;
+    isToastVisible.value = true;
     await new Promise<void>((resolve) => {
-      resolveActiveFailureToast = resolve;
+      resolveActiveToast = resolve;
     });
   }
-  activeFailureToast.value = null;
-  isFailureToastProcessing = false;
+  activeToast.value = null;
+  isToastProcessing = false;
 }
 
-function enqueueFailureToast(result: ScanResult): void {
-  failureToastQueue.value.push({
-    id: result.id,
-    errorCode: result.errorCode ?? "UNKNOWN",
+function showToast(
+  message: string,
+  color: "info" | "success" | "warning" | "error" = "info",
+  timeout = 6000,
+): void {
+  toastQueue.value.push({
+    message,
+    color,
+    timeout,
   });
-  void processFailureToasts();
+  void processToasts();
 }
 
-function clearFailureToasts(): void {
-  failureToastQueue.value = [];
-  if (isFailureToastVisible.value) {
-    updateFailureToastVisibility(false);
+function clearToasts(): void {
+  toastQueue.value = [];
+  if (isToastVisible.value) {
+    updateToastVisibility(false);
   } else {
-    activeFailureToast.value = null;
+    activeToast.value = null;
   }
 }
 
@@ -291,7 +290,7 @@ function resetCurrentCheck(): void {
   inFlight.clear();
   recentScanAt.clear();
   results.value = [];
-  clearFailureToasts();
+  clearToasts();
 }
 
 function resetSession(): void {
@@ -367,7 +366,11 @@ function queueIds(ids: string[], source: "camera" | "photo" = "camera"): void {
 
   if (!acceptedIds.length) {
     if (source === "photo" && ignoredCount) {
-      setStatus("status.ids_duplicate_ignored", { count: ignoredCount }, "warning");
+      showToast(
+        t("status.ids_duplicate_ignored", { count: ignoredCount }),
+        "warning",
+        5000,
+      );
     }
     return;
   }
@@ -442,7 +445,14 @@ function applyFailureCode(result: ScanResult, code: string): void {
   if (result.state === "success") return;
   result.state = "error";
   result.errorCode = errorCodes.has(code) ? code : "UNKNOWN";
-  enqueueFailureToast(result);
+  showToast(
+    t("status.inventory_failed_item", {
+      id: result.id,
+      error: t(`errors.${result.errorCode}`),
+    }),
+    "error",
+    8000,
+  );
 }
 
 function announceBatchComplete(): void {
@@ -609,16 +619,16 @@ async function handlePhoto(file: File): Promise<void> {
   if (!validateAppsScriptUrl()) return;
 
   isPhotoLoading.value = true;
-  setStatus("status.photo_recognizing");
   try {
     const ids = await decodeQrImageFile(file);
     if (!ids.length) {
-      setStatus("status.no_qr_code", {}, "warning");
+      showToast(t("status.no_qr_code"), "warning", 6000);
       return;
     }
     queueIds(ids, "photo");
   } catch (error) {
-    setError(error);
+    const code = getErrorCode(error);
+    showToast(t(`errors.${code}`), "error", 8000);
   } finally {
     isPhotoLoading.value = false;
   }
@@ -786,20 +796,21 @@ function handleLocaleChange(event: Event): void {
     </v-main>
 
     <v-snackbar
-      :model-value="isFailureToastVisible"
-      class="failure-toast"
-      color="error"
+      :model-value="isToastVisible"
+      class="app-toast"
+      :color="activeToast?.color ?? 'info'"
       location="bottom"
-      :timeout="8000"
-      role="alert"
-      @update:model-value="updateFailureToastVisibility"
+      :timeout="activeToast?.timeout ?? 6000"
+      :role="activeToast?.color === 'error' ? 'alert' : 'status'"
+      aria-live="polite"
+      @update:model-value="updateToastVisibility"
     >
-      {{ failureToastMessage }}
+      {{ activeToast?.message }}
       <template #actions>
         <v-btn
           variant="text"
           :aria-label="t('common.dismiss')"
-          @click="updateFailureToastVisibility(false)"
+          @click="updateToastVisibility(false)"
         >
           {{ t("common.dismiss") }}
         </v-btn>
