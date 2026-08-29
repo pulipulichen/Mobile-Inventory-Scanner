@@ -11,6 +11,8 @@
   changed without going back to Settings.
 - Added a mobile-app bottom navigation bar in `scan` for Settings, Scan,
   Checked, and Unchecked.
+- Added `vue-router` hash routes in `scan` so each tab has a shareable URL
+  (`#/settings`, `#/scan`, `#/checked`, `#/pending`).
 
 ## Changed
 
@@ -41,8 +43,11 @@
 - Showed batch-complete summaries as a bottom toast instead of a persistent
   in-page alert.
 - Gave `scan` a mobile-app layout with a bottom navigation bar for Settings,
-  Scan, Checked, and Unchecked. Confirming settings switches to the Scan tab;
-  leaving Scan stops the camera.
+  Scan, Checked, and Unchecked. Confirming settings opens `#/scan`; leaving
+  Scan stops the camera. Direct URLs and the browser back button switch tabs.
+- Stopped inserting in-page info banners above the `scan` camera. Queue and
+  camera progress stay in a visually hidden live region or a bottom toast, so
+  the preview no longer jumps when IDs are added.
 
 ## Fixed
 
@@ -77,7 +82,7 @@
 - Documented bounded frontend build verification and the requirement to report
   build timeouts instead of waiting indefinitely.
 - Documented `scan` auto-confirm of a saved `/exec` URL, the bottom feature
-  tabs, camera tap-to-focus, live-frame downscaling, and native
+  tabs and hash routes, camera tap-to-focus, live-frame downscaling, and native
   `BarcodeDetector` fallback alongside zbar.
 - Documented batch inventory POST (`ids` + location), GET confirmation, the
   10-second rescan cooldown, and resetting current results after a location

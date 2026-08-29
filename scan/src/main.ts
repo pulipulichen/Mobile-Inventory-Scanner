@@ -5,6 +5,7 @@ import "vuetify/styles";
 import "@mdi/font/css/materialdesignicons.css";
 import App from "./App.vue";
 import { i18n } from "./i18n";
+import { router } from "./router";
 import "./styles/main.scss";
 
 async function clearLegacyPwaState(): Promise<void> {
@@ -70,4 +71,4 @@ const vuetify = createVuetify({
   },
 });
 
-createApp(App).use(i18n).use(vuetify).mount("#app");
+createApp(App).use(i18n).use(router).use(vuetify).mount("#app");

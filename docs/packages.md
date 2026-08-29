@@ -44,6 +44,7 @@ framework 取代實體輸出邏輯。語系選擇器等規格指定原生元素�
 | `vite-plugin-vuetify` | `scan`、`print` | Vite 編譯時按需載入 Vuetify 元件與 tree-shaking | [GitHub README](https://github.com/vuetifyjs/vuetify-loader/tree/master/packages/vite-plugin) | —（建置工具，無獨立 UI Demo） |
 | `@mdi/font` | `scan`、`print` | Material Design Icons；`scan` 掃描操作與「最近使用的 Google Sheet」圖示，以及 `print`「最近使用」等 Vuetify 圖示 | [GitHub README](https://github.com/Templarian/MaterialDesign-Webfont) | [Material Design Icons](https://pictogrammers.com/library/mdi/) |
 | `vue-i18n` | `scan`、`print` | Vue 3 Composition API 的多語系、插值、複數與 locale 格式化 | [Composition API 文件](https://vue-i18n.intlify.dev/guide/advanced/composition) | [官方 CodeSandbox 範例](https://codesandbox.io/s/vue-i18n-9-template-h28c0) |
+| `vue-router` | `scan` | 底部功能分頁的 hash 路由，可用 `#/settings`、`#/scan`、`#/checked`、`#/pending` 切換 | [官方文件](https://router.vuejs.org/) | [官方 Examples](https://router.vuejs.org/guide/) |
 | `typescript` | `scan`、`print` | 業務資料、API 回應與元件型別 | [官方 Handbook](https://www.typescriptlang.org/docs/handbook/intro.html) | [TypeScript Playground](https://www.typescriptlang.org/play/) |
 | `vite` | `scan`、`print` | 開發伺服器與正式 bundle | [官方文件](https://vite.dev/guide/) | [Vite 線上 Playground](https://vite.new/vue-ts) |
 | `sass` | `scan`、`print` | SCSS / Sass 樣式編譯 | [官方文件](https://sass-lang.com/documentation/) | [Sass Playground](https://sass-lang.com/playground/) |
@@ -83,7 +84,8 @@ Web App 讀取與寫入盤點資料。
 
 第一版不引入：
 
-- Vue Router：兩個 App 都是單頁工具。
+- Vue Router（`print`）：列印工具仍是單頁，不需要路由。`scan` 已使用
+  `vue-router` hash 路由切換功能分頁。
 - Pinia：狀態量小，以 composable 管理即可。
 - Bootstrap、PrimeVue、Quasar、Element Plus 或其他第二套 UI framework：
   UI 元件統一使用 Vuetify。

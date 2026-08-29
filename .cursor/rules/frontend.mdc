@@ -24,6 +24,7 @@ alwaysApply: true
 - Vue 3
 - Vuetify 4.x：`scan` 與 `print` 共用的 UI framework
 - `vue-i18n`
+- `vue-router`：僅 `scan` 用於底部功能分頁的 hash 路由
 - Composition API
 - `<script setup lang="ts">`
 - TypeScript
@@ -34,11 +35,13 @@ alwaysApply: true
 
 第一版不加入：
 
-- Vue Router：兩個 App 都是單頁工具，不需要路由。
 - Pinia：狀態量小，優先使用 composable 與 Vue reactive/ref。
 - SSR / Nuxt：不需要伺服器端 rendering。
 - 第二套 UI framework：所有共用 UI 元件統一使用 Vuetify，不混用
   Bootstrap、PrimeVue、Quasar、Element Plus 或其他 UI framework。
+
+`scan` 使用 `vue-router` 的 hash 路由切換設定、掃描、已盤點與未盤點分頁，
+讓靜態部署也能用網址進入指定畫面。`print` 仍不使用 Vue Router。
 
 Vuetify 只在建置階段由 Vite 打包進靜態資源；正式環境不需要 Node.js
 runtime、Vuetify server 或其他自建後端。使用元件時應透過

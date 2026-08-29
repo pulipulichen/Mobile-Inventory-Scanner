@@ -25,6 +25,7 @@
 - SCSS / Sass。
 - Vuetify 4.x：手機盤點操作介面使用的 UI framework。
 - `vite-plugin-vuetify`：Vite 編譯時按需載入 Vuetify 元件。
+- `vue-router`：底部功能分頁使用 hash 路由，可用網址切換。
 - `@mdi/font`：提供 Material Design Icons，供掃描操作按鈕與「最近使用的
   Apps Script」圖示使用。
 - `@undecaf/zbar-wasm`：在瀏覽器本機辨識 QR Code，支援相機影格與
@@ -32,8 +33,9 @@
 - `MediaDevices.getUserMedia()`：取得使用者同意的後置鏡頭影像，供即時掃描使用。
 - 瀏覽器 `BarcodeDetector`：在支援的環境補強 QR Code 辨識，與 zbar 結果合併。
 
-第一版不使用 Vue Router、Pinia、Nuxt 或第二套 UI framework。影像只在使用者
-裝置內處理，不把照片上傳到伺服器。
+第一版不使用 Pinia、Nuxt 或第二套 UI framework。影像只在使用者
+裝置內處理，不把照片上傳到伺服器。`scan` 使用 `vue-router` 的 hash
+路由切換底部功能分頁；`print` 仍不使用 Vue Router。
 
 ### UI framework 使用範圍
 
@@ -91,14 +93,14 @@ flowchart TD
 
 網頁中所有一般使用者設定都必須保存到 `localStorage`。
 
-畫面採手機 App 底部四個功能分頁，不使用 Vue Router：
+畫面採手機 App 底部四個功能分頁，以 `vue-router` hash 路由切換：
 
-- **設定**：Apps Script `/exec` 網址與目前位置。
-- **掃描**：即時相機、拍照、讀取相片，以及目前位置。
-- **已盤點**：本次掃描結果。
-- **未盤點**：Google Sheet 中尚未盤點的項目。
+- **設定** `#/settings`：Apps Script `/exec` 網址與目前位置。
+- **掃描** `#/scan`：即時相機、拍照、讀取相片，以及目前位置。
+- **已盤點** `#/checked`：本次掃描結果。
+- **未盤點** `#/pending`：Google Sheet 中尚未盤點的項目。
 
-離開掃描分頁時會停止相機並釋放鏡頭。
+根路徑 `#/` 會依是否已有正確 `/exec` 網址導向掃描或設定。離開掃描分頁時會停止相機並釋放鏡頭。
 
 ---
 
@@ -422,6 +424,7 @@ service / composable。
 - [ ] 使用者可從 Google Sheet 的 Apps Script 部署複製 `/exec` URL，再貼回 `scan`。
 - [ ] 不需要 Google Cloud Project、OAuth Client ID 或 Google Drive API。
 - [ ] 底部四個功能分頁可切換設定、掃描、已盤點與未盤點。
+- [ ] 可用 `#/settings`、`#/scan`、`#/checked`、`#/pending` 直接開啟對應分頁。
 - [ ] 可輸入並保存目前位置，並有歷史位置下拉選單。
 - [ ] 可啟動後置鏡頭進行即時 QR Code 掃描。
 - [ ] 可停止相機並釋放相機串流。

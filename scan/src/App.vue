@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import CameraScanner from "./components/CameraScanner.vue";
 import CurrentLocationField from "./components/CurrentLocationField.vue";
@@ -27,15 +28,16 @@ import {
   saveLocationToHistory,
 } from "./services/scan_storage";
 import { setLocale, type SupportedLocale } from "./i18n";
+import { isAppTab, type AppTab } from "./router";
 import type {
   InventoryItem,
   PendingLocationGroup,
   ScanResult,
 } from "./types/scan";
 
-type AppTab = "settings" | "scan" | "checked" | "pending";
-
 const { t, locale } = useI18n({ useScope: "global" });
+const route = useRoute();
+const router = useRouter();
 
 const appsScriptUrl = ref(loadAppsScriptUrl());
 const location = ref(loadLocation());
@@ -48,9 +50,14 @@ const isPhotoLoading = ref(false);
 const isCameraActive = ref(false);
 const camera = ref<InstanceType<typeof CameraScanner> | null>(null);
 const isInventoryConfirmed = ref(isAppsScriptUrl(appsScriptUrl.value));
-const activeTab = ref<AppTab>(
-  isInventoryConfirmed.value ? "scan" : "settings",
-);
+const activeTab = computed<AppTab>({
+  get: () => (isAppTab(route.name) ? route.name : "settings"),
+  set: (tab) => {
+    if (tab !== route.name) {
+      void router.push({ name: tab });
+    }
+  },
+});
 const statusKey = ref(
   isInventoryConfirmed.value ? "status.settings_confirmed" : "status.ready",
 );
@@ -102,10 +109,7 @@ const isInventoryReady = computed(
     isAppsScriptUrl(appsScriptUrl.value),
 );
 const showStatusAlert = computed(
-  () =>
-    isAppsScriptUrlInvalid.value ||
-    (statusKey.value !== "status.ready" &&
-      statusKey.value !== "status.all_complete"),
+  () => activeTab.value === "settings" && isAppsScriptUrlInvalid.value,
 );
 const effectiveStatusMessage = computed(() =>
   isAppsScriptUrlInvalid.value
@@ -115,6 +119,19 @@ const effectiveStatusMessage = computed(() =>
 const effectiveStatusTone = computed<"info" | "success" | "warning" | "error">(
   () => (isAppsScriptUrlInvalid.value ? "error" : statusTone.value),
 );
+const liveStatusMessage = computed(() => {
+  if (
+    statusKey.value === "status.ready" ||
+    statusKey.value === "status.all_complete" ||
+    statusKey.value === "status.ids_batch_waiting" ||
+    statusKey.value === "status.ids_found_with_duplicates" ||
+    statusKey.value === "status.location_changed_results_cleared" ||
+    statusKey.value.startsWith("errors.")
+  ) {
+    return "";
+  }
+  return effectiveStatusMessage.value;
+});
 const canStartCamera = computed(() => !isCameraActive.value);
 const pendingGroups = computed<PendingLocationGroup[]>(() => {
   const currentLocation = location.value.trim();
@@ -187,6 +204,7 @@ function getErrorCode(error: unknown): string {
 function setError(error: unknown): string {
   const code = getErrorCode(error);
   setStatus(`errors.${code}`, {}, "error");
+  showToast(t(`errors.${code}`), "error", 8000);
   return code;
 }
 
@@ -250,12 +268,16 @@ function updateLocation(value: string): void {
   if (previous !== value.trim() && hasCurrentCheckWork()) {
     resetCurrentCheck();
     setStatus("status.location_changed_results_cleared", {}, "info");
+    showToast(t("status.location_changed_results_cleared"), "info");
   }
 }
 
 function validateAppsScriptUrl(): boolean {
   if (isAppsScriptUrl(appsScriptUrl.value)) return true;
   setStatus("errors.INVALID_REQUEST", {}, "error");
+  if (activeTab.value !== "settings") {
+    showToast(t("errors.INVALID_REQUEST"), "error");
+  }
   return false;
 }
 
@@ -269,20 +291,24 @@ async function confirmSettings(): Promise<void> {
   activeTab.value = "scan";
 }
 
-watch(activeTab, (tab, previous) => {
-  if (previous === "scan" && tab !== "scan") {
-    stopCamera();
-  }
-  if (
-    tab === "pending" &&
-    isAppsScriptUrl(appsScriptUrl.value) &&
-    isInventoryConfirmed.value &&
-    !hasLoadedPending.value &&
-    !isPendingLoading.value
-  ) {
-    void loadPending();
-  }
-});
+watch(
+  () => activeTab.value,
+  (tab, previous) => {
+    if (previous === "scan" && tab !== "scan") {
+      stopCamera();
+    }
+    if (
+      tab === "pending" &&
+      isAppsScriptUrl(appsScriptUrl.value) &&
+      isInventoryConfirmed.value &&
+      !hasLoadedPending.value &&
+      !isPendingLoading.value
+    ) {
+      void loadPending();
+    }
+  },
+  { immediate: true },
+);
 
 onBeforeUnmount(() => {
   window.clearTimeout(batchIdleTimer);
@@ -324,10 +350,13 @@ function handleCameraStatus(
   }
   if (errorCode === "QR_DECODE_FAILED") {
     setStatus("errors.QR_DECODE_FAILED", {}, "error");
+    showToast(t("errors.QR_DECODE_FAILED"), "error");
     return;
   }
   isCameraActive.value = false;
-  setStatus(`errors.${errorCodes.has(errorCode ?? "") ? errorCode : "UNKNOWN"}`, {}, "error");
+  const code = errorCodes.has(errorCode ?? "") ? errorCode : "UNKNOWN";
+  setStatus(`errors.${code}`, {}, "error");
+  showToast(t(`errors.${code}`), "error");
 }
 
 async function startCamera(): Promise<void> {
@@ -396,13 +425,16 @@ function queueIds(ids: string[], source: "camera" | "photo" = "camera"): void {
   const queuedCount = results.value.filter(
     (result) => result.state === "queued",
   ).length;
-  setStatus(
-    ignoredCount
-      ? "status.ids_found_with_duplicates"
-      : "status.ids_batch_waiting",
-    { count: acceptedIds.length, queued: queuedCount, ignored: ignoredCount },
-    "info",
-  );
+  const statusKeyName = ignoredCount
+    ? "status.ids_found_with_duplicates"
+    : "status.ids_batch_waiting";
+  const statusParamsValue = {
+    count: acceptedIds.length,
+    queued: queuedCount,
+    ignored: ignoredCount,
+  };
+  setStatus(statusKeyName, statusParamsValue, "info");
+  showToast(t(statusKeyName, statusParamsValue), "info", 4000);
   scheduleBatchSubmit();
 }
 
@@ -706,14 +738,16 @@ function handleLocaleChange(event: Event): void {
     </header>
 
     <v-main id="main-content" tag="main" class="app-main">
+      <p class="visually-hidden" role="status" aria-live="polite">
+        {{ liveStatusMessage }}
+      </p>
       <v-container class="app-container" fluid>
         <v-alert
           v-if="showStatusAlert"
           class="status-alert"
           :type="effectiveStatusTone"
           variant="tonal"
-          role="status"
-          aria-live="polite"
+          role="alert"
         >
           {{ effectiveStatusMessage }}
         </v-alert>
@@ -815,10 +849,11 @@ function handleLocaleChange(event: Event): void {
           />
         </template>
       </v-container>
+      <router-view />
     </v-main>
 
     <v-bottom-navigation
-      v-model="activeTab"
+      :model-value="activeTab"
       class="app-bottom-nav"
       tag="nav"
       :aria-label="t('scan.tab_navigation')"
@@ -830,7 +865,7 @@ function handleLocaleChange(event: Event): void {
       height="72"
     >
       <v-btn
-        type="button"
+        :to="{ name: 'settings' }"
         value="settings"
         :aria-current="activeTab === 'settings' ? 'page' : undefined"
       >
@@ -838,7 +873,7 @@ function handleLocaleChange(event: Event): void {
         {{ t("scan.tab_settings") }}
       </v-btn>
       <v-btn
-        type="button"
+        :to="{ name: 'scan' }"
         value="scan"
         :aria-current="activeTab === 'scan' ? 'page' : undefined"
       >
@@ -846,7 +881,7 @@ function handleLocaleChange(event: Event): void {
         {{ t("scan.tab_scan") }}
       </v-btn>
       <v-btn
-        type="button"
+        :to="{ name: 'checked' }"
         value="checked"
         :aria-current="activeTab === 'checked' ? 'page' : undefined"
       >
@@ -854,7 +889,7 @@ function handleLocaleChange(event: Event): void {
         {{ t("scan.tab_checked") }}
       </v-btn>
       <v-btn
-        type="button"
+        :to="{ name: 'pending' }"
         value="pending"
         :aria-current="activeTab === 'pending' ? 'page' : undefined"
       >
