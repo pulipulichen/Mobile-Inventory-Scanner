@@ -49,6 +49,7 @@ framework 取代實體輸出邏輯。語系選擇器等規格指定原生元素�
 | `sass` | `scan`、`print` | SCSS / Sass 樣式編譯 | [官方文件](https://sass-lang.com/documentation/) | [Sass Playground](https://sass-lang.com/playground/) |
 | `qrcode` | `print` | 產生 QR Code；預覽可輸出 SVG，PDF 產生器使用 QR matrix | [GitHub README](https://github.com/soldair/node-qrcode) | — |
 | `pdf-lib` | `print` | 在瀏覽器本機產生並下載 PDF；以向量方塊繪製 QR Code | [官方文件](https://pdf-lib.js.org/) | [建立 PDF 的 JSFiddle](https://jsfiddle.net/Hopding/rxwsc8f5/13/) |
+| `pdflib-fontkit` | `print` | 讓 `pdf-lib` 內嵌 Noto Sans TC，以便 PDF 標籤顯示繁體中文 `name` | [GitHub README](https://github.com/znacloud/pdf-fontkit) | — |
 | `@undecaf/zbar-wasm` | `scan` | 在瀏覽器本機辨識 `ImageData`，支援同一張圖片多個 barcode / QR Code | [GitHub README](https://github.com/undecaf/zbar-wasm) | [官方掃描 Demo](https://undecaf.github.io/zbar-wasm/example/) |
 | `vite-plugin-pwa` | `scan` | 產生 PWA manifest 與 Service Worker，快取 App shell 與靜態資源 | [官方文件](https://vite-pwa-org.netlify.app/guide/) | [官方 Examples（需本機啟動）](https://vite-pwa-org.netlify.app/examples/) |
 

@@ -1,6 +1,7 @@
 import {
   getPaperSizeMm,
   MIN_PAGE_MARGIN_MM,
+  showsLabelText,
   type InventoryItem,
   type LayoutMetrics,
   type PrintSettings,
@@ -16,10 +17,12 @@ export function calculateLayout(
     settings.paperSize,
     settings.orientation,
   );
-  const textHeightMm = settings.showIdText
+  const textHeightMm = showsLabelText(settings.labelText)
     ? Math.max(5, settings.idFontSizePt * 0.42)
     : 0;
-  const textGapMm = settings.showIdText ? settings.qrTextGapMm : 0;
+  const textGapMm = showsLabelText(settings.labelText)
+    ? settings.qrTextGapMm
+    : 0;
   const labelWidthMm = settings.qrSizeMm + LABEL_PADDING_MM * 2;
   const labelHeightMm =
     settings.qrSizeMm + textGapMm + textHeightMm + LABEL_PADDING_MM * 2;

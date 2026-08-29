@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import GoogleSheetSource from "./components/GoogleSheetSource.vue";
 import PrintPreview from "./components/PrintPreview.vue";
 import PrintSettings from "./components/PrintSettings.vue";
+import ScanSimulator from "./components/scan_simulator.vue";
 import { usePrintSettings } from "./composables/use_print_settings";
+import type { SimulationSourceState } from "./composables/use_scan_simulation";
 import { setLocale, type SupportedLocale } from "./i18n";
 import { generatePdf } from "./services/pdf_generator";
 import { createQrSvg, QrGeneratorError } from "./services/qr_generator";
 import { readSheet, SheetSourceError } from "./services/sheet_source";
 import type {
   LayoutMetrics,
+  PrintMode,
   PrintSettings as PrintSettingsModel,
   SheetData,
 } from "./types/print";
@@ -27,10 +30,12 @@ const statusKey = ref("status.ready");
 const statusParams = ref<Record<string, unknown>>({});
 const statusTone = ref<"info" | "success" | "warning" | "error">("info");
 const lastErrorCode = ref<string | null>(null);
+const mode = ref<PrintMode>("pdf");
 
 const statusMessage = computed(() =>
   t(statusKey.value, statusParams.value),
 );
+const showStatusAlert = computed(() => statusKey.value !== "status.ready");
 const sourceErrorMessage = computed(() =>
   lastErrorCode.value === "INVALID_SHEET_URL"
     ? t(`errors.${lastErrorCode.value}`)
@@ -52,6 +57,17 @@ const canDownload = computed(
     !isLoading.value &&
     !isGeneratingPdf.value,
 );
+const simulationSourceState = computed<SimulationSourceState>(() => {
+  if (!sheetData.value) return "not_loaded";
+  if (duplicateGroups.value.length > 0) return "duplicates";
+  const uniqueIds = new Set(sheetData.value.items.map((item) => item.id));
+  if (uniqueIds.size === 0) return "not_loaded";
+  if (Object.keys(qrSvgs.value).length !== uniqueIds.size) return "qr_error";
+  return "ready";
+});
+const canUseSimulation = computed(
+  () => simulationSourceState.value === "ready" && !isLoading.value,
+);
 
 function setStatus(
   key: string,
@@ -62,6 +78,10 @@ function setStatus(
   statusParams.value = params;
   statusTone.value = tone;
 }
+
+watch(canUseSimulation, (available) => {
+  if (!available && mode.value === "simulation") mode.value = "pdf";
+});
 
 function setError(error: unknown): void {
   const code =
@@ -217,6 +237,7 @@ function handleLocaleChange(event: Event): void {
         />
 
         <v-alert
+          v-if="showStatusAlert"
           class="status-alert"
           :type="statusTone"
           variant="tonal"
@@ -287,33 +308,86 @@ function handleLocaleChange(event: Event): void {
           </ul>
         </v-alert>
 
-        <PrintSettings
-          :settings="settings"
-          @update="updateSettings"
-          @reset="handleResetSettings"
-        />
-
-        <PrintPreview
-          :items="canDownload ? sheetData?.items ?? [] : []"
-          :qr-svgs="qrSvgs"
-          :settings="settings"
-          :metrics="metrics"
+        <section
+          class="section-card mode-card"
+          aria-labelledby="mode-heading"
         >
-          <template #actions>
-            <v-btn
-              type="button"
-              color="primary"
-              size="large"
-              block
-              prepend-icon="mdi-file-pdf-box"
-              :disabled="!canDownload"
-              :loading="isGeneratingPdf"
-              @click="downloadPdf"
-            >
-              {{ t("print.download_pdf") }}
-            </v-btn>
-          </template>
-        </PrintPreview>
+          <div class="mode-card-content">
+            <div>
+              <h2 id="mode-heading">{{ t("simulation.mode_heading") }}</h2>
+              <p>{{ t("simulation.mode_hint") }}</p>
+            </div>
+            <div class="mode-actions" role="group" aria-labelledby="mode-heading">
+              <v-btn
+                type="button"
+                :variant="mode === 'pdf' ? 'flat' : 'outlined'"
+                :color="mode === 'pdf' ? 'primary' : 'secondary'"
+                :aria-pressed="mode === 'pdf'"
+                @click="mode = 'pdf'"
+              >
+                {{ t("simulation.pdf_mode") }}
+              </v-btn>
+              <v-btn
+                type="button"
+                :variant="mode === 'simulation' ? 'flat' : 'outlined'"
+                :color="mode === 'simulation' ? 'primary' : 'secondary'"
+                :aria-pressed="mode === 'simulation'"
+                :disabled="!canUseSimulation"
+                :title="
+                  !canUseSimulation
+                    ? t('simulation.simulation_unavailable')
+                    : undefined
+                "
+                @click="mode = 'simulation'"
+              >
+                {{ t("simulation.simulation_mode") }}
+              </v-btn>
+            </div>
+            <a class="mode-scan-link" href="../scan/">
+              {{ t("simulation.go_to_scan") }}
+            </a>
+            <p v-if="!canUseSimulation" class="field-description">
+              {{ t("simulation.simulation_unavailable") }}
+            </p>
+          </div>
+        </section>
+
+        <template v-if="mode === 'pdf'">
+          <PrintSettings
+            :settings="settings"
+            @update="updateSettings"
+            @reset="handleResetSettings"
+          />
+
+          <PrintPreview
+            :items="canDownload ? sheetData?.items ?? [] : []"
+            :qr-svgs="qrSvgs"
+            :settings="settings"
+            :metrics="metrics"
+          >
+            <template #actions>
+              <v-btn
+                type="button"
+                color="primary"
+                size="large"
+                block
+                prepend-icon="mdi-file-pdf-box"
+                :disabled="!canDownload"
+                :loading="isGeneratingPdf"
+                @click="downloadPdf"
+              >
+                {{ t("print.download_pdf") }}
+              </v-btn>
+            </template>
+          </PrintPreview>
+        </template>
+
+        <ScanSimulator
+          v-else
+          :items="sheetData?.items ?? []"
+          :qr-svgs="qrSvgs"
+          :source-state="simulationSourceState"
+        />
 
         <p class="privacy-note">{{ t("print.footer_note") }}</p>
       </v-container>

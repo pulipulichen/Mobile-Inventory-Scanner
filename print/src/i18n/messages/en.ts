@@ -29,10 +29,10 @@ export default {
       "Changes are saved in this browser and update the preview immediately.",
     qr_size: "QR Code size",
     qr_size_hint: "Physical size of each QR Code.",
-    id_font_size: "ID text size",
+    id_font_size: "Text size",
     id_font_size_hint: "Text size printed below the QR Code.",
-    qr_text_gap: "QR / ID gap",
-    qr_text_gap_hint: "Space between the QR Code and its ID.",
+    qr_text_gap: "QR / text gap",
+    qr_text_gap_hint: "Space between the QR Code and its label text.",
     label_gap: "Label gap",
     label_gap_hint: "Space between adjacent labels.",
     page_margin: "Page margin",
@@ -43,9 +43,12 @@ export default {
     orientation: "Paper orientation",
     orientation_portrait: "Portrait",
     orientation_landscape: "Landscape",
-    show_id_text: "Show ID text",
-    show_id_text_hint:
-      "When off, preview and PDF keep only the QR Code and relayout the labels.",
+    label_text: "Label text",
+    label_text_hint:
+      "Show the ID, the name, or no text below each QR Code. Empty names fall back to the ID.",
+    label_text_hidden: "Hidden",
+    label_text_id: "ID",
+    label_text_name: "Name",
     reset_settings: "Reset settings",
     summary_heading: "Sheet report",
     summary_sheet: "Sheet",
@@ -64,10 +67,57 @@ export default {
     preview_empty: "Load a Sheet without duplicate IDs to see the label preview.",
     page: "Page {page} of {pages}",
     qr_label: "QR Code for ID {id}",
+    qr_label_with_name: "QR Code for ID {id}, name {name}",
     download_pdf: "Download PDF",
     pdf_filename: "inventory-qr-labels",
     footer_note:
       "PDF is generated locally in your browser. Your Sheet data is not uploaded to this app.",
+  },
+  simulation: {
+    mode_heading: "Output mode",
+    mode_hint: "Choose whether to generate a PDF or display a scan practice scene.",
+    pdf_mode: "PDF labels",
+    simulation_mode: "Scan simulation",
+    simulation_unavailable: "Load a valid Sheet without duplicate IDs first.",
+    heading: "QR Code scan simulation",
+    description:
+      "Display a scrollable wall of QR Code labels on this screen and scan it with another device.",
+    controls_heading: "Scan simulation controls",
+    item_count: "QR Code count",
+    item_count_hint: "The current scene will contain {count} available IDs.",
+    item_count_option: "{count} QR Codes",
+    item_count_all: "All IDs",
+    min_qr_size: "Minimum QR Code size",
+    max_qr_size: "Maximum QR Code size",
+    qr_size_hint: "Display size for each QR Code. The scene chooses a size in this range.",
+    build_scene: "Build scene",
+    randomize: "Randomize layout",
+    rebuild_same_seed: "Rebuild with same seed",
+    zoom: "Scene zoom",
+    zoom_out: "Zoom out",
+    zoom_in: "Zoom in",
+    zoom_reset: "Reset to 100%",
+    source_not_loaded: "Load a Google Sheet before building a scan scene.",
+    source_duplicates:
+      "Scan simulation is disabled because the loaded Sheet contains duplicate IDs.",
+    source_qr_error:
+      "Scan simulation is disabled because one or more QR Codes could not be generated.",
+    ready: "Choose the scene settings, then select “Build scene”.",
+    no_items: "There are no valid IDs available for the scan scene.",
+    scene_created: "Scan scene built with {count} QR Codes.",
+    build_hint:
+      "The scene will appear here after a valid Sheet is loaded and you build it.",
+    scene_heading: "QR Code scan scene",
+    scene_summary:
+      "{count} QR Codes · scene size {width} × {height} px before zoom",
+    go_to_scan: "Open scan on another device",
+    enter_fullscreen: "Enter full screen",
+    exit_fullscreen: "Exit full screen",
+    exit_fullscreen_hint: "Press Escape to exit full screen.",
+    fullscreen_entered: "Full screen enabled. Press Escape to exit.",
+    fullscreen_exited: "Full screen disabled. Focus returned to the full-screen button.",
+    fullscreen_unsupported:
+      "Full screen is not supported here. The simulation was expanded within this page. Press Escape to exit.",
   },
   status: {
     ready: "Confirm the Google Sheet URL, then select “Load data”.",
@@ -95,6 +145,16 @@ export default {
       "The Sheet contains no valid, non-empty IDs.",
     QR_GENERATION_FAILED:
       "QR Code generation failed. Reload the Sheet or try again later.",
+    SIMULATION_INVALID_ITEM_COUNT:
+      "Choose a supported QR Code count.",
+    SIMULATION_INVALID_QR_SIZE:
+      "QR Code sizes must be between 48 px and 480 px.",
+    SIMULATION_MIN_QR_LARGER_THAN_MAX:
+      "The minimum QR Code size cannot be larger than the maximum.",
+    SIMULATION_INVALID_ZOOM:
+      "Scene zoom must be between 50% and 200%.",
+    SIMULATION_LAYOUT_FAILED:
+      "The scene could not fit all QR Codes. Try a smaller QR Code size range.",
     UNKNOWN:
       "An unexpected error occurred. Please try again.",
   },

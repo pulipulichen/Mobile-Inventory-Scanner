@@ -17,6 +17,9 @@ export const PAPER_SIZE_DIMENSIONS: Record<PaperSize, PaperSizeDimensions> = {
   b5: { widthMm: 182, heightMm: 257 },
 };
 
+export const LABEL_TEXT_MODES = ["hidden", "id", "name"] as const;
+export type LabelTextMode = (typeof LABEL_TEXT_MODES)[number];
+
 export interface PrintSettings {
   paperSize: PaperSize;
   qrSizeMm: number;
@@ -25,11 +28,12 @@ export interface PrintSettings {
   labelGapMm: number;
   pageMarginMm: number;
   orientation: Orientation;
-  showIdText: boolean;
+  labelText: LabelTextMode;
 }
 
 export interface InventoryItem {
   id: string;
+  name: string;
   rowNumber: number;
   cellAddress: string;
 }
@@ -47,6 +51,33 @@ export interface SheetData {
   totalRows: number;
   dataErrorCount: number;
   duplicateGroups: DuplicateGroup[];
+}
+
+export type PrintMode = "pdf" | "simulation";
+export type SimulationItemCount = 5 | 10 | 20 | "all";
+
+export interface SimulationSettings {
+  itemCount: SimulationItemCount;
+  minQrSizePx: number;
+  maxQrSizePx: number;
+  zoom: number;
+  seed: number;
+}
+
+export interface SceneLayoutItem {
+  item: InventoryItem;
+  svgMarkup: string;
+  xPx: number;
+  yPx: number;
+  widthPx: number;
+  heightPx: number;
+  qrSizePx: number;
+}
+
+export interface SceneLayout {
+  widthPx: number;
+  heightPx: number;
+  items: SceneLayoutItem[];
 }
 
 export interface LayoutMetrics {
@@ -70,8 +101,48 @@ export const DEFAULT_PRINT_SETTINGS: PrintSettings = {
   labelGapMm: 4,
   pageMarginMm: 8,
   orientation: "portrait",
-  showIdText: true,
+  labelText: "id",
 };
+
+export function isLabelTextMode(value: unknown): value is LabelTextMode {
+  return (
+    typeof value === "string" &&
+    (LABEL_TEXT_MODES as readonly string[]).includes(value)
+  );
+}
+
+export function showsLabelText(mode: LabelTextMode): boolean {
+  return mode !== "hidden";
+}
+
+export function getLabelCaption(
+  item: InventoryItem,
+  mode: LabelTextMode,
+): string {
+  if (mode === "hidden") return "";
+  if (mode === "name") return item.name || item.id;
+  return item.id;
+}
+
+export const DEFAULT_SIMULATION_SETTINGS: SimulationSettings = {
+  itemCount: 10,
+  minQrSizePx: 96,
+  maxQrSizePx: 240,
+  zoom: 100,
+  seed: 20260829,
+};
+
+export const SIMULATION_ITEM_COUNTS: readonly SimulationItemCount[] = [
+  5,
+  10,
+  20,
+  "all",
+];
+export const MIN_SIMULATION_QR_SIZE_PX = 48;
+export const MAX_SIMULATION_QR_SIZE_PX = 480;
+export const MIN_SIMULATION_ZOOM = 50;
+export const MAX_SIMULATION_ZOOM = 200;
+export const SIMULATION_ZOOM_STEP = 10;
 
 export function isPaperSize(value: unknown): value is PaperSize {
   return (
@@ -89,6 +160,16 @@ export function getPaperSizeMm(
     return { widthMm: heightMm, heightMm: widthMm };
   }
   return { widthMm, heightMm };
+}
+
+export function isSimulationItemCount(
+  value: unknown,
+): value is SimulationItemCount {
+  return (
+    value === "all" ||
+    (typeof value === "number" &&
+      SIMULATION_ITEM_COUNTS.includes(value as SimulationItemCount))
+  );
 }
 
 export const MIN_PAGE_MARGIN_MM = 8;

@@ -188,6 +188,9 @@ export async function readSheet(url: string): Promise<SheetData> {
   const rows = parseCsv(csvDownload.csv);
   const headers = rows[0] ?? [];
   const idColumnIndex = headers.findIndex((header) => header.trim() === "id");
+  const nameColumnIndex = headers.findIndex(
+    (header) => header.trim() === "name",
+  );
 
   if (idColumnIndex < 0) {
     throw new SheetSourceError("COLUMN_NOT_FOUND");
@@ -207,6 +210,8 @@ export async function readSheet(url: string): Promise<SheetData> {
 
     items.push({
       id,
+      name:
+        nameColumnIndex >= 0 ? (row[nameColumnIndex] ?? "").trim() : "",
       rowNumber,
       cellAddress: `${toA1Column(idColumnIndex)}${rowNumber}`,
     });

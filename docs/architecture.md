@@ -230,9 +230,9 @@ flowchart TB
 第一版 PDF 需求：
 
 - 紙張尺寸可選 A4、A3、A5、B4、B5，預設 A4，並可切換直向或橫向。
-- 可選擇是否在標籤上顯示 ID 文字。
+- 標籤文字可選擇不顯示、顯示 ID，或顯示 name。
 - QR Code 使用實體 `mm` 尺寸。
-- QR Code 與 ID 文字保持在同一標籤。
+- QR Code 與標籤文字保持在同一標籤。
 - 可設定 QR Code 大小、文字大小、標籤間距、頁面邊界。
 - 自動計算每列數量與換頁。
 - 標籤不可跨頁切斷。
@@ -295,7 +295,7 @@ QR decode 必須支援 multi-code detection，不能只處理第一個結果。�
 - `mis.print.label_gap_mm`
 - `mis.print.page_margin_mm`
 - `mis.print.orientation`
-- `mis.print.show_id_text`
+- `mis.print.label_text`
 
 `scan` 至少保存：
 

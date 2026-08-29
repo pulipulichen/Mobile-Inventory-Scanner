@@ -1,8 +1,15 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { useI18n } from "vue-i18n";
-import type { InventoryItem, LayoutMetrics, PrintSettings } from "../types/print";
+import {
+  getLabelCaption,
+  showsLabelText,
+  type InventoryItem,
+  type LayoutMetrics,
+  type PrintSettings,
+} from "../types/print";
 
-defineProps<{
+const props = defineProps<{
   item: InventoryItem;
   svgMarkup: string;
   metrics: LayoutMetrics;
@@ -10,6 +17,19 @@ defineProps<{
 }>();
 
 const { t } = useI18n({ useScope: "global" });
+
+const caption = computed(() =>
+  getLabelCaption(props.item, props.settings.labelText),
+);
+const showText = computed(() => showsLabelText(props.settings.labelText));
+const accessibleName = computed(() =>
+  props.item.name
+    ? t("print.qr_label_with_name", {
+        id: props.item.id,
+        name: props.item.name,
+      })
+    : t("print.qr_label", { id: props.item.id }),
+);
 </script>
 
 <template>
@@ -20,12 +40,12 @@ const { t } = useI18n({ useScope: "global" });
       height: `${metrics.labelHeightMm}mm`,
       padding: `${metrics.labelPaddingMm}mm`,
     }"
-    :aria-label="t('print.qr_label', { id: item.id })"
+    :aria-label="accessibleName"
   >
     <div
       class="qr-image"
       role="img"
-      :aria-label="t('print.qr_label', { id: item.id })"
+      :aria-label="accessibleName"
       :style="{
         width: `${settings.qrSizeMm}mm`,
         height: `${settings.qrSizeMm}mm`,
@@ -34,9 +54,9 @@ const { t } = useI18n({ useScope: "global" });
     />
     <p
       class="qr-id"
-      :class="{ 'visually-hidden': !settings.showIdText }"
+      :class="{ 'visually-hidden': !showText }"
       :style="
-        settings.showIdText
+        showText
           ? {
               marginTop: `${settings.qrTextGapMm}mm`,
               fontSize: `${settings.idFontSizePt}pt`,
@@ -44,7 +64,7 @@ const { t } = useI18n({ useScope: "global" });
           : undefined
       "
     >
-      {{ item.id }}
+      {{ showText ? caption : item.id }}
     </p>
   </article>
 </template>

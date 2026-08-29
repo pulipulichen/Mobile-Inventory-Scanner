@@ -11,8 +11,12 @@
 - Added the `print` workflow for browser-accessible Google Sheet CSV data, ID
   validation and duplicate reporting, SVG QR previews, configurable physical
   label layout, and local vector PDF generation.
+- Added a `print` scan-simulation scene with configurable QR Code count and
+  display size, deterministic layouts, zoom, keyboard scrolling, randomization,
+  and full-screen display for multi-code scanning practice.
 - Added `print` paper-size selection (A4, A3, A5, B4, B5; default A4) and a
-  setting to show or hide ID text on the preview and generated PDF.
+  label-text setting to hide text or show either the ID or the Sheet `name`
+  on the preview and generated PDF.
 - Added Material Design Icons for the scan controls and print source actions.
 - Expanded the Apps Script inventory contract with the optional `name` column
   and `GET?action=pending` / `GET?action=list` read endpoints while retaining
@@ -45,6 +49,11 @@
   static `scan/dist/` and `print/dist/` artifacts.
 - Added `frontend_dev.sh` and `frontend_build.sh` one-click commands for
   watched development and compressed production builds.
+- Made the `print` scan-simulation “Build scene” control a full-width
+  button that enters fullscreen after a successful scene is created, and
+  stopped showing the layout seed in the simulator UI.
+- Limited `print` scan-simulation fullscreen to the scene canvas, hiding
+  the toolbar and other controls, and using Escape to exit.
 
 ## Documentation
 

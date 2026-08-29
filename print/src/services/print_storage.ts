@@ -1,11 +1,16 @@
 import {
   DEFAULT_PRINT_SETTINGS,
+  DEFAULT_SIMULATION_SETTINGS,
+  isLabelTextMode,
   isPaperSize,
+  isSimulationItemCount,
   MAX_PAGE_MARGIN_MM,
   MIN_PAGE_MARGIN_MM,
+  type LabelTextMode,
   type Orientation,
   type PaperSize,
   type PrintSettings,
+  type SimulationSettings,
 } from "../types/print";
 
 const STORAGE_KEYS = {
@@ -17,9 +22,27 @@ const STORAGE_KEYS = {
   labelGapMm: "mis.print.label_gap_mm",
   pageMarginMm: "mis.print.page_margin_mm",
   orientation: "mis.print.orientation",
+  labelText: "mis.print.label_text",
   showIdText: "mis.print.show_id_text",
   locale: "mis.print.locale",
+  simulationItemCount: "mis.print.simulator.item_count",
+  simulationMinQrSizePx: "mis.print.simulator.min_qr_size_px",
+  simulationMaxQrSizePx: "mis.print.simulator.max_qr_size_px",
+  simulationZoom: "mis.print.simulator.zoom",
+  simulationSeed: "mis.print.simulator.seed",
 } as const;
+const PRINT_SETTINGS_STORAGE_KEYS = [
+  STORAGE_KEYS.googleSheetUrl,
+  STORAGE_KEYS.paperSize,
+  STORAGE_KEYS.qrSizeMm,
+  STORAGE_KEYS.idFontSizePt,
+  STORAGE_KEYS.qrTextGapMm,
+  STORAGE_KEYS.labelGapMm,
+  STORAGE_KEYS.pageMarginMm,
+  STORAGE_KEYS.orientation,
+  STORAGE_KEYS.showIdText,
+  STORAGE_KEYS.locale,
+] as const;
 
 const DEFAULT_GOOGLE_SHEET_URL =
   "https://docs.google.com/spreadsheets/d/1XA-VP_7g0Op-1s_LTjNroFOsOA4DvJEyGq8GaytCkCI/edit?usp=sharing";
@@ -52,16 +75,16 @@ function readNumber(
     : fallback;
 }
 
-function readBoolean(key: string, fallback: boolean): boolean {
-  const value = getItem(key);
-  if (value === "true") return true;
-  if (value === "false") return false;
-  return fallback;
-}
-
 function readPaperSize(key: string, fallback: PaperSize): PaperSize {
   const value = getItem(key);
   return isPaperSize(value) ? value : fallback;
+}
+
+function readLabelText(fallback: LabelTextMode): LabelTextMode {
+  const saved = getItem(STORAGE_KEYS.labelText);
+  if (isLabelTextMode(saved)) return saved;
+  if (getItem(STORAGE_KEYS.showIdText) === "false") return "hidden";
+  return fallback;
 }
 
 export function loadPrintSettings(): PrintSettings {
@@ -105,10 +128,7 @@ export function loadPrintSettings(): PrintSettings {
       MAX_PAGE_MARGIN_MM,
     ),
     orientation,
-    showIdText: readBoolean(
-      STORAGE_KEYS.showIdText,
-      DEFAULT_PRINT_SETTINGS.showIdText,
-    ),
+    labelText: readLabelText(DEFAULT_PRINT_SETTINGS.labelText),
   };
 }
 
@@ -120,7 +140,7 @@ export function savePrintSettings(settings: PrintSettings): void {
   setItem(STORAGE_KEYS.labelGapMm, String(settings.labelGapMm));
   setItem(STORAGE_KEYS.pageMarginMm, String(settings.pageMarginMm));
   setItem(STORAGE_KEYS.orientation, settings.orientation);
-  setItem(STORAGE_KEYS.showIdText, String(settings.showIdText));
+  setItem(STORAGE_KEYS.labelText, settings.labelText);
 }
 
 export function loadGoogleSheetUrl(): string {
@@ -139,8 +159,70 @@ export function saveLocale(locale: string): void {
   setItem(STORAGE_KEYS.locale, locale);
 }
 
+export function loadSimulationSettings(): SimulationSettings {
+  const rawItemCount = getItem(STORAGE_KEYS.simulationItemCount);
+  const parsedItemCount =
+    rawItemCount === "all"
+      ? "all"
+      : Number(rawItemCount);
+  const rawSeed = getItem(STORAGE_KEYS.simulationSeed);
+  const savedSeed = rawSeed === null ? Number.NaN : Number(rawSeed);
+
+  return {
+    itemCount: isSimulationItemCount(parsedItemCount)
+      ? parsedItemCount
+      : DEFAULT_SIMULATION_SETTINGS.itemCount,
+    minQrSizePx: readNumber(
+      STORAGE_KEYS.simulationMinQrSizePx,
+      DEFAULT_SIMULATION_SETTINGS.minQrSizePx,
+      48,
+      480,
+    ),
+    maxQrSizePx: readNumber(
+      STORAGE_KEYS.simulationMaxQrSizePx,
+      DEFAULT_SIMULATION_SETTINGS.maxQrSizePx,
+      48,
+      480,
+    ),
+    zoom: readNumber(
+      STORAGE_KEYS.simulationZoom,
+      DEFAULT_SIMULATION_SETTINGS.zoom,
+      50,
+      200,
+    ),
+    seed:
+      Number.isSafeInteger(savedSeed) && savedSeed >= 0
+        ? savedSeed >>> 0
+        : DEFAULT_SIMULATION_SETTINGS.seed,
+  };
+}
+
+export function saveSimulationSettings(settings: SimulationSettings): void {
+  setItem(STORAGE_KEYS.simulationItemCount, String(settings.itemCount));
+  setItem(STORAGE_KEYS.simulationMinQrSizePx, String(settings.minQrSizePx));
+  setItem(STORAGE_KEYS.simulationMaxQrSizePx, String(settings.maxQrSizePx));
+  setItem(STORAGE_KEYS.simulationZoom, String(settings.zoom));
+  setItem(STORAGE_KEYS.simulationSeed, String(settings.seed >>> 0));
+}
+
+export function clearSimulationSettings(): void {
+  [
+    STORAGE_KEYS.simulationItemCount,
+    STORAGE_KEYS.simulationMinQrSizePx,
+    STORAGE_KEYS.simulationMaxQrSizePx,
+    STORAGE_KEYS.simulationZoom,
+    STORAGE_KEYS.simulationSeed,
+  ].forEach((key) => {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // Ignore storage-disabled contexts.
+    }
+  });
+}
+
 export function clearPrintSettings(): void {
-  Object.values(STORAGE_KEYS).forEach((key) => {
+  PRINT_SETTINGS_STORAGE_KEYS.forEach((key) => {
     try {
       window.localStorage.removeItem(key);
     } catch {

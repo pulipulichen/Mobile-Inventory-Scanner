@@ -115,8 +115,9 @@ id | name | checked_time | location
 ```
 
 `name` 是 ID 的人類可識別名稱，可留白；`print` 仍以 `id` 作為 QR Code
-payload 與主要列印識別。列印功能載入時也必須保留每筆資料的實際列號，
-以便指出重複 ID 位於哪些儲存格。
+payload。標籤文字可選擇顯示 `id`、`name` 或不顯示；`name` 空白時改顯示
+`id`。列印功能載入時也必須保留每筆資料的實際列號，以便指出重複 ID 位於
+哪些儲存格。
 
 ### Google Sheet 權限
 
@@ -135,7 +136,7 @@ payload 與主要列印識別。列印功能載入時也必須保留每筆資料
 
 不可加入 Google Sheet URL、Apps Script URL、JSON、`checked_time`、`location` 或額外前後綴。
 
-QR Code 預設在下方顯示同一筆 ID 的可讀文字；使用者可在列印設定關閉文字顯示。即使畫面隱藏文字，預覽中每個 QR Code 仍保留對應的 ID 文字給螢幕閱讀器。使用 npm `qrcode` 套件在瀏覽器產生 SVG；不要用低解析度 canvas / PNG 再以 CSS 放大列印。
+QR Code 預設在下方顯示同一筆 ID 的可讀文字；使用者可改顯示 `name` 或關閉文字。即使畫面隱藏文字，預覽中每個 QR Code 仍保留對應的 ID 文字給螢幕閱讀器。使用 npm `qrcode` 套件在瀏覽器產生 SVG；不要用低解析度 canvas / PNG 再以 CSS 放大列印。
 
 ---
 
@@ -157,7 +158,7 @@ QR Code 預設在下方顯示同一筆 ID 的可讀文字；使用者可在列�
 
 ### 列印參數
 
-第一版至少提供：紙張尺寸（A4、A3、A5、B4、B5，預設 A4）、紙張方向（直向 / 橫向）、是否顯示 ID 文字、QR Code 尺寸、ID 文字大小、QR Code 與 ID 文字間距、標籤間距、頁面邊界。B 系列使用台灣常用的 JIS 尺寸。
+第一版至少提供：紙張尺寸（A4、A3、A5、B4、B5，預設 A4）、紙張方向（直向 / 橫向）、標籤文字（不顯示 / ID / name）、QR Code 尺寸、文字大小、QR Code 與文字間距、標籤間距、頁面邊界。B 系列使用台灣常用的 JIS 尺寸。
 
 所有參數修改後立即更新預覽，或提供明確「更新預覽」，並保存到 `localStorage`。
 
@@ -178,7 +179,7 @@ mis.print.qr_text_gap_mm
 mis.print.label_gap_mm
 mis.print.page_margin_mm
 mis.print.orientation
-mis.print.show_id_text
+mis.print.label_text
 ```
 
 可提供「重設為預設值」清除本頁設定。
@@ -209,7 +210,7 @@ mis.print.show_id_text
 
 ## 報表預覽
 
-頁面顯示接近實際列印結果的紙張預覽。QR Code 與 ID 必須保持同一標籤，標籤不可被分頁切開，自動依尺寸計算每列數量並換列 / 換頁，多頁要有清楚分隔。關閉 ID 文字時，標籤高度只保留 QR Code 與內距。
+頁面顯示接近實際列印結果的紙張預覽。QR Code 與標籤文字必須保持同一標籤，標籤不可被分頁切開，自動依尺寸計算每列數量並換列 / 換頁，多頁要有清楚分隔。關閉文字時，標籤高度只保留 QR Code 與內距。
 
 預覽與 `@media print` 使用相同尺寸變數，避免畫面與列印規格各算一套。
 
@@ -225,7 +226,7 @@ PDF 產生器必須：
 - 使用選定紙張的實體尺寸與 `mm` / `pt` 轉換。
 - 依預覽使用的同一組版面參數計算欄列、間距與換頁。
 - 以 `qrcode` 的 QR matrix 繪製向量模組，保留足夠 quiet zone。
-- 啟用 ID 文字時，在 QR Code 下方繪製相同的 ID；關閉時不把文字畫進 PDF。
+- 依標籤文字設定，在 QR Code 下方繪製 ID 或 name；選擇不顯示時不把文字畫進 PDF。中文 name 使用內嵌的 Noto Sans TC。
 - 確保每個標籤完整位於單一頁面內。
 - 產生 `Blob` 後提供全寬、含圖示的「下載 PDF」按鈕。
 
@@ -302,8 +303,8 @@ Component 不直接散落資料來源讀取或 QR library 操作；統一透過 
 - [ ] 可從 `id` 欄取得所有有效 ID。
 - [ ] 載入時可找出重複 ID，並指出每個重複 ID 所在的 A1 儲存格位置。
 - [ ] 有重複 ID 時不產生 QR Code 預覽、PDF 或直接列印結果。
-- [ ] 每個 ID 產生 SVG QR Code並顯示 ID。
-- [ ] 可設定紙張尺寸、方向、是否顯示 ID 文字，以及 QR Code 實體尺寸與基本列印參數。
+- [ ] 每個 ID 產生 SVG QR Code，標籤文字可顯示 ID、name 或不顯示。
+- [ ] 可設定紙張尺寸、方向、標籤文字，以及 QR Code 實體尺寸與基本列印參數。
 - [ ] 所有列印偏好保存到 `localStorage`。
 - [ ] 依選定紙張自動排列與分頁。
 - [ ] 可預覽。

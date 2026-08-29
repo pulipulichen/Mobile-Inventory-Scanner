@@ -2,11 +2,13 @@
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import {
+  isLabelTextMode,
   isPaperSize,
   MAX_PAGE_MARGIN_MM,
   MIN_PAGE_MARGIN_MM,
   PAPER_SIZE_DIMENSIONS,
   PAPER_SIZES,
+  showsLabelText,
   type Orientation,
   type PrintSettings as PrintSettingsModel,
 } from "../types/print";
@@ -47,6 +49,21 @@ const orientationOptions = computed(() => [
   },
 ]);
 
+const labelTextOptions = computed(() => [
+  {
+    label: t("print.label_text_hidden"),
+    value: "hidden" as const,
+  },
+  {
+    label: t("print.label_text_id"),
+    value: "id" as const,
+  },
+  {
+    label: t("print.label_text_name"),
+    value: "name" as const,
+  },
+]);
+
 function updateNumber(
   key: "qrSizeMm" | "idFontSizePt" | "qrTextGapMm" | "labelGapMm" | "pageMarginMm",
   value: unknown,
@@ -70,8 +87,9 @@ function updateOrientation(value: unknown): void {
   emit("update", { ...props.settings, orientation: value as Orientation });
 }
 
-function updateShowIdText(value: unknown): void {
-  emit("update", { ...props.settings, showIdText: Boolean(value) });
+function updateLabelText(value: unknown): void {
+  if (!isLabelTextMode(value)) return;
+  emit("update", { ...props.settings, labelText: value });
 }
 </script>
 
@@ -140,16 +158,17 @@ function updateShowIdText(value: unknown): void {
           @update:model-value="updateNumber('qrSizeMm', $event)"
         />
 
-        <v-switch
-          id="show-id-text"
-          class="settings-toggle"
-          :model-value="settings.showIdText"
-          :label="t('print.show_id_text')"
-          :hint="t('print.show_id_text_hint')"
+        <v-select
+          id="label-text"
+          :model-value="settings.labelText"
+          :items="labelTextOptions"
+          item-title="label"
+          item-value="value"
+          :label="t('print.label_text')"
+          :hint="t('print.label_text_hint')"
           persistent-hint
-          color="primary"
-          inset
-          @update:model-value="updateShowIdText"
+          variant="outlined"
+          @update:model-value="updateLabelText"
         />
 
         <v-text-field
@@ -179,7 +198,7 @@ function updateShowIdText(value: unknown): void {
           step="1"
           persistent-hint
           variant="outlined"
-          :disabled="!settings.showIdText"
+          :disabled="!showsLabelText(settings.labelText)"
           @update:model-value="updateNumber('idFontSizePt', $event)"
         />
 
@@ -195,7 +214,7 @@ function updateShowIdText(value: unknown): void {
           step="0.5"
           persistent-hint
           variant="outlined"
-          :disabled="!settings.showIdText"
+          :disabled="!showsLabelText(settings.labelText)"
           @update:model-value="updateNumber('qrTextGapMm', $event)"
         />
       </div>
