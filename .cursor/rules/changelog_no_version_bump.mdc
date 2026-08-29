@@ -1,5 +1,5 @@
 ---
-description: Do not bump CHANGELOG version unless the user explicitly asks; same-version entries are allowed
+description: Control CHANGELOG version bumps and publish them only on explicit request
 globs: changelog/**,CHANGELOG.md
 alwaysApply: false
 ---
@@ -8,12 +8,17 @@ alwaysApply: false
 
 - **預設不要升版**：使用者未明確要求時，禁止新增 `changelog/CHANGELOG-<version>.md`、禁止把根目錄 [`CHANGELOG.md`](CHANGELOG.md) 的 Latest Version 指到新版本、禁止把舊最新版移入 Archive 當成升版。
 - **同版本可寫 changelog**：有值得記錄的改動時，應把條目加進**目前最新**版本檔（例如既有的 `changelog/CHANGELOG-0.0.8.md`）。**不需要**使用者先說「寫 changelog」；也不要為了記一筆就自行開下一個 semver。
-- **何時可以升版**：僅當使用者明確說要升版／指定新版本號（例如「升到 0.0.7」「開新 changelog 版本」）時才建立新版本檔並更新 `CHANGELOG.md` 索引。
+- **一般升版**：僅當使用者明確說要升版／指定新版本號（例如「升到 0.0.7」「開新 changelog 版本」）時才建立新版本檔並更新 `CHANGELOG.md` 索引。
+- **固定觸發詞**：當使用者明確說「推前版本號」時，將目前版本的 patch 元件增加 `0.0.1`（例如 `0.0.8` → `0.0.9`），建立／更新對應的 CHANGELOG 版本檔與根目錄索引，然後執行 `git commit` 及 `git push`。Commit message 使用 conventional commit 格式，且只納入這次版本升級相關變更。
+- **固定觸發詞「記錄日誌」**：等同於要求更新 changelog；將條目加到目前最新版本檔，不自行升版，然後執行 `git commit` 及 `git push`。根目錄 `CHANGELOG.md` 僅維持索引，除非使用者明確要求升版。
+- **推送前檢查**：執行 commit 與 push 前，先確認變更內容與目前分支／遠端狀態；若有無關或疑似敏感檔案，不要一併提交。若 commit 或 push 失敗，回報具體原因，不要假裝已完成。
 
 ```text
 ✅ 修好 pgactive／migrate 順序 → 加到目前最新版檔（例如 0.0.8）
 ✅ 使用者：「把這次改動寫進 changelog」→ 加到最新版檔
 ✅ 使用者：「changelog 升到 0.0.7」→ 新建 CHANGELOG-0.0.7.md 並更新索引
+✅ 使用者：「推前版本號」→ patch 版本 `+0.0.1`，commit，push
+✅ 使用者：「記錄日誌」→ 更新目前最新版 changelog，commit，push
 ❌ 自行判斷「架構大改該升版」→ 開 0.0.7
 ❌ 因「未要求寫 changelog」而略過同版本條目
 ```
