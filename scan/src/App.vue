@@ -808,12 +808,11 @@ function handleLocaleChange(event: Event): void {
       {{ activeToast?.message }}
       <template #actions>
         <v-btn
+          icon="mdi-close"
           variant="text"
           :aria-label="t('common.dismiss')"
           @click="updateToastVisibility(false)"
-        >
-          {{ t("common.dismiss") }}
-        </v-btn>
+        />
       </template>
     </v-snackbar>
   </v-app>

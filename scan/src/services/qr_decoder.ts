@@ -60,12 +60,36 @@ async function decodeWithBarcodeDetector(
   }
 }
 
+function isQrSymbol(typeName: string): boolean {
+  return typeName.replace(/[_-\s]/g, "").toUpperCase().includes("QRCODE");
+}
+
+function drawScaledImage(
+  image: CanvasImageSource,
+  width: number,
+  height: number,
+): ImageData | null {
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, width);
+  canvas.height = Math.max(1, height);
+  const context = canvas.getContext("2d", {
+    alpha: false,
+    willReadFrequently: true,
+  });
+  if (!context) return null;
+
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  return context.getImageData(0, 0, canvas.width, canvas.height);
+}
+
 async function decodeWithZbar(imageData: ImageData): Promise<string[]> {
   configureWasm();
   const symbols = await scanImageData(imageData);
   return [...new Set(
     symbols
-      .filter((symbol) => symbol.typeName === "QR-Code")
+      .filter((symbol) => isQrSymbol(symbol.typeName))
       .map((symbol) => symbol.decode().trim())
       .filter(Boolean),
   )];
@@ -98,34 +122,34 @@ function loadImage(file: File): Promise<HTMLImageElement> {
 
 export async function decodeQrImageFile(file: File): Promise<string[]> {
   const image = await loadImage(file);
-  const maxDimension = 1800;
-  const scale = Math.min(
-    1,
-    maxDimension / Math.max(image.naturalWidth, image.naturalHeight),
-  );
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-  canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-  const context = canvas.getContext("2d", { willReadFrequently: true });
-  if (!context) throw new Error("IMAGE_READ_FAILED");
+  const maxSide = Math.max(image.naturalWidth, image.naturalHeight);
+  const allIds = new Set<string>();
+  const targetResolutions = [1600, 1000, 600, 400];
 
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  let ids = await decodeQrImageData(
-    context.getImageData(0, 0, canvas.width, canvas.height),
-  );
+  for (const maxDimension of targetResolutions) {
+    const scale = Math.min(1, maxDimension / maxSide);
+    const imageData = drawScaledImage(
+      image,
+      Math.round(image.naturalWidth * scale),
+      Math.round(image.naturalHeight * scale),
+    );
+    if (!imageData) continue;
 
-  if (!ids.length && scale < 1) {
-    const fullCanvas = document.createElement("canvas");
-    fullCanvas.width = image.naturalWidth;
-    fullCanvas.height = image.naturalHeight;
-    const fullContext = fullCanvas.getContext("2d", { willReadFrequently: true });
-    if (fullContext) {
-      fullContext.drawImage(image, 0, 0, fullCanvas.width, fullCanvas.height);
-      ids = await decodeQrImageData(
-        fullContext.getImageData(0, 0, fullCanvas.width, fullCanvas.height),
-      );
+    const ids = await decodeQrImageData(imageData);
+    ids.forEach((id) => allIds.add(id));
+  }
+
+  if (!allIds.size && maxSide > 1600) {
+    const imageData = drawScaledImage(
+      image,
+      image.naturalWidth,
+      image.naturalHeight,
+    );
+    if (imageData) {
+      const ids = await decodeQrImageData(imageData);
+      ids.forEach((id) => allIds.add(id));
     }
   }
 
-  return ids;
+  return [...allIds];
 }

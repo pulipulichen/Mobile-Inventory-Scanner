@@ -37,6 +37,13 @@
 
 ## Fixed
 
+- Fixed `scan` photo decoding dropping valid QR Codes because zbar reports
+  `ZBAR_QRCODE` while the decoder only kept `QR-Code`.
+- Improved `scan` photo decoding for screen photographs by using high-quality
+  downscaling across several sizes, so moiré from monitor pixels no longer
+  hides QR Codes that are visible to people.
+- Changed the toast dismiss control from visible “close” text to an icon-only
+  close button with an accessible name.
 - Fixed Vite `504 (Outdated Optimize Dep)` error during photo recognition in `scan`
   by explicitly configuring `@undecaf/zbar-wasm` in `optimizeDeps.include`, statically
   importing QR decoder modules, and adding a full-resolution fallback when scaled photo decoding detects no QR codes.
