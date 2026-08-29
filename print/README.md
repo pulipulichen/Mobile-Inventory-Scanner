@@ -59,7 +59,7 @@ flowchart TB
     B -->|"開啟最近使用頁面"| D["開啟 Google Drive 固定網址"]
     D --> E["選取 Sheet 並複製網址"]
     E --> C
-    C --> F["下載 CSV 並分析 id 欄"]
+    C --> F["有效網址自動下載 CSV 並分析 id 欄"]
     F --> G["檢查空白與重複 ID"]
     G -->|"有重複"| H["指出重複 ID 與 A1 儲存格位置"]
     G -->|"無重複"| I["設定 QR Code / 紙張參數"]
@@ -84,7 +84,7 @@ Google Cloud Project、不設定 OAuth Client ID，也不使用 Google Drive API
 1. 開啟上方連結。
 2. 在 Google Drive 中選取要使用的 Google Sheet。
 3. 複製瀏覽器網址列的完整 Google Sheet URL。
-4. 回到 `print`，將網址貼到 Google Sheet URL 欄位。
+4. 回到 `print`，將網址貼到 Google Sheet URL 欄位後會自動載入資料。
 
 這個連結只負責導覽，不會自動列出檔案，也不會自動把 Sheet URL
 帶回 `print`；使用者仍可直接手動貼上已知的 Google Sheet URL。
@@ -94,7 +94,7 @@ Google Cloud Project、不設定 OAuth Client ID，也不使用 Google Drive API
 ## 資料來源
 
 使用者可以手動輸入完整 Google Sheet 網址，也可以先開啟「最近使用的
-Google Sheet」連結，選取檔案後複製網址再貼上。
+Google Sheet」連結，選取檔案後複製網址再貼上。有效網址會自動載入資料。
 
 ```text
 https://docs.google.com/spreadsheets/d/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/edit
@@ -156,7 +156,8 @@ QR Code 預設在下方顯示同一筆 ID 的可讀文字；使用者可改顯�
 - 解析 Spreadsheet ID。
 - 保存到 `localStorage`。
 - 下次開啟自動帶入。
-- 提供「重新讀取」。
+- 有效網址會自動載入資料；開啟頁面時若已有保存或預設網址，也會自動載入。
+- 提供「重新載入資料」，讓使用者在 Sheet 內容變更後再讀一次。
 
 ### 列印參數
 
@@ -302,6 +303,7 @@ Component 不直接散落資料來源讀取或 QR library 操作；統一透過 
 - [ ] 不需要 Google Cloud Project、OAuth Client ID 或 Google Drive API。
 - [ ] 可從 URL 解析 Spreadsheet ID。
 - [ ] 可依輸入的 Google Sheet URL 下載可公開取得的 CSV。
+- [ ] 有效 Google Sheet URL 會自動載入資料；來源按鈕改為重新載入。
 - [ ] 可接受額外的 `name` 欄位，並可在標籤文字選擇 `name` 時作為 QR Code payload。
 - [ ] 可從 `id` 欄取得所有有效 ID。
 - [ ] 載入時可找出重複 ID，並指出每個重複 ID 所在的 A1 儲存格位置。

@@ -2,7 +2,7 @@
 import {
   computed,
   defineAsyncComponent,
-  onMounted,
+  onUnmounted,
   ref,
   watch,
 } from "vue";
@@ -25,6 +25,9 @@ import {
   type SheetData,
 } from "./types/print";
 import { calculateLayout } from "./utils/print_layout";
+import { tryParseSpreadsheetId } from "./utils/sheet_url";
+
+const SHEET_URL_DEBOUNCE_MS = 400;
 
 const ScanSimulator = defineAsyncComponent(
   () => import("./components/ScanSimulator.vue"),
@@ -154,36 +157,67 @@ async function refreshQrSvgs(
   }
 }
 
+let sheetLoadVersion = 0;
+let sheetUrlDebounceId = 0;
+let loadedSpreadsheetId: string | null = null;
+
+function cancelPendingSheetLoad(): void {
+  window.clearTimeout(sheetUrlDebounceId);
+  sheetLoadVersion += 1;
+  qrGenerationVersion += 1;
+  isLoading.value = false;
+  isGeneratingQr.value = false;
+}
+
+function resetSheetData(): void {
+  cancelPendingSheetLoad();
+  sheetData.value = null;
+  qrSvgs.value = {};
+  loadedSpreadsheetId = null;
+}
+
 function handleUrlUpdate(value: string): void {
   googleSheetUrl.value = value;
-  lastErrorCode.value = null;
-  if (sheetData.value) {
-    qrGenerationVersion += 1;
-    isGeneratingQr.value = false;
-    sheetData.value = null;
-    qrSvgs.value = {};
-    setStatus("status.ready");
+  if (lastErrorCode.value === "INVALID_SHEET_URL") {
+    lastErrorCode.value = null;
   }
 }
 
-async function loadSheet(): Promise<void> {
-  if (!googleSheetUrl.value.trim()) {
+async function loadSheet(options: { force?: boolean } = {}): Promise<void> {
+  const spreadsheetId = tryParseSpreadsheetId(googleSheetUrl.value);
+  if (!spreadsheetId) {
     lastErrorCode.value = "INVALID_SHEET_URL";
     setStatus("errors.INVALID_SHEET_URL", {}, "error");
     return;
   }
 
+  if (
+    !options.force &&
+    loadedSpreadsheetId === spreadsheetId &&
+    sheetData.value
+  ) {
+    return;
+  }
+
+  const loadVersion = ++sheetLoadVersion;
   isLoading.value = true;
   qrGenerationVersion += 1;
   isGeneratingQr.value = false;
   sheetData.value = null;
   qrSvgs.value = {};
+  loadedSpreadsheetId = null;
   lastErrorCode.value = null;
   setStatus("status.loading_sheet");
 
   try {
     const data = await readSheet(googleSheetUrl.value);
+    if (loadVersion !== sheetLoadVersion) return;
+    if (tryParseSpreadsheetId(googleSheetUrl.value) !== data.spreadsheetId) {
+      return;
+    }
+
     sheetData.value = data;
+    loadedSpreadsheetId = data.spreadsheetId;
 
     if (data.duplicateGroups.length > 0) {
       setStatus(
@@ -205,12 +239,34 @@ async function loadSheet(): Promise<void> {
       "success",
     );
   } catch (error) {
+    if (loadVersion !== sheetLoadVersion) return;
     sheetData.value = null;
     qrSvgs.value = {};
+    loadedSpreadsheetId = null;
     setError(error);
   } finally {
-    isLoading.value = false;
+    if (loadVersion === sheetLoadVersion) {
+      isLoading.value = false;
+    }
   }
+}
+
+function scheduleSheetLoad(immediate = false): void {
+  window.clearTimeout(sheetUrlDebounceId);
+  const delay = immediate ? 0 : SHEET_URL_DEBOUNCE_MS;
+  sheetUrlDebounceId = window.setTimeout(() => {
+    const spreadsheetId = tryParseSpreadsheetId(googleSheetUrl.value);
+    if (!spreadsheetId) {
+      if (sheetData.value || isLoading.value) {
+        resetSheetData();
+        lastErrorCode.value = null;
+        setStatus("status.ready");
+      }
+      return;
+    }
+
+    void loadSheet();
+  }, delay);
 }
 
 watch(
@@ -252,10 +308,7 @@ function updateSettings(value: PrintSettingsModel): void {
 }
 
 function handleResetSettings(): void {
-  qrGenerationVersion += 1;
-  isGeneratingQr.value = false;
-  sheetData.value = null;
-  qrSvgs.value = {};
+  resetSheetData();
   lastErrorCode.value = null;
   resetSettings();
   setStatus("status.settings_reset", {}, "success");
@@ -268,10 +321,18 @@ function handleLocaleChange(event: Event): void {
   }
 }
 
-onMounted(() => {
-  if (googleSheetUrl.value.trim()) {
-    void loadSheet();
-  }
+watch(
+  googleSheetUrl,
+  (_value, previousValue) => {
+    scheduleSheetLoad(previousValue === undefined);
+  },
+  { immediate: true },
+);
+
+onUnmounted(() => {
+  window.clearTimeout(sheetUrlDebounceId);
+  sheetLoadVersion += 1;
+  qrGenerationVersion += 1;
 });
 
 </script>
@@ -311,9 +372,10 @@ onMounted(() => {
         <GoogleSheetSource
           :model-value="googleSheetUrl"
           :loading="isLoading"
+          :loaded="Boolean(sheetData)"
           :error-message="sourceErrorMessage"
           @update:model-value="handleUrlUpdate"
-          @load="loadSheet"
+          @load="loadSheet({ force: true })"
         />
 
         <v-alert

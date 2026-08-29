@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 defineProps<{
   modelValue: string;
   loading: boolean;
+  loaded: boolean;
   errorMessage: string;
 }>();
 
@@ -67,7 +68,7 @@ const { t } = useI18n({ useScope: "global" });
             :loading="loading"
             :disabled="!modelValue.trim()"
           >
-            {{ t("print.load_sheet") }}
+            {{ loaded ? t("print.reload_sheet") : t("print.load_sheet") }}
           </v-btn>
         </div>
         <p class="field-description">{{ t("print.recent_sheets_hint") }}</p>

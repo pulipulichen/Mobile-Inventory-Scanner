@@ -87,7 +87,7 @@ Mobile-Inventory-Scanner/
 負責讀取資料與產生 QR Code PDF：
 
 - 以電腦為主要操作環境，支援平板與手機 RWD。
-- 使用者輸入 Google Sheet URL，解析 Spreadsheet ID 後下載公開 CSV。
+- 使用者輸入或還原 Google Sheet URL 後，有效網址會自動解析 Spreadsheet ID 並下載公開 CSV。
 - 讀取 `id` 清單並產生 QR Code。
 - 顯示 responsive 預覽。
 - 使用 `qrcode` 產生 QR Code，使用 `pdf-lib` 產生可下載的 PDF 檔案。
@@ -99,7 +99,8 @@ Mobile-Inventory-Scanner/
 負責手機端圖片辨識與盤點寫入：
 
 - 以手機瀏覽器 / PWA 為主要操作環境。
-- 使用者輸入 Apps Script Web App URL 與目前位置。
+- 使用者輸入 Apps Script Web App URL 與目前位置；也可先開啟 Apps Script
+  首頁，選取最近使用的專案後複製 `/exec` 網址。
 - 透過即時後置鏡頭、拍照或相片選擇器取得影像。
 - 在瀏覽器本機辨識影格或圖片中的一個或多個 QR Code。
 - 同一張圖片與同一個掃描 session 中的重複 ID 只送出一次。
@@ -128,7 +129,7 @@ flowchart TB
     I --> K["開始手機盤點"]
 ```
 
-完整的畫面操作與權限設定請依 [`google_sheet/README.md`](../google_sheet/README.md) 執行。`id` 必須視為字串，且在同一張表中唯一。
+完整的畫面操作與權限設定請依 [`google_sheet/README.md`](../google_sheet/README.md) 執行。`id` 必須視為字串，且在同一張表中唯一。已經部署過的 Apps Script 專案，也可以從 [Apps Script 首頁](https://script.google.com/home) 選取後複製 `/exec` 網址。
 
 ---
 
@@ -214,8 +215,8 @@ API 的 `message` 欄位一律使用英文，讓不同前端可以穩定處理�
 
 ```mermaid
 flowchart TB
-    A["開啟 print"] --> B["輸入 Google Sheet URL"]
-    B --> C["下載 Google Sheet CSV"]
+    A["開啟 print"] --> B["輸入或還原 Google Sheet URL"]
+    B --> C["有效網址自動下載 Google Sheet CSV"]
     C --> D["分析 id 欄位"]
     D --> E["驗證空白與重複 ID"]
     E --> F["設定 QR Code 與紙張版面參數"]

@@ -38,6 +38,8 @@
   Google OAuth, Google Identity Services, and the Drive API quick picker.
 - Replaced the `print` PDF download control with a full-width Vuetify button
   that includes a PDF icon.
+- Auto-loaded `print` Google Sheet data when a valid URL is already present or
+  pasted, keeping the source button as a manual reload.
 - Changed the bound Apps Script to use the first worksheet automatically,
   removing the need for a configured worksheet name.
 - Restricted `scan` Apps Script requests to deployed HTTPS `/exec` endpoints
@@ -63,6 +65,9 @@
 - Hid the `scan` camera, pending-inventory, and result UI until both a valid
   Apps Script `/exec` URL and a location are set, and showed an error alert
   for invalid URLs.
+- Added a `scan` Apps Script source action that opens the Apps Script home
+  page so users can copy a deployed `/exec` URL, matching the `print` Google
+  Drive recent-files control.
 - Loaded a saved Google Sheet URL automatically when opening `print`.
 - Kept print settings visible in scan-simulation mode and regenerated QR Codes
   when the label-text setting changes.
@@ -91,3 +96,9 @@
 - Documented QR Code payload following the label-text setting, scan-simulation
   packing of about 10 codes per screen, and GitHub Pages URLs under
   `print/dist/` and `scan/dist/`.
+- Documented that `print` automatically loads a valid Google Sheet URL and
+  keeps the source button for a manual reload.
+- Documented the `scan` Apps Script home-page link for copying a deployed
+  `/exec` URL without Google OAuth or Drive API.
+- Added illustrated Apps Script deployment and authorization steps, including
+  copying the deployed Web App URL back into `scan`.

@@ -33,6 +33,14 @@ export function parseSpreadsheetId(value: string): string {
   return match[1];
 }
 
+export function tryParseSpreadsheetId(value: string): string | null {
+  try {
+    return parseSpreadsheetId(value);
+  } catch {
+    return null;
+  }
+}
+
 export function toA1Column(index: number): string {
   let value = index + 1;
   let column = "";

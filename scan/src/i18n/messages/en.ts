@@ -18,6 +18,9 @@ export default {
       "https://script.google.com/macros/s/…/exec",
     apps_script_url_hint:
       "Use the deployed URL ending in /exec, not the /dev test URL.",
+    recent_apps_script: "Open recently used Apps Script projects",
+    recent_apps_script_hint:
+      "Apps Script opens in a new tab. Open the project and copy the /exec URL back here.",
     location_label: "Current location",
     location_placeholder: "Science Laboratory",
     location_hint: "Successful checks save this location to Google Sheets.",

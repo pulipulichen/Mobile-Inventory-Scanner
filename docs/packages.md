@@ -42,7 +42,7 @@ framework 取代實體輸出邏輯。語系選擇器等規格指定原生元素�
 | `vue` | `scan`、`print` | Vue 3 UI 與 Composition API | [官方文件](https://vuejs.org/guide/introduction.html) | [官方 Examples](https://vuejs.org/examples/) |
 | `vuetify` | `scan`、`print` | 共用 Vue 3 UI framework 與 responsive 元件 | [官方文件](https://vuetifyjs.com/en/getting-started/installation/) | [全部元件展示](https://vuetifyjs.com/en/components/all/) |
 | `vite-plugin-vuetify` | `scan`、`print` | Vite 編譯時按需載入 Vuetify 元件與 tree-shaking | [GitHub README](https://github.com/vuetifyjs/vuetify-loader/tree/master/packages/vite-plugin) | —（建置工具，無獨立 UI Demo） |
-| `@mdi/font` | `scan`、`print` | Material Design Icons；`scan` 掃描操作按鈕與 `print`「最近使用」等 Vuetify 圖示 | [GitHub README](https://github.com/Templarian/MaterialDesign-Webfont) | [Material Design Icons](https://pictogrammers.com/library/mdi/) |
+| `@mdi/font` | `scan`、`print` | Material Design Icons；`scan` 掃描操作與「最近使用的 Apps Script」圖示，以及 `print`「最近使用」等 Vuetify 圖示 | [GitHub README](https://github.com/Templarian/MaterialDesign-Webfont) | [Material Design Icons](https://pictogrammers.com/library/mdi/) |
 | `vue-i18n` | `scan`、`print` | Vue 3 Composition API 的多語系、插值、複數與 locale 格式化 | [Composition API 文件](https://vue-i18n.intlify.dev/guide/advanced/composition) | [官方 CodeSandbox 範例](https://codesandbox.io/s/vue-i18n-9-template-h28c0) |
 | `typescript` | `scan`、`print` | 業務資料、API 回應與元件型別 | [官方 Handbook](https://www.typescriptlang.org/docs/handbook/intro.html) | [TypeScript Playground](https://www.typescriptlang.org/play/) |
 | `vite` | `scan`、`print` | 開發伺服器與正式 bundle | [官方文件](https://vite.dev/guide/) | [Vite 線上 Playground](https://vite.new/vue-ts) |

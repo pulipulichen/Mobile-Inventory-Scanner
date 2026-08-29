@@ -26,18 +26,39 @@ const { t } = useI18n({ useScope: "global" });
     <div class="settings-fields">
       <v-text-field
         id="apps-script-url"
+        class="apps-script-url-field"
         :model-value="appsScriptUrl"
         :label="t('scan.apps_script_url_label')"
         :placeholder="t('scan.apps_script_url_placeholder')"
-        :hint="t('scan.apps_script_url_hint')"
+        aria-describedby="apps-script-url-hint recent-apps-script-hint"
         type="url"
         autocomplete="url"
         aria-required="true"
         variant="outlined"
-        persistent-hint
+        hide-details="auto"
         :disabled="disabled"
         @update:model-value="emit('update:appsScriptUrl', String($event ?? ''))"
-      />
+      >
+        <template #prepend>
+          <v-btn
+            class="recent-apps-script-button"
+            icon="mdi-history"
+            color="secondary"
+            variant="outlined"
+            :aria-label="t('scan.recent_apps_script')"
+            :title="t('scan.recent_apps_script')"
+            href="https://script.google.com/home"
+            target="_blank"
+            rel="noopener noreferrer"
+          />
+        </template>
+      </v-text-field>
+      <p id="apps-script-url-hint" class="field-description">
+        {{ t("scan.apps_script_url_hint") }}
+      </p>
+      <p id="recent-apps-script-hint" class="field-description">
+        {{ t("scan.recent_apps_script_hint") }}
+      </p>
 
       <v-combobox
         id="current-location"

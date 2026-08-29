@@ -16,7 +16,7 @@ export default {
     source_heading: "1. Google Sheet 資料來源",
     sheet_url_label: "Google Sheet 網址",
     sheet_url_hint:
-      "請貼上 Google Sheet 網址，系統會下載第一個工作表的 CSV 並分析其中的 id 欄。",
+      "請貼上 Google Sheet 網址。有效網址會自動下載第一個工作表的 CSV 並分析其中的 id 欄。",
     sheet_url_placeholder:
       "https://docs.google.com/spreadsheets/d/…/edit",
     recent_sheets: "開啟最近使用的 Google Sheet",
@@ -115,7 +115,7 @@ export default {
       "此瀏覽器不支援全螢幕，已改用頁面內最大化顯示。按 Esc 可離開。",
   },
   status: {
-    ready: "請確認 Google Sheet 網址後按「載入資料」。",
+    ready: "有效的 Google Sheet 網址會自動載入資料。",
     loading_sheet: "正在下載 Google Sheet CSV…",
     sheet_loaded: "已從「{sheet}」載入 {count} 個有效 ID。",
     duplicate_found: "Sheet 有 {count} 組重複 ID，已暫停預覽與 PDF。",

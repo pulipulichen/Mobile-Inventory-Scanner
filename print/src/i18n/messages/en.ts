@@ -16,7 +16,7 @@ export default {
     source_heading: "1. Google Sheet source",
     sheet_url_label: "Google Sheet URL",
     sheet_url_hint:
-      "Paste a Google Sheet URL. The first worksheet is downloaded as CSV and its id column is analyzed.",
+      "Paste a Google Sheet URL. A valid URL automatically downloads the first worksheet as CSV and analyzes its id column.",
     sheet_url_placeholder:
       "https://docs.google.com/spreadsheets/d/…/edit",
     recent_sheets: "Open recently used Google Sheets",
@@ -122,7 +122,7 @@ export default {
       "Full screen is not supported here. The simulation was expanded within this page. Press Escape to exit.",
   },
   status: {
-    ready: "Confirm the Google Sheet URL, then select “Load data”.",
+    ready: "A valid Google Sheet URL is loaded automatically.",
     loading_sheet: "Downloading Google Sheet CSV…",
     sheet_loaded: "Loaded {count} valid IDs from {sheet}.",
     duplicate_found: "The Sheet contains {count} duplicate ID groups. Preview and PDF are blocked.",

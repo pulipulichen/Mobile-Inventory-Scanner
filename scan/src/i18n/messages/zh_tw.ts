@@ -17,6 +17,9 @@ export default {
       "https://script.google.com/macros/s/…/exec",
     apps_script_url_hint:
       "請貼上部署後結尾為 /exec 的網址，不要使用 /dev 測試網址。",
+    recent_apps_script: "開啟最近使用的 Apps Script",
+    recent_apps_script_hint:
+      "Apps Script 會在新分頁開啟。開啟專案後，從部署複製 /exec 網址回來。",
     location_label: "目前位置",
     location_placeholder: "理科實驗室",
     location_hint: "成功盤點時會將此位置寫入 Google Sheet。",

@@ -2,23 +2,43 @@
 
 `scan` 透過 Apps Script Web App 讀取尚未盤點的項目，並將 `id` 與 `location`
 寫回同一份 Google Sheet。建議使用與試算表綁定的 **Bound Script**，讓程式
-可以直接取得目前的 Spreadsheet。
+可以直接取得目前的 Spreadsheet。若專案已經部署過，也可以先開啟
+[最近使用的 Apps Script](https://script.google.com/home)，選取專案後從
+**Deploy > Manage deployments** 複製結尾為 `/exec` 的 Web app URL。
 
 ## 操作步驟
 
+![[Pasted image 20260829214238.png]]
 1. 在盤點用 Google Sheet 選擇 **Extensions > Apps Script**。
-2. 將本專案的 Apps Script 程式碼貼到編輯器，確認它使用目前綁定的
+
+![[Pasted image 20260829214254.png]]
+1. 將本專案的 Apps Script 程式碼 `main.gs` 貼到編輯器，確認它使用目前綁定的
    Spreadsheet，並儲存專案。
-3. 選擇 **Deploy > New deployment**。
-4. 在 **Select type** 選擇 **Web app**。
-5. **Execute as** 選擇執行部署者（通常是 **Me**），讓程式能更新這份
-   Sheet。
-6. 設定 **Who has access**：
-   - 組織內使用：選組織帳號可存取的選項。
-   - 需要未登入的手機直接呼叫：選 **Anyone**，但必須妥善保護 URL。
-7. 按 **Deploy**，完成 Google 授權後複製 **Web app URL**。
-8. 將網址貼到 `scan` 的 Apps Script Web App URL 欄位。正式使用請複製結尾
-   為 `/exec` 的網址；`/dev` 只供部署者測試，不要交給使用者。
+![[Pasted image 20260829214329.png]]
+
+2. 選擇 **Deploy > New deployment**。
+![[Pasted image 20260829214345.png]]
+3. 在 **Select type** 選擇 **Web app**。
+
+![](Pasted%20image%2020260829214513.png)
+2. 3. 設定 **Who has access**：
+   - 選 **Anyone**，但必須妥善保護 URL。
+2. 按 **Deploy**，完成 Google 授權後複製 **Web app URL**。
+![](Pasted%20image%2020260829214551.png)
+3. 授予存取權
+![](Pasted%20image%2020260829214641.png)
+按Advanced
+
+![](Pasted%20image%2020260829214716.png)
+按Go to 未命名的專案 (unsafe)
+![](Pasted%20image%2020260829214755.png)
+Continue
+![](Pasted%20image%2020260829214825.png)
+
+複製網址
+
+4. 將網址貼到 `scan` 的 Apps Script Web App URL 欄位。正式使用請複製結尾
+   為 `/exec` 的網址。
 
 ```mermaid
 flowchart TB

@@ -25,7 +25,8 @@
 - SCSS / Sass。
 - Vuetify 4.x：手機盤點操作介面使用的 UI framework。
 - `vite-plugin-vuetify`：Vite 編譯時按需載入 Vuetify 元件。
-- `@mdi/font`：提供 Material Design Icons，供掃描操作按鈕使用。
+- `@mdi/font`：提供 Material Design Icons，供掃描操作按鈕與「最近使用的
+  Apps Script」圖示使用。
 - `vite-plugin-pwa`：產生 PWA manifest / Service Worker。
 - `@undecaf/zbar-wasm`：在瀏覽器本機辨識 QR Code，支援相機影格與
   圖片中的多個 QR Code。
@@ -56,24 +57,28 @@ live region 與螢幕閱讀器要求。
 
 ```mermaid
 flowchart TD
-    A["手機開啟 scan 網頁 / PWA"] --> B["帶入或輸入 Apps Script Web App URL"]
-    B --> C["輸入或選擇目前 location"]
-    C --> D{"選擇掃描方式"}
-    D -->|"即時掃描"| E["啟動後置鏡頭"]
-    E --> F["持續取得相機影格"]
-    D -->|"拍照"| G["使用後鏡頭取得圖片"]
-    D -->|"讀取相片"| H["從照片 / 檔案選擇器選取圖片"]
-    F --> I["瀏覽器本機執行 QR decode"]
-    G --> I
-    H --> I
-    I --> J["辨識影格或圖片中的所有 QR Code"]
-    J --> K["清理並依 id 去重"]
-    K --> L["逐筆送出 id + location"]
-    L --> M["Apps Script 更新 Google Sheet"]
-    M --> N["顯示每筆成功 / 失敗結果"]
-    A --> O["按下列出尚未盤點的 ID"]
-    O --> P["GET Apps Script?action=pending"]
-    P --> R["依既有 location 分組並顯示 id + name"]
+    A["手機開啟 scan 網頁 / PWA"] --> B{"取得 Apps Script /exec URL"}
+    B -->|"手動輸入"| C["輸入 /exec 網址"]
+    B -->|"開啟最近使用頁面"| D["開啟 Apps Script 首頁"]
+    D --> E["開啟專案並複製 /exec 網址"]
+    E --> C
+    C --> F["輸入或選擇目前 location"]
+    F --> G{"選擇掃描方式"}
+    G -->|"即時掃描"| H["啟動後置鏡頭"]
+    H --> I["持續取得相機影格"]
+    G -->|"拍照"| J["使用後鏡頭取得圖片"]
+    G -->|"讀取相片"| K["從照片 / 檔案選擇器選取圖片"]
+    I --> L["瀏覽器本機執行 QR decode"]
+    J --> L
+    K --> L
+    L --> M["辨識影格或圖片中的所有 QR Code"]
+    M --> N["清理並依 id 去重"]
+    N --> O["逐筆送出 id + location"]
+    O --> P["Apps Script 更新 Google Sheet"]
+    P --> Q["顯示每筆成功 / 失敗結果"]
+    A --> R["按下列出尚未盤點的 ID"]
+    R --> S["GET Apps Script?action=pending"]
+    S --> T["依既有 location 分組並顯示 id + name"]
 ```
 
 網頁中所有一般使用者設定都必須保存到 `localStorage`。
@@ -113,6 +118,25 @@ https://script.google.com/macros/s/xxxxxxxxxxxxxxxx/exec
 需求：只能使用部署後的 `/exec` 網址，不使用 `/dev` 測試網址；可手動輸入或
 貼上、保存到 `localStorage`、下次自動帶入、呼叫失敗時顯示清楚錯誤。
 `scan` 不提供 Google 登入功能，權限與資料存取由 Apps Script Web App 處理。
+使用者也可以先開啟「最近使用的 Apps Script」連結，選取專案後複製 `/exec`
+網址再貼上。
+
+### 開啟最近使用的 Apps Script
+
+`scan` 只提供固定連結開啟 Google Apps Script 首頁，不建立 Google Cloud
+Project、不設定 OAuth Client ID，也不使用 Google Drive API：
+
+[開啟最近使用的 Apps Script](https://script.google.com/home)
+
+操作步驟：
+
+1. 開啟上方連結。
+2. 在 Apps Script 首頁選取要使用的專案。
+3. 選擇 **Deploy > Manage deployments**，複製結尾為 `/exec` 的 Web app URL。
+4. 回到 `scan`，將網址貼到 Apps Script URL 欄位。
+
+這個連結只負責導覽，不會自動列出專案，也不會自動把 `/exec` URL 帶回
+`scan`；使用者仍可直接手動貼上已知的 `/exec` 網址。
 
 ### 目前位置
 
@@ -353,6 +377,9 @@ service / composable。
 - [ ] `./frontend_build.sh` 成功產生 `scan/dist/` 與 `print/dist/`。
 - [ ] 手機可開啟 HTTPS 網頁並安裝成 PWA。
 - [ ] 可輸入並保存 Apps Script Web App URL。
+- [ ] 有「開啟最近使用的 Apps Script」連結。
+- [ ] 連結使用 `https://script.google.com/home`。
+- [ ] 使用者可從 Apps Script 專案複製 `/exec` URL，再貼回 `scan`。
 - [ ] 不需要 Google Cloud Project、OAuth Client ID 或 Google Drive API。
 - [ ] 可輸入並保存目前位置，並有歷史位置下拉選單。
 - [ ] 可啟動後置鏡頭進行即時 QR Code 掃描。
