@@ -198,8 +198,6 @@ function updateAppsScriptUrl(value: string): void {
 
 function updateLocation(value: string): void {
   location.value = value;
-  isInventoryConfirmed.value = false;
-  setStatus("status.ready");
   saveLocation(value);
 }
 
@@ -354,6 +352,7 @@ async function sendResult(result: ScanResult): Promise<void> {
     result.state = "success";
     result.checked_time = item.checked_time;
     result.location = item.location;
+    result.locationProvided = Boolean(submittedLocation);
     locationHistory.value = saveLocationToHistory(submittedLocation);
     pendingItems.value = pendingItems.value.filter(
       (pendingItem) => pendingItem.id !== result.id,
@@ -457,7 +456,7 @@ function handleLocaleChange(event: Event): void {
           :apps-script-url="appsScriptUrl"
           :location="location"
           :location-history="locationHistory"
-          :disabled="isCameraActive"
+          :settings-locked="isCameraActive"
           @update:apps-script-url="updateAppsScriptUrl"
           @update:location="updateLocation"
           @confirm="confirmSettings"

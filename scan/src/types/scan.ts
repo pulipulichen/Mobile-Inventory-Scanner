@@ -20,6 +20,7 @@ export interface ScanResult {
   state: ScanResultState;
   checked_time?: string;
   location?: string;
+  locationProvided?: boolean;
   errorCode?: string;
 }
 

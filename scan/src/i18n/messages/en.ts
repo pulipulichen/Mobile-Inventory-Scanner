@@ -55,7 +55,9 @@ export default {
     results_description: "{count} IDs processed.",
     result_queued: "Waiting to send",
     result_sending: "Writing to Google Sheets…",
-    result_success: "Check succeeded; time {checked_time}; location {location}",
+    result_success: "Check succeeded; time {checked_time}",
+    result_success_with_location:
+      "Check succeeded; time {checked_time}; location {location}",
     result_error: "Check failed ({error})",
     privacy_note:
       "QR Code images are decoded locally in this browser. Photos and camera frames are not uploaded.",

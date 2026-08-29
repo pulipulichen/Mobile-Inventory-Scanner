@@ -5,7 +5,7 @@ defineProps<{
   appsScriptUrl: string;
   location: string;
   locationHistory: string[];
-  disabled: boolean;
+  settingsLocked: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -37,7 +37,7 @@ const { t } = useI18n({ useScope: "global" });
         aria-required="true"
         variant="outlined"
         hide-details="auto"
-        :disabled="disabled"
+        :disabled="settingsLocked"
         @update:model-value="emit('update:appsScriptUrl', String($event ?? ''))"
       >
         <template #prepend>
@@ -73,7 +73,6 @@ const { t } = useI18n({ useScope: "global" });
         autocomplete="off"
         variant="outlined"
         persistent-hint
-        :disabled="disabled"
         @update:model-value="emit('update:location', String($event ?? ''))"
       />
 
@@ -83,7 +82,7 @@ const { t } = useI18n({ useScope: "global" });
         color="primary"
         size="large"
         prepend-icon="mdi-check-circle"
-        :disabled="disabled"
+        :disabled="settingsLocked"
         @click="emit('confirm')"
       >
         {{ t("scan.confirm_settings") }}

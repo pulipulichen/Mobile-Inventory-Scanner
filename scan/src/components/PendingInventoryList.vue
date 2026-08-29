@@ -46,8 +46,10 @@ const { t } = useI18n({ useScope: "global" });
         </h3>
         <ul>
           <li v-for="item in group.items" :key="item.id">
-            <strong>{{ item.name }}</strong>
-            <span class="result-id">{{ item.id }}</span>
+            <strong>{{ item.id }}</strong>
+            <span v-if="item.name !== item.id" class="pending-item-name">
+              {{ item.name }}
+            </span>
           </li>
         </ul>
       </section>

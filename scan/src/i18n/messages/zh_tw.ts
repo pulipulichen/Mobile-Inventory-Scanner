@@ -53,7 +53,9 @@ export default {
     results_description: "共處理 {count} 個 ID。",
     result_queued: "等待送出",
     result_sending: "寫入 Google Sheet 中…",
-    result_success: "盤點成功；時間 {checked_time}；位置 {location}",
+    result_success: "盤點成功；時間 {checked_time}",
+    result_success_with_location:
+      "盤點成功；時間 {checked_time}；位置 {location}",
     result_error: "盤點失敗（{error}）",
     privacy_note: "QR Code 影像只在此瀏覽器本機辨識，不會上傳照片或相機影像。",
   },

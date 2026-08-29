@@ -12,10 +12,15 @@ function statusText(result: ScanResult): string {
   if (result.state === "queued") return t("scan.result_queued");
   if (result.state === "sending") return t("scan.result_sending");
   if (result.state === "success") {
-    return t("scan.result_success", {
-      checked_time: result.checked_time ?? "",
-      location: result.location ?? "",
-    });
+    return t(
+      result.locationProvided
+        ? "scan.result_success_with_location"
+        : "scan.result_success",
+      {
+        checked_time: result.checked_time ?? "",
+        location: result.location ?? "",
+      },
+    );
   }
   return t("scan.result_error", {
     error: t(`errors.${result.errorCode ?? "UNKNOWN"}`),
