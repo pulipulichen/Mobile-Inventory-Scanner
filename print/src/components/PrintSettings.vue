@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import {
+  isBarcodeMode,
   isLabelTextMode,
   isPaperSize,
   MAX_PAGE_MARGIN_MM,
@@ -49,6 +50,12 @@ const orientationOptions = computed(() => [
   },
 ]);
 
+const barcodeModeOptions = [
+  { label: "QR Code", value: "qr" as const },
+  { label: "Code 128", value: "code128" as const },
+  { label: "QR Code + Code 128", value: "both" as const },
+];
+
 const labelTextOptions = computed(() => [
   {
     label: t("print.label_text_hidden"),
@@ -87,6 +94,11 @@ function updateOrientation(value: unknown): void {
   emit("update", { ...props.settings, orientation: value as Orientation });
 }
 
+function updateBarcodeMode(value: unknown): void {
+  if (!isBarcodeMode(value)) return;
+  emit("update", { ...props.settings, barcodeMode: value });
+}
+
 function updateLabelText(value: unknown): void {
   if (!isLabelTextMode(value)) return;
   emit("update", { ...props.settings, labelText: value });
@@ -104,6 +116,19 @@ function updateLabelText(value: unknown): void {
 
     <v-card-text>
       <div class="settings-grid">
+        <v-select
+          id="barcode-mode"
+          :model-value="settings.barcodeMode"
+          :items="barcodeModeOptions"
+          item-title="label"
+          item-value="value"
+          label="條碼格式"
+          hint="可單獨列印 QR Code、Code 128，或兩者同時列印"
+          persistent-hint
+          variant="outlined"
+          @update:model-value="updateBarcodeMode"
+        />
+
         <v-select
           id="paper-size"
           :model-value="settings.paperSize"
@@ -147,7 +172,7 @@ function updateLabelText(value: unknown): void {
           id="qr-size-mm"
           :model-value="settings.qrSizeMm"
           :label="t('print.qr_size')"
-          :hint="t('print.qr_size_hint')"
+          hint="QR Code 邊長；Code 128 將依此尺寸自動換算"
           suffix="mm"
           type="number"
           min="10"
