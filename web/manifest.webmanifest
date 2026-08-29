@@ -1,0 +1,19 @@
+{
+  "name": "Mobile Inventory Scanner",
+  "short_name": "盤點掃描",
+  "description": "Google Sheets integrated QR Code inventory scanner",
+  "lang": "zh-Hant-TW",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f7fa",
+  "theme_color": "#1f6feb",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
