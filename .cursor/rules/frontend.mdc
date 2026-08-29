@@ -79,8 +79,8 @@ print/
 
 - 全域 SCSS 放 `src/styles/`。
 - Component-specific 樣式優先使用 `<style scoped lang="scss">`。
-- 列印專用規則使用 `@media print`。
-- 尺寸涉及實體列印時，使用 `mm` / `pt`，不要以畫面 pixel 假裝實際尺寸。
+- PDF 版面尺寸涉及實體輸出時，使用 `mm` / `pt`，不要以畫面 pixel 假裝實際尺寸。
+- `print` 預設桌面優先但必須支援平板與手機 RWD。
 - 手機掃描頁採 mobile-first。
 
 ## 6. localStorage
@@ -121,8 +121,8 @@ mis.print.qr_size_mm
 ## 8. print 專用技術決策
 
 - QR Code 產生優先使用 npm `qrcode` 套件。
-- 列印輸出使用 SVG QR Code，避免 bitmap 放大造成模糊。
-- PDF 不自行 renderer；使用 `window.print()`，由瀏覽器列印或另存 PDF。
+- 預覽使用 SVG QR Code；PDF 使用 `qrcode` 的 QR matrix 搭配 `pdf-lib` 繪製向量模組。
+- PDF 在瀏覽器本機由 `pdf-lib` 產生並下載，不使用 `window.print()` 或瀏覽器另存 PDF。
 - Google Sheet 讀取使用 Google Identity Services OAuth + Google Sheets API。
 - Google OAuth Client ID 可使用 `VITE_GOOGLE_CLIENT_ID` 注入，Client ID 是公開識別值；不可出現 Client Secret。
 - 使用者輸入 Google Sheet URL，前端解析 Spreadsheet ID。

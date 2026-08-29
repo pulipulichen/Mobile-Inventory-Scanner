@@ -1,8 +1,12 @@
-# QR Code 列印功能規格
+# QR Code PDF 產生功能規格
 
-本目錄負責從 Google Sheet 讀取盤點項目，產生 QR Code 列印報表，並讓使用者透過瀏覽器列印或輸出 PDF。
+本目錄負責從 Google Sheet 讀取盤點項目，產生 QR Code 標籤 PDF 檔案。
+`print` 以電腦為主要操作環境，但必須支援平板與手機 RWD；在手機上也
+可以透過頁面入口前往 `scan` 進行盤點。
 
-整體流程以 [`docs/architecture.md`](../docs/architecture.md) 為準。
+共通流程以 [`docs/architecture.md`](../docs/architecture.md) 為準，套件
+清單見 [`docs/packages.md`](../docs/packages.md)。Google Sheet URL 與
+Apps Script URL 的取得方式見 [`google_sheet/README.md`](../google_sheet/README.md)。
 
 ## 前端技術決策
 
@@ -15,12 +19,13 @@
 - TypeScript。
 - Vite。
 - SCSS / Sass。
-- npm `qrcode`：在瀏覽器產生 QR Code，列印時使用 SVG。
+- npm `qrcode`：在瀏覽器產生 QR Code，預覽使用 SVG。
+- npm `pdf-lib`：在瀏覽器本機產生可下載的 PDF，QR Code 使用向量模組。
 - Google Identity Services：Google OAuth 登入。
 - Google Sheets API：直接從瀏覽器讀取使用者有權限的 Sheet。
 - Google Drive API：列出使用者最近開啟的 Google Sheets，供快速選取。
 
-第一版不使用 Vue Router、Pinia、Nuxt、大型 UI framework 或自建 PDF renderer。
+第一版不使用 Vue Router、Pinia、Nuxt、大型 UI framework 或自建後端。
 
 ### 編譯方式
 
@@ -48,30 +53,36 @@ frontend.sh
 
 ## 使用流程
 
-```text
-開啟 print 網頁
-    ↓
-手動輸入 Google Sheet 網址
-或按「從最近使用的 Google Sheet 選取」
-    ↓
-Google OAuth 登入
-    ↓
-Google Drive API 顯示最近開啟的 Google Sheets（若使用快速選取）
-    ↓
-選取 Sheet，自動帶入 Google Sheet 網址
-    ↓
-Google Sheets API 讀取 id 欄
-    ↓
-設定列印參數
-    ↓
-前端產生 SVG QR Code 報表預覽
-    ↓
-window.print()
-    ↓
-瀏覽器列印 / 另存 PDF
+```mermaid
+flowchart TB
+    A["開啟 print"] --> B{"選擇 Google Sheet 來源"}
+    B -->|"手動輸入"| C["輸入 Google Sheet URL"]
+    B -->|"快速選取"| D["Google OAuth 登入"]
+    D --> E["Google Drive API 顯示最近開啟的 Google Sheets"]
+    E --> F["選取 Sheet，自動帶入 Google Sheet URL"]
+    C --> G["Google OAuth 登入"]
+    F --> G
+    G --> H["Google Sheets API 讀取 id 欄"]
+    H --> I["檢查空白與重複 ID"]
+    I --> J["設定 QR Code / A4 參數"]
+    J --> K["產生 responsive 預覽"]
+    K --> L["qrcode 產生 QR Code"]
+    L --> M["pdf-lib 產生向量 PDF"]
+    M --> N["下載 .pdf 檔案"]
+    A -.-> O["前往 scan"]
 ```
 
-所有使用者輸入或調整內容，都要保存到 `localStorage`。
+所有使用者輸入或調整內容，都要保存到 `localStorage`。`print` 不更新
+Google Sheet，也不呼叫 Apps Script 寫入盤點結果。
+
+### `print` 與 `scan` 入口
+
+頁面必須提供「前往 scan」按鈕或連結，讓使用者在平板或手機上可直接
+切換到盤點 App：
+
+- 同網域部署時使用相對路徑。
+- 不同網域部署時使用 `VITE_SCAN_APP_URL`。
+- 連結只負責導覽，不把 `scan` URL 編入 QR Code。
 
 ---
 
@@ -240,11 +251,22 @@ OAuth access token 不應長期寫入 localStorage。可提供「重設為預設
 
 ---
 
-## 列印與 PDF
+## PDF 產生
 
-第一版使用瀏覽器原生 `window.print()`；使用者可直接列印或由瀏覽器另存 PDF。
+第一版由瀏覽器本機使用 `pdf-lib` 產生 PDF，不使用 `window.print()`、瀏覽
+器列印對話框或自建後端。
 
-`@media print` 必須隱藏設定面板、按鈕與非報表 UI，只輸出 QR Code 報表，保持 QR Code 實際 mm 尺寸並避免標籤被 page break 切開。
+PDF 產生器必須：
+
+- 使用 A4 實體尺寸與 `mm` / `pt` 轉換。
+- 依預覽使用的同一組版面參數計算欄列、間距與換頁。
+- 以 `qrcode` 的 QR matrix 繪製向量模組，保留足夠 quiet zone。
+- 在 QR Code 下方繪製相同的 ID 文字。
+- 確保每個標籤完整位於單一頁面內。
+- 產生 `Blob` 後提供 `.pdf` 下載。
+
+輸出的 PDF 是可儲存、分享或交給實體印表機的檔案；`print` 不直接呼叫
+印表機，也不依賴瀏覽器的 PDF 另存功能。
 
 ---
 
@@ -275,7 +297,8 @@ src/
 │   ├── google_auth.ts
 │   ├── google_drive.ts
 │   ├── google_sheets.ts
-│   └── qr_generator.ts
+│   ├── qr_generator.ts
+│   └── pdf_generator.ts
 ├── styles/
 │   ├── main.scss
 │   └── print.scss
@@ -291,7 +314,20 @@ Component 不直接散落 OAuth、Drive API、Sheets API 或 QR library 操作�
 
 ## 錯誤處理
 
-至少處理：Google Sheet URL 格式錯誤、尚未登入 Google、OAuth 設定錯誤、Drive 最近檔案讀取失敗、最近沒有可用的 Google Sheet、登入帳號沒有 Sheet 權限、Google API 無法連線、找不到 `id` 欄位、Sheet 沒有有效 ID、重複 ID、QR Code 產生失敗。
+至少處理：
+
+- Google Sheet URL 格式錯誤。
+- 尚未登入 Google。
+- OAuth 設定錯誤。
+- Drive 最近檔案讀取失敗。
+- 最近沒有可用的 Google Sheet。
+- 登入帳號沒有 Sheet 權限。
+- Google API 無法連線。
+- 找不到 `id` 欄位。
+- Sheet 沒有有效 ID。
+- 出現重複 ID。
+- QR Code 產生失敗。
+- PDF 產生或下載失敗。
 
 ---
 
@@ -313,7 +349,10 @@ Component 不直接散落 OAuth、Drive API、Sheets API 或 QR library 操作�
 - [ ] 可設定 QR Code 實體尺寸與基本列印參數。
 - [ ] 所有列印偏好保存到 `localStorage`。
 - [ ] A4 自動排列與分頁。
-- [ ] 可預覽並以 `window.print()` 列印 / 另存 PDF。
+- [ ] 可預覽。
+- [ ] 使用 `pdf-lib` 產生向量 QR Code PDF。
+- [ ] 可下載產生的 PDF 檔案。
+- [ ] 提供前往 `scan` 的入口。
 
 ## 第一版不做
 
@@ -323,4 +362,4 @@ Component 不直接散落 OAuth、Drive API、Sheets API 或 QR library 操作�
 - 自訂任意紙張規格。
 - 複雜標籤模板設計器。
 - 自建後端。
-- 自建 PDF renderer。
+- 直接控制實體印表機。

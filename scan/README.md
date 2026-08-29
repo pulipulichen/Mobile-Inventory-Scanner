@@ -2,7 +2,9 @@
 
 本目錄負責手機端的 QR Code 圖片辨識與盤點寫入。
 
-整體流程以 [`docs/architecture.md`](../docs/architecture.md) 為準。
+共通流程以 [`docs/architecture.md`](../docs/architecture.md) 為準，套件
+清單見 [`docs/packages.md`](../docs/packages.md)。Apps Script Web App URL
+的取得方式見 [`google_sheet/README.md`](../google_sheet/README.md)。
 
 第一版不做持續開啟鏡頭的即時掃描，而是以「拍照」或「讀取相片」取得圖片，再從圖片中辨識一個或多個 QR Code。
 
@@ -43,25 +45,23 @@
 
 ## 使用流程
 
-```text
-手機開啟 scan 網頁 / PWA
-    ↓
-輸入 Apps Script Web App 網址
-（需要時可按「開啟最近使用的 Google Sheet」快速找到盤點表）
-    ↓
-輸入目前位置
-    ↓
-選擇：拍照 / 讀取相片
-    ↓
-瀏覽器本機辨識一個或多個 QR Code
-    ↓
-取得每個 QR Code 的 id 並去重
-    ↓
-逐筆將 id + location 傳給 Apps Script
-    ↓
-Apps Script 更新 Google Sheet
-    ↓
-畫面下方列出每筆 QR Code 與盤點結果
+```mermaid
+flowchart TB
+    A["手機開啟 scan 網頁 / PWA"] --> B["帶入或輸入 Apps Script Web App URL"]
+    B --> C["輸入或選擇目前 location"]
+    C --> D{"選擇圖片來源"}
+    D -->|"拍照"| E["使用後鏡頭取得圖片"]
+    D -->|"讀取相片"| F["從照片 / 檔案選擇器選取圖片"]
+    E --> G["瀏覽器本機執行 QR decode"]
+    F --> G
+    G --> H["辨識同一張圖片中的所有 QR Code"]
+    H --> I["清理並依 id 去重"]
+    I --> J["逐筆送出 id + location"]
+    J --> K["Apps Script 更新 Google Sheet"]
+    K --> L["顯示每筆成功 / 失敗結果"]
+    A -.-> M["開啟最近使用的 Google Sheet"]
+    M --> N["Google OAuth 與 Drive API"]
+    N --> O["開啟選取的 Google Sheet"]
 ```
 
 網頁中所有一般使用者設定都必須保存到 `localStorage`；OAuth access token 除外。
@@ -228,6 +228,34 @@ mis.scan.location_history
 
 Apps Script 回傳格式依 [`google_sheet/README.md`](../google_sheet/README.md) 定義。
 
+成功範例：
+
+```json
+{
+  "success": true,
+  "item": {
+    "id": "A01",
+    "checked_time": "20260829-171000",
+    "location": "主機房 A 區"
+  },
+  "message": "Inventory check succeeded"
+}
+```
+
+失敗範例：
+
+```json
+{
+  "success": false,
+  "id": "A99",
+  "error": "ID_NOT_FOUND",
+  "message": "Item ID not found: A99"
+}
+```
+
+Apps Script 回應的 `message` 欄位一律使用英文；畫面若要顯示繁體中文，
+應依 `error` 代碼進行 UI 映射。
+
 ---
 
 ## 掃描結果列表
@@ -269,7 +297,18 @@ Component 不直接散落 Google OAuth、Drive API、Apps Script `fetch()` 或 Q
 
 ## 錯誤處理
 
-至少處理：未設定 Apps Script URL、未輸入位置、Google OAuth 失敗、Drive 最近檔案讀取失敗、最近沒有 Google Sheet、圖片無 QR Code、圖片讀取失敗、Apps Script 無法連線、ID 不存在，以及多筆中的單筆失敗不得中止其他 ID。
+至少處理：
+
+- 未設定 Apps Script URL：`Please enter the Apps Script Web App URL`。
+- 未輸入位置：`Please enter the current location`。
+- Google OAuth 失敗。
+- Drive 最近檔案讀取失敗。
+- 最近沒有 Google Sheet。
+- 圖片無 QR Code：`No QR Code was detected in this image`。
+- 圖片讀取失敗：`Unable to read the image. Please select it again`。
+- Apps Script 無法連線：`Unable to connect to the inventory service`。
+- ID 不存在：顯示 Apps Script 回傳的英文 `message`。
+- 多筆中的單筆失敗：不得中止其他 ID。
 
 ---
 

@@ -28,14 +28,14 @@ description: >-
 | --- | --- | --- |
 | QR Code 解碼 | `@undecaf/zbar-wasm` | `scan/`；在瀏覽器本機處理 `ImageData`，一次支援多個 barcode |
 | PWA manifest／Service Worker | `vite-plugin-pwa` | `scan/`；只快取 App shell 與靜態資源 |
-| QR Code 產生 | `qrcode` | `print/`；輸出 SVG，避免列印放大失真 |
+| QR Code 產生 | `qrcode` | `print/`；預覽輸出 SVG，PDF 使用 QR matrix 產生向量模組 |
 | UI 元件與互動 | Vue 3 Composition API | `scan/`、`print/`；元件使用 `<script setup lang="ts">` |
 | 版面與元件樣式 | SCSS 與 component scoped styles | `src/styles/` 或元件內 `<style scoped lang="scss">` |
 | 圖片取得 | `<input type="file" accept="image/*">` | `scan/`；拍照入口使用 `capture="environment"` |
 | Google Sheet 讀取 | Google Identity Services OAuth + Google Sheets API | `print/`；集中在 `src/services/` |
 | HTTP 請求 | 瀏覽器 `fetch` | `src/services/`；不建立 CORS proxy |
 | 設定保存 | 集中的 localStorage wrapper／composable | 使用 `mis.scan.*` 或 `mis.print.*` prefix |
-| 列印／另存 PDF | `window.print()` | `print/`；不自行建立 PDF renderer |
+| QR Code PDF 產生 | `qrcode` + `pdf-lib` | `print/`；在瀏覽器本機產生向量 PDF |
 
 ## 該做
 

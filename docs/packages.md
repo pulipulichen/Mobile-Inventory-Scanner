@@ -1,4 +1,4 @@
- # Mobile Inventory Scanner 前端套件清單
+# Mobile Inventory Scanner 前端套件清單
 
 本文件記錄 `scan` 與 `print` 的前端套件選擇。兩個 App 都是由 Vite
 編譯的純靜態網站；正式執行時不需要 Node.js runtime、後端 API 或執行期
