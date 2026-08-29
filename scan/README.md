@@ -77,13 +77,16 @@ flowchart TD
     N --> O
     O --> P["辨識影格或圖片中的所有 QR Code"]
     P --> Q["清理並依 id 去重"]
-    Q --> R["逐筆送出 id + location"]
-    R --> S["Apps Script 更新 Google Sheet"]
-    S --> T["顯示每筆成功 / 失敗結果"]
-    C --> U["按下列出尚未盤點的 ID"]
-    I --> U
-    U --> V["GET Apps Script?action=pending"]
-    V --> W["依 location 分成小卡片，目前位置優先，兩欄顯示 id 與 name"]
+    Q --> R["10 秒內重複 ID 忽略，其餘加入本次結果"]
+    R --> S{"3 秒內還有新掃描？"}
+    S -->|"是"| R
+    S -->|"否"| T["一次 POST ids + location"]
+    T --> U["Apps Script 批次更新 Google Sheet"]
+    U --> V["GET 確認寫入並顯示成功 / 失敗"]
+    C --> W["按下列出尚未盤點的 ID"]
+    I --> W
+    W --> X["GET Apps Script?action=pending"]
+    X --> Y["依 location 分成小卡片，目前位置優先，兩欄顯示 id 與 name"]
 ```
 
 網頁中所有一般使用者設定都必須保存到 `localStorage`。
@@ -161,6 +164,7 @@ https://script.google.com/macros/s/xxxxxxxxxxxxxxxx/exec
 - 相同位置不要重複。
 - 只有盤點成功後才將該位置加入歷史紀錄。
 - 仍可自由輸入新位置。
+- 變更目前位置時，清除本次盤點結果，因為使用者已換到其他地方盤點。
 - 第一版可保留最近 20 筆位置。
 
 ---
@@ -230,8 +234,9 @@ mis.scan.location_history
 - 提供清楚的「停止相機」按鈕；停止時釋放所有 MediaStream tracks。
 - QR Code 辨識期間顯示文字狀態，不可只顯示 loading 動畫。
 - 同一個 QR Code 持續出現在畫面中時，不得在每個影格重複送出；
-  需在掃描 session 內去重或套用明確的冷卻時間。
-- 一個影格辨識到多個 QR Code 時，先依 `id` 去重，再逐筆送出。
+  同一 ID 在 10 秒內不重複送出，超過 10 秒可以再次盤點。
+- 一個影格辨識到多個 QR Code 時，先依 `id` 去重；掃描後若 3 秒內沒有
+  新的 ID，再一次批次送出。
 - 相機權限被拒絕、裝置沒有相機或串流啟動失敗時，顯示可理解的錯誤與
   下一步提示，並保留「拍照辨識」替代流程。
 
@@ -263,8 +268,8 @@ zbar 合併去重。
 - QR Code payload 直接視為 `id`。
 - 去除 ID 前後空白，不修改大小寫。
 - ID 保持字串型態。
-- 同一影格或同一張圖片相同 ID 只送出一次；即時掃描 session 也不得因
-  QR Code 持續停留在畫面中而重複送出。
+- 同一影格或同一張圖片相同 ID 只送出一次；即時掃描同一個 ID 在 10 秒內
+  不重複送出。超過 10 秒後可以再次盤點。
 - 圖片不離開瀏覽器。
 
 若沒有 QR Code，顯示：`此圖片中沒有辨識到 QR Code`。
@@ -273,31 +278,48 @@ zbar 合併去重。
 
 ## Apps Script 呼叫
 
-每個唯一 ID 各送出一次請求，語意資料為：
+掃描後會先把 ID 放進本次結果。若連續 3 秒沒有新的掃描內容，再一次
+批次送出：
 
 ```json
 {
-  "id": "A01",
+  "ids": ["A01", "A02"],
   "location": "主機房 A 區"
 }
 ```
 
-實際 HTTP transport 由 `src/services/` 封裝，必須能由瀏覽器直接呼叫 Apps Script，不建立自建 proxy server。第一版建議逐筆或低併發處理，讓 UI 可明確對應每一筆狀態。
+前端不守候 POST 回應是否可讀；接著用 `GET ?action=list` 確認
+`checked_time` 已更新。單筆 ID 失敗不得中止同一批次其他 ID。
 
-Apps Script 回傳格式依 [`google_sheet/README.md`](../google_sheet/README.md) 定義。
+實際 HTTP transport 由 `src/services/` 封裝，必須能由瀏覽器直接呼叫 Apps Script，不建立自建 proxy server。
+
+Apps Script 回傳格式依 [`google_sheet/README.md`](../google_sheet/README.md) 定義。變更此契約後需要重新部署 Web App。
 
 成功範例：
 
 ```json
 {
   "success": true,
-  "item": {
-    "id": "A01",
-    "name": "印表機",
-    "checked_time": "20260829-171000",
-    "location": "主機房 A 區"
-  },
-  "message": "Inventory check succeeded"
+  "items": [
+    {
+      "id": "A01",
+      "name": "印表機",
+      "checked_time": "20260829-171000",
+      "location": "主機房 A 區"
+    }
+  ],
+  "results": [
+    {
+      "success": true,
+      "item": {
+        "id": "A01",
+        "name": "印表機",
+        "checked_time": "20260829-171000",
+        "location": "主機房 A 區"
+      }
+    }
+  ],
+  "message": "Inventory check completed"
 }
 ```
 
@@ -319,7 +341,7 @@ Apps Script 回應的 `message` 欄位一律使用英文；畫面若要顯示繁
 
 ## 掃描結果列表
 
-每筆至少顯示 ID、等待送出 / 寫入中 / 成功 / 失敗、Apps Script 回傳訊息；成功時顯示 `checked_time` 與 `location`。
+每筆至少顯示 ID、等待批次送出 / 寫入中 / 成功 / 失敗；成功時顯示 `checked_time` 與 `location`。
 
 同一張圖片即使部分 ID 失敗，也必須繼續處理其他 ID。全部完成後顯示本次成功 / 失敗統計。
 
@@ -393,14 +415,14 @@ service / composable。
 - [ ] 可輸入並保存目前位置，並有歷史位置下拉選單。
 - [ ] 可啟動後置鏡頭進行即時 QR Code 掃描。
 - [ ] 可停止相機並釋放相機串流。
-- [ ] 即時掃描中同一個 QR Code 不會因持續出現在畫面中而重複送出。
+- [ ] 即時掃描中同一個 QR Code 在 10 秒內不會因持續出現在畫面中而重複送出。
 - [ ] 可按「拍照」取得新照片。
 - [ ] 可按「讀取相片」選擇既有圖片。
 - [ ] 可從一張圖片辨識多個 QR Code。
 - [ ] QR decode 全部在本機瀏覽器完成。
 - [ ] 同張圖片的重複 ID 不重複送出。
-- [ ] 每個 ID 都帶 location 呼叫 Apps Script。
-- [ ] 可顯示每個 ID 的等待 / 寫入中 / 成功 / 失敗狀態。
+- [ ] 3 秒內沒有新掃描後，一次批次送出 `ids` 與 location。
+- [ ] 可顯示每個 ID 的等待批次送出 / 寫入中 / 成功 / 失敗狀態。
 - [ ] 單筆失敗不影響其他 QR Code。
 - [ ] 可透過同一個 Apps Script `/exec` URL 列出 `checked_time` 空白的 ID。
 - [ ] 尚未盤點清單顯示 `name` 與 `id`，並依 `location` 分組。

@@ -103,8 +103,10 @@ Mobile-Inventory-Scanner/
   最近使用的試算表，進入該 Sheet 的 Apps Script 部署後複製 `/exec` 網址。
 - 透過即時後置鏡頭、拍照或相片選擇器取得影像。
 - 在瀏覽器本機辨識影格或圖片中的一個或多個 QR Code。
-- 同一張圖片與同一個掃描 session 中的重複 ID 只送出一次。
-- 每個 ID 個別呼叫 Apps Script，單筆失敗不能中止其他 ID。
+- 同一張圖片中的重複 ID 只送出一次；同一個 ID 在 10 秒內不重複送出。
+- 掃描後若 3 秒內沒有新的 ID，再一次批次呼叫 Apps Script；不守候 POST 回應，改以 GET 確認寫入。
+- 變更目前位置時，清除本次盤點結果。
+- 每個批次中的單筆失敗不能中止其他 ID。
 - 可透過 Apps Script GET API 列出尚未盤點的 ID，並依 `location` 分組。
 
 即時掃描與拍照都是替代入口；相機只在使用者主動操作期間使用。
@@ -135,28 +137,33 @@ flowchart TB
 
 ## 4. Apps Script API 與資料寫入
 
-Apps Script Web App 接收：
+Apps Script Web App 接收一批 ID 與共用位置：
 
 ```json
 {
-  "id": "A01",
+  "ids": ["A01", "A02"],
   "location": "主機房 A 區"
 }
 ```
 
-寫入流程：
+單一 `id` 仍可接受。寫入流程：
 
 ```mermaid
 flowchart TB
-    A["收到 id + location"] --> B["驗證必要參數"]
-    B --> C["在 Google Sheet 搜尋完全相符的 id"]
-    C --> D{"符合的資料列數量？"}
-    D -->|"0"| E["回傳 ID_NOT_FOUND"]
-    D -->|"多於 1"| F["回傳 DUPLICATE_ID"]
-    D -->|"1"| G["以 Apps Script 伺服器時間產生 checked_time"]
-    G --> H["更新 checked_time"]
-    H --> I["更新 location"]
-    I --> J["回傳成功 JSON"]
+    A["收到 ids + location"] --> B["驗證必要參數"]
+    B --> C["一次讀取 Google Sheet 並對應 id"]
+    C --> D{"每一個 id 符合的資料列數量？"}
+    D -->|"0"| E["該 id 標記 ID_NOT_FOUND"]
+    D -->|"多於 1"| F["該 id 標記 DUPLICATE_ID"]
+    D -->|"1"| G["列入本次寫入"]
+    E --> H{"還有下一個 id？"}
+    F --> H
+    G --> H
+    H -->|"是"| D
+    H -->|"否"| I["以 Apps Script 伺服器時間產生 checked_time"]
+    I --> J["一次更新所有成功列的 checked_time"]
+    J --> K["位置有值時一次更新 location"]
+    K --> L["回傳每筆成功或失敗 JSON"]
 ```
 
 正式 `checked_time` 只由 Apps Script 產生，不使用手機時間。預設時區是 `Asia/Taipei`，規格格式為：
@@ -176,13 +183,26 @@ Apps Script 使用 `Utilities.formatDate` 時，對應的格式字串為 `yyyyMM
 ```json
 {
   "success": true,
-  "item": {
-    "id": "A01",
-    "name": "印表機",
-    "checked_time": "20260829-171000",
-    "location": "主機房 A 區"
-  },
-  "message": "Inventory check succeeded"
+  "items": [
+    {
+      "id": "A01",
+      "name": "印表機",
+      "checked_time": "20260829-171000",
+      "location": "主機房 A 區"
+    }
+  ],
+  "results": [
+    {
+      "success": true,
+      "item": {
+        "id": "A01",
+        "name": "印表機",
+        "checked_time": "20260829-171000",
+        "location": "主機房 A 區"
+      }
+    }
+  ],
+  "message": "Inventory check completed"
 }
 ```
 
@@ -259,9 +279,12 @@ flowchart TB
     J --> K
     K --> L["取得影格或圖片中的所有 QR Code"]
     L --> M["去除前後空白並依 ID 去重"]
-    M --> N["逐筆送出 id + location"]
-    N --> O["Apps Script 更新 Google Sheet"]
-    O --> P["逐筆顯示成功或失敗"]
+    M --> N["10 秒冷卻後加入本次結果"]
+    N --> O{"3 秒內還有新掃描？"}
+    O -->|"是"| N
+    O -->|"否"| P["一次送出 ids + location"]
+    P --> Q["Apps Script 批次更新 Google Sheet"]
+    Q --> R["GET 確認後顯示成功或失敗"]
 ```
 
 QR decode 必須支援 multi-code detection，不能只處理第一個結果。影像不離開使用者裝置；若同一張圖片有多筆 ID，其中一筆失敗時仍要繼續處理其他 ID。
@@ -427,4 +450,4 @@ src/
 1. `zh-TW` 與 `en` 都能載入，且沒有缺少翻譯 key。
 2. 手動切換後，靜態文字、動態狀態、ARIA / live region、PDF 標籤與 `html[lang]` 都同步更新。
 3. reload 後會依 App 專用的 `mis.*.locale` 設定還原語系，沒有直接依賴瀏覽器語系覆蓋使用者選擇。
-4. QR Code 辨識、逐筆送出、錯誤與完成摘要等無障礙通知在兩種語系都可理解。
+4. QR Code 辨識、批次送出、錯誤與完成摘要等無障礙通知在兩種語系都可理解。

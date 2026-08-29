@@ -9,7 +9,7 @@ var CONFIG = {
   HEADER_ROW: 1,
   TIMEZONE: "Asia/Taipei",
   CHECKED_TIME_FORMAT: "yyyyMMdd-HHmmss",
-  LOCK_TIMEOUT_MS: 10000,
+  LOCK_TIMEOUT_MS: 20000,
   COLUMNS: {
     ID: "id",
     NAME: "name",
@@ -19,28 +19,27 @@ var CONFIG = {
 };
 
 /**
- * Receives one inventory check request.
+ * Receives one inventory check request, or a batch of IDs.
  *
  * Expected body:
  * {
- *   "id": "A01",
+ *   "ids": ["A01", "A02"],
  *   "location": "主機房 A 區"
  * }
+ *
+ * A single `id` is still accepted for compatibility.
  *
  * @param {Object} event Apps Script web-app event.
  * @return {ContentService.TextOutput} JSON response.
  */
 function doPost(event) {
-  var request = {};
-
   try {
     var payload = parseRequestBody_(event);
-    request.id = normalizeId_(payload.id);
-    request.location = normalizeLocation_(payload.location);
-
-    return jsonResponse_(processInventoryCheck_(request));
+    var location = normalizeLocation_(payload.location);
+    var entries = collectRequestIds_(payload);
+    return jsonResponse_(processInventoryChecks_(entries, location));
   } catch (error) {
-    return jsonResponse_(buildErrorResponse_(error, request));
+    return jsonResponse_(buildErrorResponse_(error, {}));
   }
 }
 
@@ -158,12 +157,65 @@ function normalizeLocation_(value) {
 }
 
 /**
- * Looks up the requested ID and writes the inventory result.
+ * Collects IDs from either `ids` or a single `id`. Invalid values are kept as
+ * per-item failures so a batch can still write the valid IDs.
  *
- * @param {Object} request Normalized request.
- * @return {Object} Success response.
+ * @param {Object} payload Parsed request body.
+ * @return {Object[]} Request entries with `id` and optional `error`.
  */
-function processInventoryCheck_(request) {
+function collectRequestIds_(payload) {
+  var rawIds;
+  if (Array.isArray(payload.ids)) {
+    rawIds = payload.ids;
+  } else if (payload.id !== undefined && payload.id !== null) {
+    rawIds = [payload.id];
+  } else {
+    throw apiError_(
+      "INVALID_REQUEST",
+      "Request body must include id or ids."
+    );
+  }
+
+  if (!rawIds.length) {
+    throw apiError_("INVALID_ID", "At least one item ID is required.");
+  }
+
+  var seen = {};
+  var entries = [];
+
+  rawIds.forEach(function(value) {
+    var displayedId = typeof value === "string" || typeof value === "number"
+      ? String(value).trim()
+      : "";
+
+    try {
+      var id = normalizeId_(value);
+      if (seen[id]) {
+        return;
+      }
+      seen[id] = true;
+      entries.push({ id: id });
+    } catch (error) {
+      entries.push({
+        id: displayedId,
+        error: error && error.code
+          ? error
+          : apiError_("INVALID_ID", "Item ID must be a non-empty string.")
+      });
+    }
+  });
+
+  return entries;
+}
+
+/**
+ * Looks up requested IDs and writes all valid inventory results in one lock.
+ *
+ * @param {Object[]} entries Normalized request entries.
+ * @param {string} location Normalized location for the whole batch.
+ * @return {Object} Success response with per-item results.
+ */
+function processInventoryChecks_(entries, location) {
   var lock = LockService.getScriptLock();
 
   try {
@@ -179,37 +231,75 @@ function processInventoryCheck_(request) {
     var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
     var sheet = getTargetSheet_(spreadsheet);
     var columnMap = getColumnMap_(sheet);
-    var match = findUniqueIdRow_(sheet, columnMap.id, request.id);
-
+    var idRows = buildIdRowMap_(sheet, columnMap);
     var checkedTime = formatCheckedTime_(
       new Date(),
       getSpreadsheetTimeZone_(spreadsheet)
     );
-    var currentLocation = getCellText_(
-      sheet.getRange(match.rowNumber, columnMap.location).getDisplayValue()
-    );
-    var nextLocation = request.location || currentLocation;
+    var rowNumbers = [];
+    var items = [];
+    var results = [];
 
-    writeInventoryCheck_(
-      sheet,
-      match.rowNumber,
-      columnMap,
-      checkedTime,
-      request.location
-    );
+    entries.forEach(function(entry) {
+      if (entry.error) {
+        results.push(buildItemFailure_(entry.id, entry.error));
+        return;
+      }
 
-    return {
-      success: true,
-      item: {
-        id: request.id,
-        name: columnMap.name
-          ? getCellText_(sheet.getRange(match.rowNumber, columnMap.name).getDisplayValue())
-          : "",
+      var matches = idRows[entry.id] || [];
+      if (matches.length === 0) {
+        results.push(buildItemFailure_(
+          entry.id,
+          apiError_("ID_NOT_FOUND", "Item ID not found: " + entry.id)
+        ));
+        return;
+      }
+
+      if (matches.length > 1) {
+        results.push(buildItemFailure_(
+          entry.id,
+          apiError_("DUPLICATE_ID", "Duplicate item ID found: " + entry.id)
+        ));
+        return;
+      }
+
+      var match = matches[0];
+      var nextLocation = location || match.location;
+      var item = {
+        id: entry.id,
+        name: match.name,
         checked_time: checkedTime,
         location: nextLocation
-      },
-      message: "Inventory check succeeded"
+      };
+
+      rowNumbers.push(match.rowNumber);
+      items.push(item);
+      results.push({
+        success: true,
+        item: item
+      });
+    });
+
+    writeInventoryChecks_(
+      sheet,
+      columnMap,
+      rowNumbers,
+      checkedTime,
+      location
+    );
+
+    var response = {
+      success: true,
+      items: items,
+      results: results,
+      message: items.length === 1
+        ? "Inventory check succeeded"
+        : "Inventory check completed"
     };
+    if (items.length === 1) {
+      response.item = items[0];
+    }
+    return response;
   } catch (error) {
     if (error && error.code) {
       throw error;
@@ -223,6 +313,70 @@ function processInventoryCheck_(request) {
   } finally {
     lock.releaseLock();
   }
+}
+
+/**
+ * Builds a per-item failure object from an API error.
+ *
+ * @param {string} id Requested ID, if known.
+ * @param {Error} error API error with a code.
+ * @return {Object} Failure result.
+ */
+function buildItemFailure_(id, error) {
+  var result = {
+    success: false,
+    error: error && error.code ? error.code : "WRITE_FAILED",
+    message: error && error.message
+      ? error.message
+      : "Unable to write the inventory check."
+  };
+  if (id) {
+    result.id = id;
+  }
+  return result;
+}
+
+/**
+ * Indexes non-empty IDs to their sheet rows in one pass.
+ *
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet Target worksheet.
+ * @param {Object} columnMap Required column indexes.
+ * @return {Object} Map of ID to matching row metadata arrays.
+ */
+function buildIdRowMap_(sheet, columnMap) {
+  var firstDataRow = CONFIG.HEADER_ROW + 1;
+  var lastRow = sheet.getLastRow();
+  var idRows = {};
+
+  if (lastRow < firstDataRow) {
+    return idRows;
+  }
+
+  var lastColumn = sheet.getLastColumn();
+  var rows = sheet
+    .getRange(firstDataRow, 1, lastRow - CONFIG.HEADER_ROW, lastColumn)
+    .getDisplayValues();
+
+  rows.forEach(function(row, index) {
+    var id = getCellText_(row[columnMap.id - 1]).trim();
+    if (!id) {
+      return;
+    }
+
+    if (!idRows[id]) {
+      idRows[id] = [];
+    }
+
+    idRows[id].push({
+      rowNumber: firstDataRow + index,
+      name: columnMap.name
+        ? getCellText_(row[columnMap.name - 1]).trim()
+        : "",
+      location: getCellText_(row[columnMap.location - 1]).trim()
+    });
+  });
+
+  return idRows;
 }
 
 /**
@@ -327,11 +481,13 @@ function getColumnMap_(sheet) {
     CONFIG.COLUMNS.CHECKED_TIME,
     CONFIG.COLUMNS.LOCATION
   ];
+  var optionalHeaders = [CONFIG.COLUMNS.NAME];
+  var knownHeaders = requiredHeaders.concat(optionalHeaders);
   var columnMap = {};
 
   headers.forEach(function(header, index) {
     var normalizedHeader = getCellText_(header);
-    if (requiredHeaders.indexOf(normalizedHeader) === -1) {
+    if (knownHeaders.indexOf(normalizedHeader) === -1) {
       return;
     }
 
@@ -364,67 +520,44 @@ function getColumnMap_(sheet) {
 }
 
 /**
- * Searches all data rows and rejects both missing and duplicate IDs.
+ * Writes checked_time for every successful row, and location when a
+ * non-blank location was supplied. One flush is used for the whole batch.
  *
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet Target worksheet.
- * @param {number} idColumn One-based ID column index.
- * @param {string} id Requested ID.
- * @return {Object} Matching row metadata.
- */
-function findUniqueIdRow_(sheet, idColumn, id) {
-  var firstDataRow = CONFIG.HEADER_ROW + 1;
-  var lastRow = sheet.getLastRow();
-
-  if (lastRow < firstDataRow) {
-    throw apiError_("ID_NOT_FOUND", "Item ID not found: " + id);
-  }
-
-  var rowValues = sheet
-    .getRange(firstDataRow, idColumn, lastRow - CONFIG.HEADER_ROW, 1)
-    .getDisplayValues();
-  var matches = [];
-
-  rowValues.forEach(function(row, index) {
-    var sheetId = getCellText_(row[0]).trim();
-    if (sheetId && sheetId === id) {
-      matches.push(firstDataRow + index);
-    }
-  });
-
-  if (matches.length === 0) {
-    throw apiError_("ID_NOT_FOUND", "Item ID not found: " + id);
-  }
-
-  if (matches.length > 1) {
-    throw apiError_("DUPLICATE_ID", "Duplicate item ID found: " + id);
-  }
-
-  return {
-    rowNumber: matches[0]
-  };
-}
-
-/**
- * Writes checked_time on every successful check and location only when a
- * non-blank location was supplied.
- *
- * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet Target worksheet.
- * @param {number} rowNumber Matching row number.
  * @param {Object} columnMap Required column indexes.
+ * @param {number[]} rowNumbers Matching row numbers to update.
  * @param {string} checkedTime Server-generated timestamp.
  * @param {string} location Normalized request location.
  */
-function writeInventoryCheck_(
+function writeInventoryChecks_(
   sheet,
-  rowNumber,
   columnMap,
+  rowNumbers,
   checkedTime,
   location
 ) {
+  if (!rowNumbers.length) {
+    return;
+  }
+
   try {
-    sheet.getRange(rowNumber, columnMap.checkedTime).setValue(checkedTime);
-    if (location) {
-      sheet.getRange(rowNumber, columnMap.location).setValue(location);
+    var timeRanges = [];
+    var locationRanges = [];
+
+    rowNumbers.forEach(function(rowNumber) {
+      timeRanges.push(
+        sheet.getRange(rowNumber, columnMap.checkedTime).getA1Notation()
+      );
+      if (location) {
+        locationRanges.push(
+          sheet.getRange(rowNumber, columnMap.location).getA1Notation()
+        );
+      }
+    });
+
+    sheet.getRangeList(timeRanges).setValue(checkedTime);
+    if (locationRanges.length) {
+      sheet.getRangeList(locationRanges).setValue(location);
     }
     SpreadsheetApp.flush();
   } catch (error) {

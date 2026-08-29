@@ -30,7 +30,7 @@ export default {
       "確認 Apps Script 網址後即可進入盤點；目前位置可選填。若網址已保存且正確，開啟頁面會自動進入盤點。",
     scanner_heading: "開始盤點",
     scanner_description:
-      "請將 QR Code 放在鏡頭前方並開始掃描，也可以拍照或讀取相片；一次可辨識多個 QR Code。",
+      "請將 QR Code 放在鏡頭前方並開始掃描，也可以拍照或讀取相片；一次可辨識多個 QR Code。掃描後會等 3 秒沒有新項目，再一次送出。同一 ID 10 秒內不會重複送出。",
     start_camera: "開始掃描",
     stop_camera: "停止相機",
     capture_qr_code: "拍攝 QR Code",
@@ -52,7 +52,7 @@ export default {
     unassigned_location: "尚未設定位置",
     results_heading: "本次盤點結果",
     results_description: "共處理 {count} 個 ID。",
-    result_queued: "等待送出",
+    result_queued: "等待 3 秒後批次送出",
     result_sending: "寫入 Google Sheet 中…",
     result_success: "盤點成功；時間 {checked_time}",
     result_success_with_location:
@@ -69,15 +69,21 @@ export default {
     photo_recognizing: "正在辨識照片中的 QR Code…",
     ids_found: "辨識完成，共找到 {count} 個 QR Code。",
     no_qr_code: "未辨識到 QR Code，請重新拍照或選擇其他相片。",
-    ids_duplicate_ignored: "辨識到的 QR Code 都已在本次盤點中處理，重複項目已忽略。",
+    ids_duplicate_ignored: "這些 QR Code 在 10 秒內已掃描過，已忽略。",
     ids_found_with_duplicates:
-      "辨識完成，新增 {count} 個 QR Code；另有 {ignored} 個重複項目已忽略。",
+      "已加入 {count} 個 QR Code，3 秒內沒有新掃描就會一次送出；另有 {ignored} 個在 10 秒內重複掃描，已忽略。",
+    ids_batch_waiting:
+      "已加入 {count} 個 QR Code。3 秒內沒有新掃描就會一次送出。",
     sending: "正在送出 {id} 的盤點結果…",
+    batch_sending: "正在一次送出 {count} 筆盤點結果…",
+    confirming: "正在確認 {count} 筆已送出的盤點結果…",
     inventory_failed_item: "盤點失敗：{id}（{error}）",
     all_complete: "盤點完成：成功 {success} 筆，失敗 {failed} 筆。",
     pending_loaded: "已載入 {count} 個尚未盤點 ID。",
     pending_empty: "目前沒有尚未盤點的 ID。",
     session_cleared: "本次盤點結果已清除，可以開始新的盤點。",
+    location_changed_results_cleared:
+      "位置已變更，本次盤點結果已重新開始。",
   },
   errors: {
     INVALID_REQUEST: "Apps Script URL 無效，請貼上完整的 /exec 網址。",

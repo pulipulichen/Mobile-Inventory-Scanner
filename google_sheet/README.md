@@ -94,18 +94,16 @@ Apps Script 負責「依 ID 寫入盤點結果」以及提供盤點清單讀取 
 
 ### Web App 輸入
 
-掃描頁每辨識到一個 QR Code，就送出一筆盤點請求。
-
-輸入至少包含：
+掃描頁在 3 秒內沒有新的掃描內容後，一次送出本批次 ID：
 
 ```json
 {
-  "id": "A01",
+  "ids": ["A01", "A02"],
   "location": "主機房 A 區"
 }
 ```
 
-固定使用 `POST` JSON，讓 `scan` 與 Apps Script 的資料契約一致。
+單一 `id` 仍可接受，行為等同 `ids: ["A01"]`。固定使用 `POST` JSON，讓 `scan` 與 Apps Script 的資料契約一致。變更此契約後需要重新部署 Web App。
 
 ### Web App 讀取尚未盤點清單
 
@@ -146,30 +144,55 @@ Apps Script 會讀取所有非空 `id`，只回傳 `checked_time` 為空白的�
 
 ### 寫入流程
 
-Apps Script 收到請求後：
+Apps Script 收到請求後，在同一把 lock 內處理整批 ID：
 
-1. 驗證 `id` 不為空。
-2. 在 `id` 欄尋找完全相符的非空資料，略過中間的空白資料列。
-3. 找不到 ID 時回傳盤點失敗。
-4. 找到多筆相同 ID 時回傳重複 ID 錯誤。
-5. 找到唯一資料列時，以伺服器目前時間更新 `checked_time`。
+1. 驗證至少有一個 `id` 或 `ids`。
+2. 一次讀取工作表，依 `id` 對應資料列。
+3. 找不到的 ID 標記為失敗，不中止其他 ID。
+4. Sheet 中同一個非空 ID 出現多筆時，該 ID 標記為重複錯誤，不更新該列。
+5. 找到唯一資料列的 ID，以伺服器目前時間更新 `checked_time`。
 6. 輸入的位置有值時更新 `location`；位置空白時保留原本的 `location`。
-7. 回傳本次盤點結果。
+7. 一次寫入後 `flush`，並回傳每筆成功或失敗結果。
 
 ### 成功回傳
+
+整批請求成功處理時，頂層 `success` 為 `true`。個別 ID 的結果在 `results`：
 
 ```json
 {
   "success": true,
-  "item": {
-    "id": "A01",
-    "name": "印表機",
-    "checked_time": "20260829-171000",
-    "location": "主機房 A 區"
-  },
-  "message": "Inventory check succeeded"
+  "items": [
+    {
+      "id": "A01",
+      "name": "印表機",
+      "checked_time": "20260829-171000",
+      "location": "主機房 A 區"
+    }
+  ],
+  "results": [
+    {
+      "success": true,
+      "item": {
+        "id": "A01",
+        "name": "印表機",
+        "checked_time": "20260829-171000",
+        "location": "主機房 A 區"
+      }
+    },
+    {
+      "success": false,
+      "id": "A99",
+      "error": "ID_NOT_FOUND",
+      "message": "Item ID not found: A99"
+    }
+  ],
+  "message": "Inventory check completed"
 }
 ```
+
+若批次只有一筆成功，也會附帶 `item` 以相容舊的單筆讀取方式。
+
+`scan` 不依賴 POST 回應是否可被瀏覽器讀取；寫入後以 `GET ?action=list` 確認 `checked_time`。
 
 ### 失敗回傳
 
@@ -231,11 +254,11 @@ google_sheet/
 - [ ] 有可複製的 Google Sheet 範本。
 - [ ] 範本包含 `id`、`name`、`checked_time`、`location` 四欄。
 - [ ] Apps Script 可部署成 Web App。
-- [ ] Web App 可接收 `id` 與 `location`。
+- [ ] Web App 可接收 `ids` 與 `location`，並一次寫入多筆。
 - [ ] Web App 的 `GET?action=pending` 可回傳尚未盤點的 ID、名稱與位置。
 - [ ] 找到 ID 時更新 `checked_time`；位置有值時更新 `location`，空白時保留原值。
-- [ ] 找不到 ID 時不修改 Sheet 並回傳錯誤。
-- [ ] 重複 ID 時不修改 Sheet 並回傳錯誤。
+- [ ] 找不到 ID 時不修改該列，並在批次結果中回傳錯誤。
+- [ ] 重複 ID 時不修改該列，並在批次結果中回傳錯誤。
 - [ ] 回傳格式可直接供 `scan` 頁顯示。
 
 ## 第一版不做

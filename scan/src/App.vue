@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import CameraScanner from "./components/CameraScanner.vue";
 import ImageSourceButtons from "./components/ImageSourceButtons.vue";
@@ -8,9 +8,12 @@ import ScanResultList from "./components/ScanResultList.vue";
 import ScanSettings from "./components/ScanSettings.vue";
 import {
   AppsScriptError,
+  findConfirmedInventoryItem,
+  formatSheetTimestamp,
   isAppsScriptUrl,
+  loadInventoryItems,
   loadPendingInventory,
-  submitInventoryCheck,
+  postInventoryChecks,
 } from "./services/apps_script";
 import {
   loadAppsScriptUrl,
@@ -48,17 +51,35 @@ const statusParams = ref<Record<string, unknown>>({});
 const statusTone = ref<"info" | "success" | "warning" | "error">(
   isInventoryConfirmed.value ? "success" : "info",
 );
-const sessionIds = new Set<string>();
+const SCAN_COOLDOWN_MS = 10_000;
+const BATCH_IDLE_MS = 3_000;
+const VERIFY_TIMEOUT_MS = 25_000;
+const VERIFY_POLL_MS = 1_000;
+const CLOCK_SKEW_MS = 3_000;
+
 type FailureToast = {
   id: string;
   errorCode: string;
+};
+type PendingConfirmation = {
+  result: ScanResult;
+  previousCheckedTime: string;
+  expectedLocation: string;
+  submittedAt: number;
+  minCheckedTime: string;
 };
 const failureToastQueue = ref<FailureToast[]>([]);
 const activeFailureToast = ref<FailureToast | null>(null);
 const isFailureToastVisible = ref(false);
 let resolveActiveFailureToast: (() => void) | null = null;
 let isFailureToastProcessing = false;
-let submissionQueue: Promise<void> = Promise.resolve();
+const recentScanAt = new Map<string, number>();
+const inFlight = new Map<string, PendingConfirmation>();
+let submitGeneration = 0;
+let batchIdleTimer = 0;
+let pollLoop: Promise<void> | null = null;
+let lastInventoryItems: InventoryItem[] = [];
+let lastInventoryReadFailed = false;
 
 const statusMessage = computed(() =>
   t(statusKey.value, statusParams.value),
@@ -214,8 +235,13 @@ function updateAppsScriptUrl(value: string): void {
 }
 
 function updateLocation(value: string): void {
+  const previous = location.value.trim();
   location.value = value;
   saveLocation(value);
+  if (previous !== value.trim() && hasCurrentCheckWork()) {
+    resetCurrentCheck();
+    setStatus("status.location_changed_results_cleared", {}, "info");
+  }
 }
 
 function validateAppsScriptUrl(): boolean {
@@ -249,16 +275,32 @@ onMounted(() => {
   if (isInventoryConfirmed.value) void scrollToScanner();
 });
 
-function resetSession(): void {
-  sessionIds.clear();
+onBeforeUnmount(() => {
+  window.clearTimeout(batchIdleTimer);
+  flushQueuedResults();
+});
+
+function hasCurrentCheckWork(): boolean {
+  return results.value.length > 0 || inFlight.size > 0;
+}
+
+function resetCurrentCheck(): void {
+  submitGeneration += 1;
+  window.clearTimeout(batchIdleTimer);
+  inFlight.clear();
+  recentScanAt.clear();
   results.value = [];
+  clearFailureToasts();
+}
+
+function resetSession(): void {
+  resetCurrentCheck();
 }
 
 function clearResults(): void {
   camera.value?.stop();
   isCameraActive.value = false;
   resetSession();
-  clearFailureToasts();
   setStatus("status.session_cleared", {}, "success");
 }
 
@@ -296,90 +338,270 @@ async function startCamera(): Promise<void> {
 
 function stopCamera(): void {
   camera.value?.stop();
+  flushQueuedResults();
 }
 
-function queueIds(ids: string[]): void {
+function queueIds(ids: string[], source: "camera" | "photo" = "camera"): void {
+  const now = Date.now();
   const normalizedIds = ids
     .map((id) => id.trim())
     .filter(Boolean);
   const uniqueIds = [...new Set(normalizedIds)];
-  const newIds = uniqueIds.filter((id) => !sessionIds.has(id));
-  const ignoredCount = normalizedIds.length - newIds.length;
-  if (!newIds.length) {
-    if (ignoredCount) {
+  const acceptedIds: string[] = [];
+  let ignoredCount = 0;
+
+  uniqueIds.forEach((id) => {
+    const existing = results.value.find((result) => result.id === id);
+    if (existing?.state === "queued" || existing?.state === "sending") {
+      ignoredCount += 1;
+      return;
+    }
+    const lastScanAt = recentScanAt.get(id) ?? 0;
+    if (now - lastScanAt < SCAN_COOLDOWN_MS) {
+      ignoredCount += 1;
+      return;
+    }
+    acceptedIds.push(id);
+  });
+
+  if (!acceptedIds.length) {
+    if (source === "photo" && ignoredCount) {
       setStatus("status.ids_duplicate_ignored", { count: ignoredCount }, "warning");
     }
     return;
   }
 
-  // Claim IDs before sending so repeated camera frames cannot enqueue or
-  // vibrate for the same ID.
-  const newResults = newIds.map((id): ScanResult => {
-    sessionIds.add(id);
-    return {
+  acceptedIds.forEach((id) => {
+    recentScanAt.set(id, now);
+    const existingIndex = results.value.findIndex((result) => result.id === id);
+    if (existingIndex >= 0) {
+      const existing = results.value[existingIndex];
+      existing.state = "queued";
+      existing.errorCode = undefined;
+      results.value.splice(existingIndex, 1);
+      results.value.unshift(existing);
+      return;
+    }
+    results.value.unshift({
       id,
       name: id,
       state: "queued",
-    };
+    });
   });
-  results.value.unshift(...newResults);
+
+  const queuedCount = results.value.filter(
+    (result) => result.state === "queued",
+  ).length;
   setStatus(
     ignoredCount
       ? "status.ids_found_with_duplicates"
-      : "status.ids_found",
-    { count: newIds.length, ignored: ignoredCount },
+      : "status.ids_batch_waiting",
+    { count: acceptedIds.length, queued: queuedCount, ignored: ignoredCount },
     "info",
   );
+  scheduleBatchSubmit();
+}
 
-  const queuedResults = newResults;
-  submissionQueue = submissionQueue
-    .catch(() => undefined)
-    .then(async () => {
-      for (const result of queuedResults) {
-        await sendResult(result);
-      }
-      const success = results.value.filter(
-        (result) => result.state === "success",
-      ).length;
-      const failed = results.value.filter(
-        (result) => result.state === "error",
-      ).length;
-      setStatus(
-        "status.all_complete",
-        { success, failed },
-        failed ? "warning" : "success",
-      );
+function scheduleBatchSubmit(): void {
+  window.clearTimeout(batchIdleTimer);
+  batchIdleTimer = window.setTimeout(() => {
+    flushQueuedResults();
+  }, BATCH_IDLE_MS);
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function vibrateSuccess(): void {
+  if (navigator.vibrate) navigator.vibrate([80, 50, 80]);
+}
+
+function applySuccess(
+  result: ScanResult,
+  item: InventoryItem,
+  submittedLocation: string,
+): void {
+  if (result.state === "success") return;
+  result.name = item.name || result.id;
+  result.state = "success";
+  result.checked_time = item.checked_time;
+  result.location = item.location;
+  result.locationProvided = Boolean(submittedLocation);
+  result.errorCode = undefined;
+  locationHistory.value = saveLocationToHistory(submittedLocation);
+  pendingItems.value = pendingItems.value.filter(
+    (pendingItem) => pendingItem.id !== result.id,
+  );
+}
+
+function applyFailureCode(result: ScanResult, code: string): void {
+  if (result.state === "success") return;
+  result.state = "error";
+  result.errorCode = errorCodes.has(code) ? code : "UNKNOWN";
+  enqueueFailureToast(result);
+}
+
+function announceBatchComplete(): void {
+  const success = results.value.filter(
+    (result) => result.state === "success",
+  ).length;
+  const failed = results.value.filter(
+    (result) => result.state === "error",
+  ).length;
+  const pending = results.value.filter(
+    (result) => result.state === "queued" || result.state === "sending",
+  ).length;
+  if (pending) {
+    const sending = results.value.filter(
+      (result) => result.state === "sending",
+    ).length;
+    if (sending) {
+      setStatus("status.confirming", { count: sending });
+    }
+    return;
+  }
+  setStatus(
+    "status.all_complete",
+    { success, failed },
+    failed ? "warning" : "success",
+  );
+}
+
+function failTimedOutItem(pending: PendingConfirmation): void {
+  const item = lastInventoryItems.find(
+    (candidate) => candidate.id === pending.result.id,
+  );
+  if (lastInventoryReadFailed && lastInventoryItems.length === 0) {
+    applyFailureCode(pending.result, "READ_FAILED");
+    return;
+  }
+  if (!item) {
+    applyFailureCode(pending.result, "ID_NOT_FOUND");
+    return;
+  }
+  applyFailureCode(pending.result, "WRITE_FAILED");
+}
+
+function flushQueuedResults(): void {
+  window.clearTimeout(batchIdleTimer);
+  const queuedResults = results.value.filter(
+    (result) => result.state === "queued",
+  );
+  if (!queuedResults.length) return;
+
+  const submittedLocation = location.value.trim();
+  const generation = submitGeneration;
+  const submittedAt = Date.now();
+  const minCheckedTime = formatSheetTimestamp(
+    new Date(submittedAt - CLOCK_SKEW_MS),
+  );
+  const batchIds = queuedResults.map((result) => result.id);
+
+  queuedResults.forEach((result) => {
+    result.state = "sending";
+    inFlight.set(result.id, {
+      result,
+      previousCheckedTime: result.checked_time ?? "",
+      expectedLocation: submittedLocation,
+      submittedAt,
+      minCheckedTime,
+    });
+  });
+
+  setStatus("status.batch_sending", { count: batchIds.length });
+  startConfirmPoller();
+
+  void postInventoryChecks(
+    appsScriptUrl.value,
+    batchIds,
+    submittedLocation,
+  )
+    .then((outcome) => {
+      if (generation !== submitGeneration) return;
+      if (!outcome) return;
+
+      let confirmed = 0;
+      outcome.items.forEach((item) => {
+        const pending = inFlight.get(item.id);
+        if (!pending) return;
+        applySuccess(pending.result, item, pending.expectedLocation);
+        inFlight.delete(item.id);
+        confirmed += 1;
+      });
+      outcome.failures.forEach((failure) => {
+        const pending = inFlight.get(failure.id);
+        if (!pending) return;
+        applyFailureCode(pending.result, failure.errorCode);
+        inFlight.delete(failure.id);
+      });
+      if (confirmed) vibrateSuccess();
+      announceBatchComplete();
     })
     .catch((error) => {
-      setError(error);
+      if (generation !== submitGeneration) return;
+      if (
+        error instanceof AppsScriptError &&
+        error.code === "READ_FAILED"
+      ) {
+        return;
+      }
+      const code = getErrorCode(error);
+      batchIds.forEach((id) => {
+        const pending = inFlight.get(id);
+        if (!pending) return;
+        applyFailureCode(pending.result, code);
+        inFlight.delete(id);
+      });
+      announceBatchComplete();
     });
 }
 
-async function sendResult(result: ScanResult): Promise<void> {
-  result.state = "sending";
-  setStatus("status.sending", { id: result.id });
-  const submittedLocation = location.value.trim();
-  try {
-    const item = await submitInventoryCheck(
-      appsScriptUrl.value,
-      result.id,
-      submittedLocation,
-    );
-    result.name = item.name;
-    result.state = "success";
-    result.checked_time = item.checked_time;
-    result.location = item.location;
-    result.locationProvided = Boolean(submittedLocation);
-    locationHistory.value = saveLocationToHistory(submittedLocation);
-    pendingItems.value = pendingItems.value.filter(
-      (pendingItem) => pendingItem.id !== result.id,
-    );
-    if (navigator.vibrate) navigator.vibrate([80, 50, 80]);
-  } catch (error) {
-    result.state = "error";
-    result.errorCode = setError(error);
-    enqueueFailureToast(result);
+function startConfirmPoller(): void {
+  if (pollLoop) return;
+  pollLoop = runConfirmPoller().finally(() => {
+    pollLoop = null;
+  });
+}
+
+async function runConfirmPoller(): Promise<void> {
+  const generation = submitGeneration;
+
+  while (generation === submitGeneration && inFlight.size > 0) {
+    const now = Date.now();
+    [...inFlight.entries()].forEach(([id, pending]) => {
+      if (now - pending.submittedAt < VERIFY_TIMEOUT_MS) return;
+      failTimedOutItem(pending);
+      inFlight.delete(id);
+    });
+    if (!inFlight.size) break;
+
+    try {
+      lastInventoryItems = await loadInventoryItems(appsScriptUrl.value);
+      lastInventoryReadFailed = false;
+      if (generation !== submitGeneration) return;
+
+      let confirmed = 0;
+      [...inFlight.entries()].forEach(([id, pending]) => {
+        const item = findConfirmedInventoryItem(lastInventoryItems, id, pending);
+        if (!item) return;
+        applySuccess(pending.result, item, pending.expectedLocation);
+        inFlight.delete(id);
+        confirmed += 1;
+      });
+      if (confirmed) vibrateSuccess();
+    } catch {
+      lastInventoryReadFailed = true;
+    }
+
+    if (generation !== submitGeneration) return;
+    announceBatchComplete();
+    if (inFlight.size) await delay(VERIFY_POLL_MS);
   }
+
+  if (generation === submitGeneration) announceBatchComplete();
 }
 
 async function handlePhoto(file: File): Promise<void> {
@@ -394,7 +616,7 @@ async function handlePhoto(file: File): Promise<void> {
       setStatus("status.no_qr_code", {}, "warning");
       return;
     }
-    queueIds(ids);
+    queueIds(ids, "photo");
   } catch (error) {
     setError(error);
   } finally {

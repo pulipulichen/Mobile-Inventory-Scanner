@@ -24,6 +24,22 @@
 - Combined the `scan` pending-inventory action and result list into one card,
   showed each location as a nested card, listed ID and name in two columns,
   and moved the current location group to the top.
+- Batched `scan` inventory writes: new IDs wait 3 seconds with no further
+  scans, then one POST sends `ids` plus location. The UI does not wait for the
+  Apps Script POST body; it confirms writes with `GET ?action=list`.
+- Updated the bound Apps Script Web App to write a batch of IDs under one
+  lock and return per-item success or failure.
+- Replaced session-wide scan deduplication with a 10-second cooldown so the
+  same ID can be checked again later.
+- Cleared the current `scan` results when the location changes, so a new
+  place starts a new check.
+
+## Fixed
+
+- Mapped the optional Google Sheet `name` column in Apps Script so pending
+  inventory items return their human-readable names instead of repeating the ID.
+- Stopped `scan` results from remaining stuck on “waiting to send” or
+  “writing to Google Sheets” when the Apps Script POST redirect was unreadable.
 
 ## Removed
 
@@ -39,3 +55,6 @@
   build timeouts instead of waiting indefinitely.
 - Documented `scan` auto-confirm of a saved `/exec` URL, camera tap-to-focus,
   live-frame downscaling, and native `BarcodeDetector` fallback alongside zbar.
+- Documented batch inventory POST (`ids` + location), GET confirmation, the
+  10-second rescan cooldown, and resetting current results after a location
+  change. Apps Script must be redeployed for the batch contract.

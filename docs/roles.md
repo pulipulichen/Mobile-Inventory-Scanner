@@ -79,9 +79,9 @@ Django、PHP、Express 或其他自建後端。
 
 - 取得使用者拍攝或選取的圖片。
 - 在瀏覽器本機辨識圖片中的一個或多個 QR Code。
-- 對同一張圖片的 ID 去重。
-- 逐筆將 `id` 與 `location` 傳送給 Apps Script Web App。
-- 顯示每筆盤點成功或失敗結果。
+- 對同一張圖片的 ID 去重；同一個 ID 在 10 秒內不重複送出。
+- 3 秒內沒有新掃描後，一次將 `ids` 與 `location` 傳送給 Apps Script Web App。
+- 顯示每筆盤點成功或失敗結果；變更位置時重置本次結果。
 
 `scan` 不自行決定正式 `checked_time`，也不直接修改 Google Sheet。
 
@@ -119,6 +119,6 @@ Apps Script 是盤點寫入的唯一權威來源。`scan` 不可在 API 失敗�
 | GitHub Actions | 自動或手動編譯、驗證並部署靜態 App | 作為正式 API 或保存 Sheet 資料 |
 | 靜態網站服務環境（GitHub Pages） | 提供 `dist/` 靜態檔案 | 執行 Node.js 或保存 Sheet 資料 |
 | `print` | 讀取 ID、產生 QR Code PDF | 寫入盤點結果 |
-| `scan` | 圖片辨識、去重、送出結果、顯示狀態 | 產生正式時間、直接改 Sheet |
+| `scan` | 圖片辨識、去重、批次送出結果、顯示狀態 | 產生正式時間、直接改 Sheet |
 | Google Sheet | 保存盤點主資料與目前狀態 | 主動處理前端掃描流程 |
 | Bound Apps Script | 驗證並寫入盤點結果 | 產生 QR Code 或辨識圖片 |

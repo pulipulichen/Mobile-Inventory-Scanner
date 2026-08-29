@@ -126,8 +126,11 @@ mis.print.qr_size_mm
 - QR 解碼固定優先使用 `@undecaf/zbar-wasm`，原因是可在瀏覽器處理
   `ImageData` 並一次回傳多個 barcode / QR Code。
 - WASM 檔案應跟著 Vite build 部署，不依賴第三方 CDN 才能掃描。
-- 同一影格、同一張圖片與同一掃描 session 中重複辨識出的 ID，必須去重後才呼叫
-  Apps Script。
+- 同一影格與同一張圖片中重複辨識出的 ID，必須去重後才加入本次結果。
+- 同一個 ID 在 10 秒內不重複送出；超過 10 秒可以再次盤點。
+- 掃描後若 3 秒內沒有新的 ID，再一次批次 POST 給 Apps Script。前端不守候
+  POST 回應，改以 `GET ?action=list` 確認寫入。
+- 變更目前位置時，清除本次盤點結果。
 - `scan` 必須是 PWA；使用靜態 manifest 提供可安裝與 standalone 顯示。
 - PWA 不註冊 Service Worker，也不使用 HTML5 Cache Storage 快取檔案；
   第一版不做離線待送 queue。
@@ -148,7 +151,7 @@ mis.print.qr_size_mm
 - 外部 API 呼叫集中在 `src/services/`。
 - UI component 不直接散落 `fetch()`。
 - 所有 request 都要有 loading、success、error 狀態。
-- `scan` 不得因單筆 Apps Script 失敗而停止同張圖片其他 ID。
+- `scan` 不得因單筆 Apps Script 失敗而停止同一批次其他 ID。
 - 不建立自建 CORS proxy；Apps Script / Google API 必須設計成瀏覽器可直接呼叫。
 
 ## 10. i18n

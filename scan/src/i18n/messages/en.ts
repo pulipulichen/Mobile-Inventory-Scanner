@@ -31,7 +31,7 @@ export default {
       "Confirm the Apps Script URL to show the inventory controls; current location is optional. A saved valid URL opens the inventory controls automatically.",
     scanner_heading: "Start inventory check",
     scanner_description:
-      "Place QR Codes in front of the camera and start scanning. You can also take or choose a photo; multiple QR Codes are supported.",
+      "Place QR Codes in front of the camera and start scanning. You can also take or choose a photo; multiple QR Codes are supported. After scanning, the app waits 3 seconds with no new IDs, then sends one batch. The same ID is not sent again within 10 seconds.",
     start_camera: "Start scanning",
     stop_camera: "Stop camera",
     capture_qr_code: "Take QR Code photo",
@@ -54,7 +54,7 @@ export default {
     unassigned_location: "Location not set",
     results_heading: "Current check results",
     results_description: "{count} IDs processed.",
-    result_queued: "Waiting to send",
+    result_queued: "Waiting 3 seconds to send as a batch",
     result_sending: "Writing to Google Sheets…",
     result_success: "Check succeeded; time {checked_time}",
     result_success_with_location:
@@ -74,15 +74,21 @@ export default {
     ids_found: "Recognition complete. Found {count} QR Codes.",
     no_qr_code: "No QR Code was detected. Take another photo or choose a different one.",
     ids_duplicate_ignored:
-      "All detected QR Codes were already processed in this check. Duplicates were ignored.",
+      "These QR Codes were already scanned within 10 seconds and were ignored.",
     ids_found_with_duplicates:
-      "Recognition complete. Found {count} new QR Codes; {ignored} duplicates were ignored.",
+      "Added {count} QR Codes. They will be sent as one batch after 3 seconds with no new scans. {ignored} duplicates scanned within 10 seconds were ignored.",
+    ids_batch_waiting:
+      "Added {count} QR Codes. They will be sent as one batch after 3 seconds with no new scans.",
     sending: "Sending the inventory result for {id}…",
+    batch_sending: "Sending {count} inventory results as one batch…",
+    confirming: "Confirming {count} submitted inventory results…",
     inventory_failed_item: "Inventory check failed: {id} ({error})",
     all_complete: "Inventory check complete: {success} succeeded and {failed} failed.",
     pending_loaded: "Loaded {count} unchecked IDs.",
     pending_empty: "There are no unchecked IDs right now.",
     session_cleared: "Current results were cleared. You can start a new check.",
+    location_changed_results_cleared:
+      "The location changed, so the current check results were reset.",
   },
   errors: {
     INVALID_REQUEST: "The Apps Script URL is invalid. Use the complete /exec URL.",
