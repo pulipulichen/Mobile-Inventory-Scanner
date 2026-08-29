@@ -276,7 +276,6 @@ function handleCameraStatus(
 async function startCamera(): Promise<void> {
   if (!canStartCamera.value) return;
   if (!validateAppsScriptUrl()) return;
-  resetSession();
   camera.value?.start();
 }
 
@@ -298,6 +297,8 @@ function queueIds(ids: string[]): void {
     return;
   }
 
+  // Claim IDs before sending so repeated camera frames cannot enqueue or
+  // vibrate for the same ID.
   const newResults = newIds.map((id): ScanResult => {
     sessionIds.add(id);
     return {
@@ -316,18 +317,27 @@ function queueIds(ids: string[]): void {
   );
 
   const queuedResults = newResults;
-  submissionQueue = submissionQueue.then(async () => {
-    for (const result of queuedResults) {
-      await sendResult(result);
-    }
-    const success = results.value.filter(
-      (result) => result.state === "success",
-    ).length;
-    const failed = results.value.filter(
-      (result) => result.state === "error",
-    ).length;
-    setStatus("status.all_complete", { success, failed }, failed ? "warning" : "success");
-  });
+  submissionQueue = submissionQueue
+    .catch(() => undefined)
+    .then(async () => {
+      for (const result of queuedResults) {
+        await sendResult(result);
+      }
+      const success = results.value.filter(
+        (result) => result.state === "success",
+      ).length;
+      const failed = results.value.filter(
+        (result) => result.state === "error",
+      ).length;
+      setStatus(
+        "status.all_complete",
+        { success, failed },
+        failed ? "warning" : "success",
+      );
+    })
+    .catch((error) => {
+      setError(error);
+    });
 }
 
 async function sendResult(result: ScanResult): Promise<void> {
@@ -353,7 +363,6 @@ async function sendResult(result: ScanResult): Promise<void> {
     result.state = "error";
     result.errorCode = setError(error);
     enqueueFailureToast(result);
-    if (navigator.vibrate) navigator.vibrate(250);
   }
 }
 

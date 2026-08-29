@@ -1,5 +1,7 @@
 import type { InventoryCheckItem, InventoryItem } from "../types/scan";
 
+const REQUEST_TIMEOUT_MS = 20_000;
+
 type AppsScriptErrorCode =
   | "INVALID_REQUEST"
   | "INVALID_ID"
@@ -108,20 +110,29 @@ async function request(
   endpoint: URL,
   init?: RequestInit,
 ): Promise<AppsScriptSuccessResponse> {
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(
+    () => controller.abort(),
+    REQUEST_TIMEOUT_MS,
+  );
   let response: Response;
   try {
-    response = await fetch(endpoint, init);
+    response = await fetch(endpoint, {
+      ...init,
+      signal: init?.signal ?? controller.signal,
+    });
+    const body = await readJson(response);
+    if (!response.ok || body.success !== true) {
+      const failure = body as AppsScriptFailureResponse;
+      throw new AppsScriptError(getErrorCode(failure.error), failure.message);
+    }
+    return body as AppsScriptSuccessResponse;
   } catch (error) {
+    if (error instanceof AppsScriptError) throw error;
     throw new AppsScriptError("READ_FAILED", error);
+  } finally {
+    window.clearTimeout(timeoutId);
   }
-
-  const body = await readJson(response);
-  if (!response.ok || body.success !== true) {
-    const failure = body as AppsScriptFailureResponse;
-    throw new AppsScriptError(getErrorCode(failure.error), failure.message);
-  }
-
-  return body as AppsScriptSuccessResponse;
 }
 
 function parseInventoryItem(value: unknown): InventoryItem | null {
@@ -139,7 +150,14 @@ function parseInventoryItem(value: unknown): InventoryItem | null {
 }
 
 export async function loadPendingInventory(url: string): Promise<InventoryItem[]> {
-  const response = await request(getEndpoint(url, "pending"));
+  return loadInventoryList(url, "pending");
+}
+
+async function loadInventoryList(
+  url: string,
+  action: "pending" | "list",
+): Promise<InventoryItem[]> {
+  const response = await request(getEndpoint(url, action));
   if (!Array.isArray(response.items)) {
     throw new AppsScriptError("READ_FAILED");
   }
@@ -154,16 +172,41 @@ export async function submitInventoryCheck(
   id: string,
   location: string,
 ): Promise<InventoryCheckItem> {
-  const response = await request(getEndpoint(url), {
-    method: "POST",
-    headers: {
-      // Apps Script Web Apps do not reliably handle the OPTIONS preflight
-      // triggered by application/json. The body remains JSON for doPost().
-      "Content-Type": "text/plain;charset=utf-8",
-    },
-    body: JSON.stringify({ id, location }),
-  });
-  const item = parseInventoryItem(response.item);
-  if (!item) throw new AppsScriptError("READ_FAILED");
-  return item;
+  let postError: AppsScriptError | null = null;
+
+  try {
+    const response = await request(getEndpoint(url), {
+      method: "POST",
+      headers: {
+        // Apps Script Web Apps do not reliably handle the OPTIONS preflight
+        // triggered by application/json. The body remains JSON for doPost().
+        "Content-Type": "text/plain;charset=utf-8",
+      },
+      body: JSON.stringify({ id, location }),
+      redirect: "follow",
+    });
+    const item = parseInventoryItem(response.item);
+    if (item) return item;
+    postError = new AppsScriptError("READ_FAILED");
+  } catch (error) {
+    if (!(error instanceof AppsScriptError) || error.code !== "READ_FAILED") {
+      throw error;
+    }
+    postError = error;
+  }
+
+  // Apps Script can commit the POST before its redirected response is
+  // readable by the browser. Verify the committed row through the simple GET
+  // endpoint before reporting a failure to the user.
+  try {
+    const items = await loadInventoryList(url, "list");
+    const item = items.find(
+      (candidate) => candidate.id === id && Boolean(candidate.checked_time),
+    );
+    if (item) return item;
+  } catch {
+    // Preserve the original POST error when verification also fails.
+  }
+
+  throw postError ?? new AppsScriptError("READ_FAILED");
 }

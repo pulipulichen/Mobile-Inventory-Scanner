@@ -85,7 +85,7 @@ export default {
     SHEET_NOT_FOUND: "找不到設定的 Google Sheet 工作表。",
     COLUMN_NOT_FOUND: "Google Sheet 缺少必要欄位，請確認第一列標題。",
     WRITE_FAILED: "無法寫入 Google Sheet，請稍後再試。",
-    READ_FAILED: "無法讀取尚未盤點清單，請檢查網路與 Apps Script 部署。",
+    READ_FAILED: "無法讀取 Apps Script 回應，請檢查網路與 Apps Script 部署。",
     CAMERA_UNAVAILABLE: "此瀏覽器或裝置不支援相機，請改用拍照或讀取相片。",
     CAMERA_PERMISSION_DENIED:
       "相機啟動失敗，請允許相機權限，或改用拍照與讀取相片。",

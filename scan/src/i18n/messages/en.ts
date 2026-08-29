@@ -92,7 +92,7 @@ export default {
       "Google Sheets is missing a required column. Check the first row headers.",
     WRITE_FAILED: "Google Sheets could not be updated. Please try again later.",
     READ_FAILED:
-      "Unchecked items could not be loaded. Check the network and Apps Script deployment.",
+      "The Apps Script response could not be read. Check the network and Apps Script deployment.",
     CAMERA_UNAVAILABLE:
       "This browser or device does not support a camera. Use a photo instead.",
     CAMERA_PERMISSION_DENIED:
