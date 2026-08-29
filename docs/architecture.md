@@ -58,6 +58,8 @@ Mobile-Inventory-Scanner/
 │   └── packages.md
 ├── google_sheet/
 │   ├── README.md
+│   ├── GET_APPS_SCRIPT_URL.md
+│   ├── GET_GOOGLE_SHEET_URL.md
 │   └── main.gs
 ├── print/
 │   └── README.md
@@ -349,3 +351,63 @@ Apps Script = 盤點寫入 API
 print = QR Code PDF 產生工具
 scan = 手機圖片掃描 / 盤點工具
 ```
+
+---
+
+## 11. 國際化（i18n）設計
+
+### 技術選擇
+
+`scan` 與 `print` 雖然都是純前端靜態網站，但實際技術棧是 Vue 3 + TypeScript + Vite。因此採用 Vue 生態系的 [`vue-i18n`](https://vue-i18n.intlify.dev/)；不使用自製 `i18n.js`、執行期 CDN 字典或自建翻譯 API。這樣可以直接整合 Composition API、插值、複數、locale 格式化與 TypeScript 型別。
+
+兩個 App 維持獨立依賴，各自於 `package.json` 與 `package-lock.json` 加入：
+
+```text
+vue-i18n
+```
+
+翻譯資源會隨各 App 的 Vite bundle 部署，正式環境仍只需要靜態檔案伺服器。
+
+### 資源與初始化
+
+兩個 App 都遵循以下結構：
+
+```text
+src/
+└── i18n/
+    ├── index.ts
+    └── messages/
+        ├── en.ts
+        └── zh_tw.ts
+```
+
+- 使用 `createI18n({ legacy: false })`，元件透過 `useI18n()` 使用 Composition API。
+- locale 值使用標準 BCP 47 格式：`en`、`zh-TW`；翻譯檔名則遵循專案的 `snake_case` 命名規範。
+- 第一版預設 `zh-TW`，fallback 使用 `en`。
+- 初始化優先順序為：App 專用 localStorage 設定、`navigator.languages` / `navigator.language`、預設 `zh-TW`。
+- 語系切換立即更新畫面，並同步設定 `document.documentElement.lang`。
+- 翻譯 key 使用具命名空間的 `snake_case`，例如 `common.cancel`、`scan.capture_qr_code`、`print.download_pdf`。各語系必須維持相同 key schema，缺少 key 應由測試或 CI 發現。
+
+語系偏好不作為正式資料，只透過既有設定 wrapper / composable 保存：
+
+- `mis.scan.locale`
+- `mis.print.locale`
+
+元件不可直接呼叫 `localStorage`。`scan` 與 `print` 因為是獨立 App，各自保存自己的語系設定。
+
+### 使用範圍與資料界線
+
+- 所有使用者可見文字都必須來自翻譯資源，包括表單 label、按鈕、錯誤、loading、成功訊息、ARIA label、live region 與 PDF 標籤文字。
+- 使用 `vue-i18n` 的插值與複數功能處理變數文字，不以字串串接組合句子；日期與數字依目前 locale 使用 `Intl` 或 `vue-i18n` 格式化。
+- Apps Script / Google API 的英文 `message` 與 `error` code 仍是穩定的資料契約。前端依 `error` code 映射本地化訊息，不把翻譯後文字送回 API。
+- `id`、`location` 與其他使用者資料是資料內容，不翻譯；API 回應也不可直接當成 UI 文字而跳過錯誤映射。
+- 語系選擇器使用有明確 label 的原生 `<select>`，保留鍵盤操作與可存取名稱；切換語系後，重要狀態通知也必須使用目前語系。
+
+### 驗證要求
+
+除一般前端 build 外，i18n 至少驗證：
+
+1. `zh-TW` 與 `en` 都能載入，且沒有缺少翻譯 key。
+2. 手動切換後，靜態文字、動態狀態、ARIA / live region、PDF 標籤與 `html[lang]` 都同步更新。
+3. reload 後會依 App 專用的 `mis.*.locale` 設定還原語系，沒有直接依賴瀏覽器語系覆蓋使用者選擇。
+4. QR Code 辨識、逐筆送出、錯誤與完成摘要等無障礙通知在兩種語系都可理解。

@@ -22,6 +22,7 @@ alwaysApply: true
 兩個 App 統一使用：
 
 - Vue 3
+- `vue-i18n`
 - Composition API
 - `<script setup lang="ts">`
 - TypeScript
@@ -136,7 +137,21 @@ mis.print.qr_size_mm
 - `scan` 不得因單筆 Apps Script 失敗而停止同張圖片其他 ID。
 - 不建立自建 CORS proxy；Apps Script / Google API 必須設計成瀏覽器可直接呼叫。
 
-## 10. Podman 開發與編譯
+## 10. i18n
+
+- `scan` 與 `print` 統一使用 `vue-i18n`；因為兩個 App 都是 Vue 3 應用程式，使用 Vue 生態系的 i18n 套件比自製 `i18n.js` 更能整合 Composition API、插值、複數與型別檢查。
+- 每個獨立 App 都要在自己的 `package.json` 與 `package-lock.json` 管理 `vue-i18n`；翻譯資源隨 Vite bundle 部署，不使用 CDN、執行期遠端字典或自建後端。
+- 以 Composition API 模式初始化 `createI18n({ legacy: false })`，元件使用 `useI18n({ useScope: "global" })`；初始化集中在 `src/i18n/index.ts`。
+- 翻譯檔集中放在 `src/i18n/messages/`，例如 `zh_tw.ts` 與 `en.ts`。檔名遵循專案的 `snake_case`，locale 值使用標準 BCP 47 `zh-TW` 與 `en`。
+- 預設語系為 `zh-TW`，fallback 語系為 `en`。初始化優先順序為：App 專用 localStorage 語系、瀏覽器語系、預設語系；語系切換必須立即更新靜態文字、動態文字與 `html[lang]`。
+- 語系設定必須透過集中 wrapper / composable 保存，不可在元件直接呼叫 `localStorage`；使用 `mis.scan.locale` 與 `mis.print.locale`。
+- 所有使用者可見文字都必須使用翻譯 key，包括按鈕、錯誤、loading、成功訊息、ARIA label、live region 與 PDF 標籤文字。翻譯 key 使用具命名空間的 `snake_case`，例如 `scan.capture_qr_code`。
+- 各語系必須維持相同的 key schema，缺少 key 應在測試或 CI 中被發現；不可把英文原文或 translation key 當成正式 UI fallback。
+- 使用 `vue-i18n` 的插值與複數功能處理變數文字，不以字串串接組合句子；日期與數字依 locale 使用 `Intl` 或 `vue-i18n` 格式化。
+- Apps Script / Google API 的英文 `message` 與 `error` code 是資料契約；前端依 `error` code 使用 `t()` 顯示本地化訊息，不把翻譯後文字送回 API。ID、location 等使用者資料不可翻譯。
+- 語系選擇器必須使用有 label 的原生 `<select>`，支援鍵盤操作；重要狀態通知需沿用可存取的 live region，切換語系後也必須更新其文字。
+
+## 11. Podman 開發與編譯
 
 **主機不要求安裝 Node.js 或 npm。**
 
@@ -162,7 +177,7 @@ Node / npm 一律從根目錄的 `Containerfile.frontend` 建立 Podman image，
 - 新增 / 更新 npm dependency 後同步更新 lockfile。
 - 正式部署內容只取各 App 的 `dist/`。
 
-## 11. 完成前檢查
+## 12. 完成前檢查
 
 修改 `scan/` 或 `print/` 前端後至少執行：
 

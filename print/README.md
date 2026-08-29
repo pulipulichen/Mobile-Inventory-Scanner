@@ -62,14 +62,15 @@ flowchart TB
     E --> F["選取 Sheet，自動帶入 Google Sheet URL"]
     C --> G["Google OAuth 登入"]
     F --> G
-    G --> H["Google Sheets API 讀取 id 欄"]
+    G --> H["Google Sheets API 讀取 id 欄與儲存格位置"]
     H --> I["檢查空白與重複 ID"]
-    I --> J["設定 QR Code / A4 參數"]
-    J --> K["產生 responsive 預覽"]
-    K --> L["qrcode 產生 QR Code"]
-    L --> M["pdf-lib 產生向量 PDF"]
-    M --> N["下載 .pdf 檔案"]
-    A -.-> O["前往 scan"]
+    I -->|"有重複"| J["指出重複 ID 與 A1 儲存格位置"]
+    I -->|"無重複"| K["設定 QR Code / A4 參數"]
+    K --> L["產生 responsive 預覽"]
+    L --> M["qrcode 產生 QR Code"]
+    M --> N["pdf-lib 產生向量 PDF"]
+    N --> O["下載 .pdf 檔案"]
+    A -.-> S["前往 scan"]
 ```
 
 所有使用者輸入或調整內容，都要保存到 `localStorage`。`print` 不更新
@@ -164,7 +165,8 @@ https://docs.google.com/spreadsheets/d/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 id | checked_time | location
 ```
 
-列印功能只需要讀取 `id`。
+列印功能主要使用 `id`，載入時也必須保留每筆資料的實際列號，
+以便指出重複 ID 位於哪些儲存格。
 
 ### Google Sheet 權限
 
@@ -237,9 +239,18 @@ OAuth access token 不應長期寫入 localStorage。可提供「重設為預設
 - 忽略空白 ID。
 - ID 保持字串型態。
 - 保留 Sheet 原始順序。
-- 若有重複 ID，提示使用者，不直接產生容易混淆的列印結果。
+- 保留每筆 ID 對應的試算表列號，並換算為 A1 儲存格位置，例如 `A2`。
+- 重複判定以載入後的非空 ID 字串為準；同一 ID 出現於多個資料列時，
+  必須在載入報表時立即提示。
+- 重複提示必須逐組列出 ID 與所有出現位置，例如：
+  `A01：A2、A8、A14`。
+- 重複提示必須是可讀取的文字，不可只使用顏色、標記或圖示。
+- 只要存在重複 ID，就不得產生 QR Code 預覽、PDF 或直接列印結果；
+  使用者修正 Google Sheet 後，重新載入才可繼續。
 
-載入成功後顯示 Google Sheet 名稱或 Spreadsheet ID、有效 ID 總數、資料錯誤數量。讀取失敗時清除 / 標記舊資料，不能讓使用者誤以為舊資料是本次結果。
+載入成功後顯示 Google Sheet 名稱或 Spreadsheet ID、有效 ID 總數、資料錯誤數量。
+若有重複 ID，另顯示重複 ID 組數、每組 ID 與所有 A1 儲存格位置。
+讀取失敗時清除 / 標記舊資料，不能讓使用者誤以為舊資料是本次結果。
 
 ---
 
@@ -345,6 +356,8 @@ Component 不直接散落 OAuth、Drive API、Sheets API 或 QR library 操作�
 - [ ] 可由瀏覽器直接用 Google Sheets API 讀取有權限的 Sheet。
 - [ ] 不需要 Sheet 公開分享。
 - [ ] 可從 `id` 欄取得所有有效 ID。
+- [ ] 載入時可找出重複 ID，並指出每個重複 ID 所在的 A1 儲存格位置。
+- [ ] 有重複 ID 時不產生 QR Code 預覽、PDF 或直接列印結果。
 - [ ] 每個 ID 產生 SVG QR Code並顯示 ID。
 - [ ] 可設定 QR Code 實體尺寸與基本列印參數。
 - [ ] 所有列印偏好保存到 `localStorage`。

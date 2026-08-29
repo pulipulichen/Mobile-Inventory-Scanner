@@ -13,6 +13,7 @@ npm 命令。
 | 套件 | App | 用途 |
 | --- | --- | --- |
 | `vue` | `scan`、`print` | Vue 3 UI 與 Composition API |
+| `vue-i18n` | `scan`、`print` | Vue 3 Composition API 的多語系、插值、複數與 locale 格式化 |
 | `typescript` | `scan`、`print` | 業務資料、API 回應與元件型別 |
 | `vite` | `scan`、`print` | 開發伺服器與正式 bundle |
 | `sass` | `scan`、`print` | SCSS / Sass 樣式編譯 |

@@ -24,54 +24,12 @@ flowchart TB
 ```
 
 Google Sheet 不需要公開；擁有該試算表權限的使用者即可管理資料與 Apps
-Script。完整網址取得方式如下。
+Script。兩個網址的詳細取得方式請參考：
 
-## 取得 Google Sheet URL
-
-1. 登入要使用的 Google 帳號，開啟盤點用 Google Sheet。
-2. 確認第一列欄位名稱正好是 `id`、`checked_time`、`location`。
-3. 將瀏覽器網址列的完整網址複製下來，例如：
-
-   ```text
-   https://docs.google.com/spreadsheets/d/<SPREADSHEET_ID>/edit
-   ```
-
-4. 將這個網址貼到 `print` 的 Google Sheet URL 欄位。`print` 會透過
-   Google OAuth 與 Google Sheets API 讀取，不要求把 Sheet 設為公開。
-
-不要只複製 `<SPREADSHEET_ID>`；前端可接受完整 Google Sheet URL，並會自行
-解析 ID。
-
-## 取得 Apps Script Web App URL
-
-1. 在同一份 Google Sheet 選擇 **Extensions > Apps Script**。
-2. 將本專案的 Apps Script 程式碼貼到編輯器，確認它使用目前綁定的
-   Spreadsheet，並儲存專案。
-3. 選擇 **Deploy > New deployment**。
-4. 在 **Select type** 選擇 **Web app**。
-5. **Execute as** 選擇執行部署者（通常是 **Me**），讓程式能更新這份
-   Sheet。
-6. 設定 **Who has access**：
-   - 組織內使用：選組織帳號可存取的選項。
-   - 需要未登入的手機直接呼叫：選 **Anyone**，但必須妥善保護 URL。
-7. 按 **Deploy**，完成 Google 授權後複製 **Web app URL**。
-8. 貼到 `scan` 的 Apps Script Web App URL 欄位。正式使用要複製結尾為
-   `/exec` 的網址；`/dev` 只供部署者測試，不要交給使用者。
-
-```mermaid
-flowchart TB
-    A["Google Sheet"] --> B["Extensions > Apps Script"]
-    B --> C["貼上並儲存 Bound Script"]
-    C --> D["Deploy > New deployment"]
-    D --> E["Select type: Web app"]
-    E --> F["設定執行者與存取權限"]
-    F --> G["完成授權"]
-    G --> H["複製 /exec URL"]
-    H --> I["貼到 scan"]
-```
-
-若部署後修改 Apps Script 程式碼，需依 Google 的部署流程建立新版本或更新
-既有 deployment，並確認 `scan` 使用的仍是 `/exec` 網址。
+- [取得 Google Sheet URL](./GET_GOOGLE_SHEET_URL.md)：提供給 `print` 讀取
+  試算表。
+- [取得 Apps Script Web App URL](./GET_APPS_SCRIPT_URL.md)：提供給 `scan`
+  傳送盤點結果。
 
 ---
 
@@ -79,28 +37,34 @@ flowchart TB
 
 第一版固定使用以下三個欄位：
 
-| 欄位 | 必填 | 說明 | 範例 |
-| --- | --- | --- | --- |
-| `id` | 是 | 盤點項目的唯一識別碼，也是 QR Code 的內容 | `A01` |
-| `checked_time` | 否 | 最近一次成功盤點的日期時間，由 Apps Script 寫入 | `20260829-171000` |
-| `location` | 否 | 最近一次成功盤點的位置，由掃描端傳入 | `主機房 A 區` |
+|欄位|必填|說明|範例|
+|---|---|---|---|
+|`id`|是|盤點項目的唯一識別碼，也是 QR Code 的內容|`A01`|
+|`checked_time`|否|最近一次成功盤點的日期時間，由 Apps Script 寫入|`20260829-171000`|
+|`location`|否|最近一次成功盤點的位置，由掃描端傳入；若傳入空白則保留原值|`主機房 A 區`|
 
 範例：
 
-```text
-id  | checked_time       | location
-A01 | 20260829-171000    | 主機房 A 區
-B03 |                   |
-C04 |                   |
-```
+| `id` | `checked_time` | `location` |
+| --- | --- | --- |
+| `A01` | `20260829-171000` | `主機房 A 區` |
+| `B03` | — | — |
+| `C04` | — | — |
+
+`—` 表示尚未盤點，實際試算表儲存格應保持空白。
 
 ### `id` 規則
 
-- `id` 必須唯一。
+- 非空 `id` 必須唯一。
 - `id` 一律視為字串。
 - QR Code 內容就是 `id` 本身，不包 URL、JSON 或其他前後綴。
-- 空白 ID 不視為有效盤點資料。
-- 若 Sheet 中出現重複 ID，Apps Script 不應任意更新其中一筆，必須回傳錯誤。
+- 試算表資料列之間可以有空行；空白 ID 列應略過，不視為有效盤點資料。
+- 若 Sheet 中出現重複的非空 ID，Apps Script 不應任意更新其中一筆，必須回傳錯誤。
+
+`print` 載入報表時會先檢查非空 `id` 是否重複，並列出重複 ID
+以及所有出現的 A1 儲存格位置，例如 `A01：A2、A8`。發現重複時，
+`print` 不得產生 QR Code、PDF 或直接列印結果；Apps Script 的重複檢查
+仍保留作為盤點寫入時的第二道防護。
 
 ### `checked_time`
 
@@ -112,8 +76,9 @@ C04 |                   |
 ### `location`
 
 - 由手機掃描頁手動輸入。
-- Apps Script 收到空白位置時應拒絕寫入。
-- 成功盤點後直接覆寫該 ID 目前的 `location`。
+- Apps Script 收到空白位置時仍可接受請求。
+- 位置為空白時，不刪除或覆寫該 ID 原本的 `location` 資料。
+- 位置有值時，成功盤點後直接覆寫該 ID 目前的 `location`。
 
 ---
 
@@ -143,13 +108,12 @@ Apps Script 第一版只負責「依 ID 寫入盤點結果」。
 Apps Script 收到請求後：
 
 1. 驗證 `id` 不為空。
-2. 驗證 `location` 不為空。
-3. 在 `id` 欄尋找完全相符的資料。
-4. 找不到 ID 時回傳盤點失敗。
-5. 找到多筆相同 ID 時回傳重複 ID 錯誤。
-6. 找到唯一資料列時，以伺服器目前時間更新 `checked_time`。
-7. 將輸入的位置更新到 `location`。
-8. 回傳本次盤點結果。
+2. 在 `id` 欄尋找完全相符的非空資料，略過中間的空白資料列。
+3. 找不到 ID 時回傳盤點失敗。
+4. 找到多筆相同 ID 時回傳重複 ID 錯誤。
+5. 找到唯一資料列時，以伺服器目前時間更新 `checked_time`。
+6. 輸入的位置有值時更新 `location`；位置空白時保留原本的 `location`。
+7. 回傳本次盤點結果。
 
 ### 成功回傳
 
@@ -182,9 +146,8 @@ Apps Script 收到請求後：
 至少區分以下錯誤：
 
 - `INVALID_ID`：ID 為空或格式不合法。
-- `INVALID_LOCATION`：位置為空。
 - `ID_NOT_FOUND`：Sheet 找不到該 ID。
-- `DUPLICATE_ID`：Sheet 中同一 ID 出現多筆。
+- `DUPLICATE_ID`：Sheet 中同一個非空 ID 出現多筆。
 - `SHEET_NOT_FOUND`：目標工作表不存在。
 - `COLUMN_NOT_FOUND`：必要欄位不存在。
 - `WRITE_FAILED`：寫入失敗。
@@ -214,6 +177,8 @@ SpreadsheetApp.getActiveSpreadsheet();
 ```text
 google_sheet/
 ├── README.md
+├── GET_APPS_SCRIPT_URL.md
+├── GET_GOOGLE_SHEET_URL.md
 └── main.gs
 ```
 
@@ -225,7 +190,7 @@ google_sheet/
 - [ ] 範本包含 `id`、`checked_time`、`location` 三欄。
 - [ ] Apps Script 可部署成 Web App。
 - [ ] Web App 可接收 `id` 與 `location`。
-- [ ] 找到 ID 時更新 `checked_time` 與 `location`。
+- [ ] 找到 ID 時更新 `checked_time`；位置有值時更新 `location`，空白時保留原值。
 - [ ] 找不到 ID 時不修改 Sheet 並回傳錯誤。
 - [ ] 重複 ID 時不修改 Sheet 並回傳錯誤。
 - [ ] 回傳格式可直接供 `scan` 頁顯示。
