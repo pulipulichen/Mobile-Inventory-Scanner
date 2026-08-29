@@ -213,6 +213,12 @@ a {
   gap: 0.15rem;
 }
 
+.section-heading-row > h2 {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+
+.section-heading-row > .help-modal-wrap,
 .section-heading-row > .help-modal,
 .section-heading-row > .v-dialog,
 .section-heading-row > .v-overlay-container {

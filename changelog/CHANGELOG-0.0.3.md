@@ -57,6 +57,9 @@
 
 ## Fixed
 
+- Stopped `scan` section headings next to the help icon from stacking Chinese
+  characters vertically; the title stays on one line and the dialog no longer
+  stretches the heading row.
 - Fixed `scan` photo decoding dropping valid QR Codes because zbar reports
   `ZBAR_QRCODE` while the decoder only kept `QR-Code`.
 - Improved `scan` photo decoding for screen photographs by using high-quality

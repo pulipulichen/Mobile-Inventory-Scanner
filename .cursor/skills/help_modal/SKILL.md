@@ -47,7 +47,9 @@ description: >-
 ```
 
 `section-heading-row` 已在 `scan/src/styles/main.scss`。`print` 若還沒有，
-複製同一組 flex 樣式，不要另造一套標題列。
+複製同一組 flex 樣式，不要另造一套標題列。標題必須橫向排列，不可被
+`v-dialog` 撐開後把中文逐字折成直書；`HelpModal` 外層用
+`.help-modal-wrap`（`flex: 0 0 auto`），標題用 `white-space: nowrap`。
 
 ## i18n
 
