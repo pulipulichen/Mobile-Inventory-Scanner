@@ -2,6 +2,18 @@
 
 ### Changed
 
+- Added independent Vue 3/Vuetify 4 TypeScript frontend apps for `scan` and
+  `print`, including responsive accessible interfaces, localization, PWA
+  support, and centralized browser settings storage.
+- Added the `scan` camera workflow with rear-camera live QR scanning, photo/file
+  fallback, local multi-code decoding, scan-session deduplication, per-ID
+  Apps Script submission results, and pending inventory grouped by location.
+- Added the `print` workflow for authorized Google Sheet reading, ID validation
+  and duplicate reporting, SVG QR previews, configurable physical label layout,
+  local vector PDF generation, and scan-scene simulation.
+- Expanded the Apps Script inventory contract with the optional `name` column
+  and `GET?action=pending` / `GET?action=list` read endpoints while retaining
+  validated POST writes, duplicate handling, locking, and location behavior.
 - Standardized both frontend apps on Vuetify 4.x with `vite-plugin-vuetify`
   for shared, tree-shaken UI components and responsive layouts.
 - Added the bound Apps Script Web App implementation for inventory writes,
