@@ -190,6 +190,10 @@ a {
   padding: 1rem 1rem calc(1.5rem + env(safe-area-inset-bottom));
 }
 
+.scanner-card {
+  scroll-margin-top: 5rem;
+}
+
 .section-card {
   margin-bottom: 0.9rem;
   padding: 1rem;

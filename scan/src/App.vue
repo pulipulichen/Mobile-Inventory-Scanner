@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, nextTick, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import CameraScanner from "./components/CameraScanner.vue";
 import ImageSourceButtons from "./components/ImageSourceButtons.vue";
@@ -39,6 +39,7 @@ const isPendingLoading = ref(false);
 const isPhotoLoading = ref(false);
 const isCameraActive = ref(false);
 const camera = ref<InstanceType<typeof CameraScanner> | null>(null);
+const scannerSection = ref<HTMLElement | null>(null);
 const isInventoryConfirmed = ref(false);
 const statusKey = ref("status.ready");
 const statusParams = ref<Record<string, unknown>>({});
@@ -147,12 +148,19 @@ function validateAppsScriptUrl(): boolean {
   return false;
 }
 
-function confirmSettings(): void {
+async function confirmSettings(): Promise<void> {
   isInventoryConfirmed.value = false;
   if (!validateAppsScriptUrl()) return;
 
   isInventoryConfirmed.value = true;
   setStatus("status.settings_confirmed", {}, "success");
+  await nextTick();
+  scannerSection.value?.scrollIntoView({
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      ? "auto"
+      : "smooth",
+    block: "start",
+  });
 }
 
 function resetSession(): void {
@@ -382,6 +390,7 @@ function handleLocaleChange(event: Event): void {
 
         <template v-if="isInventoryReady">
           <section
+            ref="scannerSection"
             class="section-card scanner-card"
             aria-labelledby="scanner-heading"
           >
