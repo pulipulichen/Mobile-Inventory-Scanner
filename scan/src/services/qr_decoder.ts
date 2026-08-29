@@ -8,6 +8,9 @@ setModuleArgs({
   locateFile: () => wasmUrl,
 });
 
+const NATIVE_FORMATS = ["qr_code", "code_128"] as const;
+type NativeFormat = (typeof NATIVE_FORMATS)[number];
+
 let barcodeDetector: BarcodeDetector | null | undefined;
 let barcodeDetectorPromise: Promise<BarcodeDetector | null> | null = null;
 
@@ -26,12 +29,15 @@ function getBarcodeDetector(): Promise<BarcodeDetector | null> {
     }
 
     try {
-      const formats = await BarcodeDetector.getSupportedFormats();
-      if (!formats.includes("qr_code")) {
+      const supported = await BarcodeDetector.getSupportedFormats();
+      const formats = NATIVE_FORMATS.filter((format) =>
+        supported.includes(format),
+      ) as NativeFormat[];
+      if (!formats.length) {
         barcodeDetector = null;
         return null;
       }
-      barcodeDetector = new BarcodeDetector({ formats: ["qr_code"] });
+      barcodeDetector = new BarcodeDetector({ formats });
     } catch {
       barcodeDetector = null;
     }
@@ -51,7 +57,9 @@ async function decodeWithBarcodeDetector(
     const barcodes = await detector.detect(imageData);
     return [...new Set(
       barcodes
-        .filter((barcode) => barcode.format === "qr_code")
+        .filter((barcode) =>
+          NATIVE_FORMATS.includes(barcode.format as NativeFormat),
+        )
         .map((barcode) => barcode.rawValue.trim())
         .filter(Boolean),
     )];
@@ -60,8 +68,13 @@ async function decodeWithBarcodeDetector(
   }
 }
 
-function isQrSymbol(typeName: string): boolean {
-  return typeName.replace(/[_-\s]/g, "").toUpperCase().includes("QRCODE");
+function normalizeSymbolType(typeName: string): string {
+  return typeName.replace(/[_-\s]/g, "").toUpperCase();
+}
+
+function isSupportedSymbol(typeName: string): boolean {
+  const normalized = normalizeSymbolType(typeName);
+  return normalized.includes("QRCODE") || normalized.includes("CODE128");
 }
 
 function drawScaledImage(
@@ -89,12 +102,16 @@ async function decodeWithZbar(imageData: ImageData): Promise<string[]> {
   const symbols = await scanImageData(imageData);
   return [...new Set(
     symbols
-      .filter((symbol) => isQrSymbol(symbol.typeName))
+      .filter((symbol) => isSupportedSymbol(symbol.typeName))
       .map((symbol) => symbol.decode().trim())
       .filter(Boolean),
   )];
 }
 
+/**
+ * Decode inventory identifiers from either QR Code or Code 128 symbols.
+ * The legacy function name is retained to avoid breaking existing callers.
+ */
 export async function decodeQrImageData(imageData: ImageData): Promise<string[]> {
   const [nativeIds, zbarIds] = await Promise.all([
     decodeWithBarcodeDetector(imageData),
@@ -120,6 +137,7 @@ function loadImage(file: File): Promise<HTMLImageElement> {
   });
 }
 
+/** Decode QR Code and Code 128 symbols from an uploaded/captured image. */
 export async function decodeQrImageFile(file: File): Promise<string[]> {
   const image = await loadImage(file);
   const maxSide = Math.max(image.naturalWidth, image.naturalHeight);
