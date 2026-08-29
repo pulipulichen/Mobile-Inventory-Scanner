@@ -5,6 +5,8 @@ import {
 import wasmUrl from "@undecaf/zbar-wasm/dist/zbar.wasm?url";
 
 let isConfigured = false;
+let barcodeDetector: BarcodeDetector | null | undefined;
+let barcodeDetectorPromise: Promise<BarcodeDetector | null> | null = null;
 
 function configureWasm(): void {
   if (isConfigured) return;
@@ -15,15 +17,69 @@ function configureWasm(): void {
   isConfigured = true;
 }
 
-export async function decodeQrImageData(imageData: ImageData): Promise<string[]> {
+function getBarcodeDetector(): Promise<BarcodeDetector | null> {
+  if (barcodeDetector !== undefined) return Promise.resolve(barcodeDetector);
+  if (barcodeDetectorPromise) return barcodeDetectorPromise;
+
+  barcodeDetectorPromise = (async () => {
+    if (typeof BarcodeDetector === "undefined") {
+      barcodeDetector = null;
+      return null;
+    }
+
+    try {
+      const formats = await BarcodeDetector.getSupportedFormats();
+      if (!formats.includes("qr_code")) {
+        barcodeDetector = null;
+        return null;
+      }
+      barcodeDetector = new BarcodeDetector({ formats: ["qr_code"] });
+    } catch {
+      barcodeDetector = null;
+    }
+    return barcodeDetector;
+  })();
+
+  return barcodeDetectorPromise;
+}
+
+async function decodeWithBarcodeDetector(
+  imageData: ImageData,
+): Promise<string[]> {
+  const detector = await getBarcodeDetector();
+  if (!detector) return [];
+
+  try {
+    const barcodes = await detector.detect(imageData);
+    return [...new Set(
+      barcodes
+        .filter((barcode) => barcode.format === "qr_code")
+        .map((barcode) => barcode.rawValue.trim())
+        .filter(Boolean),
+    )];
+  } catch {
+    return [];
+  }
+}
+
+async function decodeWithZbar(imageData: ImageData): Promise<string[]> {
   configureWasm();
   const symbols = await scanImageData(imageData);
-  const ids = symbols
-    .filter((symbol) => symbol.typeName === "QR-Code")
-    .map((symbol) => symbol.decode().trim())
-    .filter(Boolean);
+  return [...new Set(
+    symbols
+      .filter((symbol) => symbol.typeName === "QR-Code")
+      .map((symbol) => symbol.decode().trim())
+      .filter(Boolean),
+  )];
+}
 
-  return [...new Set(ids)];
+export async function decodeQrImageData(imageData: ImageData): Promise<string[]> {
+  const [nativeIds, zbarIds] = await Promise.all([
+    decodeWithBarcodeDetector(imageData),
+    decodeWithZbar(imageData),
+  ]);
+
+  return [...new Set([...nativeIds, ...zbarIds])];
 }
 
 function loadImage(file: File): Promise<HTMLImageElement> {

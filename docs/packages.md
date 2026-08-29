@@ -59,6 +59,8 @@ framework 取代實體輸出邏輯。語系選擇器等規格指定原生元素�
 下列功能不另引入 npm 套件：
 
 - `MediaDevices.getUserMedia()`：取得後置鏡頭串流，供瀏覽器內即時掃描。
+- `MediaStreamTrack.applyConstraints()`：在支援的瀏覽器啟用連續對焦，並讓預覽畫面點擊對焦。
+- `BarcodeDetector`：在支援的瀏覽器補強 QR Code 辨識，結果與 `@undecaf/zbar-wasm` 合併。
 - `<input type="file" accept="image/*" capture="environment">`：取得手機相片或拍照。
 - `fetch`：由 service 下載 Google Sheet CSV，或呼叫 Apps Script Web App。
 - `localStorage`：保存 `mis.scan.*` 與 `mis.print.*` 設定。

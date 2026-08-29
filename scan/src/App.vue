@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import CameraScanner from "./components/CameraScanner.vue";
 import ImageSourceButtons from "./components/ImageSourceButtons.vue";
@@ -40,10 +40,14 @@ const isPhotoLoading = ref(false);
 const isCameraActive = ref(false);
 const camera = ref<InstanceType<typeof CameraScanner> | null>(null);
 const scannerSection = ref<HTMLElement | null>(null);
-const isInventoryConfirmed = ref(false);
-const statusKey = ref("status.ready");
+const isInventoryConfirmed = ref(isAppsScriptUrl(appsScriptUrl.value));
+const statusKey = ref(
+  isInventoryConfirmed.value ? "status.settings_confirmed" : "status.ready",
+);
 const statusParams = ref<Record<string, unknown>>({});
-const statusTone = ref<"info" | "success" | "warning" | "error">("info");
+const statusTone = ref<"info" | "success" | "warning" | "error">(
+  isInventoryConfirmed.value ? "success" : "info",
+);
 const sessionIds = new Set<string>();
 let submissionQueue: Promise<void> = Promise.resolve();
 
@@ -148,20 +152,30 @@ function validateAppsScriptUrl(): boolean {
   return false;
 }
 
+async function scrollToScanner(): Promise<void> {
+  await nextTick();
+  window.requestAnimationFrame(() => {
+    scannerSection.value?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "auto"
+        : "smooth",
+      block: "start",
+    });
+  });
+}
+
 async function confirmSettings(): Promise<void> {
   isInventoryConfirmed.value = false;
   if (!validateAppsScriptUrl()) return;
 
   isInventoryConfirmed.value = true;
   setStatus("status.settings_confirmed", {}, "success");
-  await nextTick();
-  scannerSection.value?.scrollIntoView({
-    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
-      ? "auto"
-      : "smooth",
-    block: "start",
-  });
+  await scrollToScanner();
 }
+
+onMounted(() => {
+  if (isInventoryConfirmed.value) void scrollToScanner();
+});
 
 function resetSession(): void {
   sessionIds.clear();
@@ -188,11 +202,16 @@ function handleCameraStatus(
     setStatus("status.camera_active", {}, "success");
     return;
   }
-  isCameraActive.value = false;
   if (state === "stopped") {
+    isCameraActive.value = false;
     setStatus("status.camera_stopped");
     return;
   }
+  if (errorCode === "QR_DECODE_FAILED") {
+    setStatus("errors.QR_DECODE_FAILED", {}, "error");
+    return;
+  }
+  isCameraActive.value = false;
   setStatus(`errors.${errorCodes.has(errorCode ?? "") ? errorCode : "UNKNOWN"}`, {}, "error");
 }
 

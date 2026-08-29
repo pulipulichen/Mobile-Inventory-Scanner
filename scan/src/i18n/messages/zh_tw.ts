@@ -26,7 +26,7 @@ export default {
       "可留白；留白時會保留 Google Sheet 中原本的位置，有輸入內容才會更新位置。",
     confirm_settings: "確認設定並進入盤點",
     confirm_settings_hint:
-      "確認 Apps Script 網址後即可進入盤點；目前位置可選填。",
+      "確認 Apps Script 網址後即可進入盤點；目前位置可選填。若網址已保存且正確，開啟頁面會自動進入盤點。",
     scanner_heading: "開始盤點",
     scanner_description:
       "請將 QR Code 放在鏡頭前方並開始掃描，也可以拍照或讀取相片；一次可辨識多個 QR Code。",
@@ -35,6 +35,9 @@ export default {
     capture_qr_code: "拍攝 QR Code",
     choose_photo: "讀取相片",
     camera_preview_label: "QR Code 相機預覽",
+    camera_tap_to_focus: "點擊預覽畫面以對焦，或按 Enter 對準畫面中央對焦",
+    camera_tap_to_focus_hint: "點擊畫面可對焦",
+    camera_focused: "已對準點選位置對焦。",
     clear_results: "清除本次結果並開始新盤點",
     pending_button: "列出尚未盤點的 ID",
     pending_control_description:
@@ -57,7 +60,7 @@ export default {
     ready: "請先設定 Apps Script URL；目前位置可選填。",
     settings_confirmed: "設定完成，可以開始盤點。",
     camera_starting: "正在啟動相機…",
-    camera_active: "相機已啟動，請將 QR Code 對準鏡頭。",
+    camera_active: "相機已啟動，請將 QR Code 對準鏡頭；可點擊畫面對焦。",
     camera_stopped: "相機已停止。",
     photo_recognizing: "正在辨識照片中的 QR Code…",
     ids_found: "辨識完成，共找到 {count} 個 QR Code。",

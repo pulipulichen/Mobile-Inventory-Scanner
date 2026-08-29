@@ -30,6 +30,7 @@
 - `@undecaf/zbar-wasm`：在瀏覽器本機辨識 QR Code，支援相機影格與
   圖片中的多個 QR Code。
 - `MediaDevices.getUserMedia()`：取得使用者同意的後置鏡頭影像，供即時掃描使用。
+- 瀏覽器 `BarcodeDetector`：在支援的環境補強 QR Code 辨識，與 zbar 結果合併。
 
 第一版不使用 Vue Router、Pinia、Nuxt 或第二套 UI framework。影像只在使用者
 裝置內處理，不把照片上傳到伺服器。
@@ -56,28 +57,33 @@ live region 與螢幕閱讀器要求。
 
 ```mermaid
 flowchart TD
-    A["手機開啟 scan 網頁 / PWA"] --> B{"取得 Apps Script /exec URL"}
-    B -->|"手動輸入"| C["輸入 /exec 網址"]
-    B -->|"開啟最近使用頁面"| D["開啟 Google Drive 最近使用的試算表"]
-    D --> E["選取試算表並複製網址"]
-    E --> C
-    C --> F["輸入或選擇目前 location"]
-    F --> G{"選擇掃描方式"}
-    G -->|"即時掃描"| H["啟動後置鏡頭"]
-    H --> I["持續取得相機影格"]
-    G -->|"拍照"| J["使用後鏡頭取得圖片"]
-    G -->|"讀取相片"| K["從照片 / 檔案選擇器選取圖片"]
-    I --> L["瀏覽器本機執行 QR decode"]
-    J --> L
-    K --> L
-    L --> M["辨識影格或圖片中的所有 QR Code"]
-    M --> N["清理並依 id 去重"]
-    N --> O["逐筆送出 id + location"]
-    O --> P["Apps Script 更新 Google Sheet"]
-    P --> Q["顯示每筆成功 / 失敗結果"]
-    A --> R["按下列出尚未盤點的 ID"]
-    R --> S["GET Apps Script?action=pending"]
-    S --> T["依既有 location 分組並顯示 id + name"]
+    A["手機開啟 scan 網頁 / PWA"] --> B{"localStorage 已有正確 /exec 網址？"}
+    B -->|"是"| C["自動確認設定並捲到開始盤點"]
+    B -->|"否"| D{"取得 Apps Script /exec URL"}
+    D -->|"手動輸入"| E["輸入 /exec 網址"]
+    D -->|"開啟最近使用頁面"| F["開啟 Google Drive 最近使用的試算表"]
+    F --> G["選取試算表並複製網址"]
+    G --> E
+    E --> H["輸入或選擇目前 location"]
+    H --> I["確認設定並進入盤點"]
+    C --> J{"選擇掃描方式"}
+    I --> J
+    J -->|"即時掃描"| K["啟動後置鏡頭"]
+    K --> L["持續取得相機影格"]
+    J -->|"拍照"| M["使用後鏡頭取得圖片"]
+    J -->|"讀取相片"| N["從照片 / 檔案選擇器選取圖片"]
+    L --> O["瀏覽器本機執行 QR decode"]
+    M --> O
+    N --> O
+    O --> P["辨識影格或圖片中的所有 QR Code"]
+    P --> Q["清理並依 id 去重"]
+    Q --> R["逐筆送出 id + location"]
+    R --> S["Apps Script 更新 Google Sheet"]
+    S --> T["顯示每筆成功 / 失敗結果"]
+    C --> U["按下列出尚未盤點的 ID"]
+    I --> U
+    U --> V["GET Apps Script?action=pending"]
+    V --> W["依既有 location 分組並顯示 id + name"]
 ```
 
 網頁中所有一般使用者設定都必須保存到 `localStorage`。
@@ -114,7 +120,8 @@ https://script.google.com/macros/s/xxxxxxxxxxxxxxxx/exec
 ```
 
 需求：只能使用部署後的 `/exec` 網址，不使用 `/dev` 測試網址；可手動輸入或
-貼上、保存到 `localStorage`、下次自動帶入、呼叫失敗時顯示清楚錯誤。
+貼上、保存到 `localStorage`、下次自動帶入。若重新開啟時網址已存在且格式
+正確，會自動完成「確認設定」並捲動到開始盤點。呼叫失敗時顯示清楚錯誤。
 `scan` 不提供 Google 登入功能，權限與資料存取由 Apps Script Web App 處理。
 使用者也可以先開啟「最近使用的 Google Sheet」連結，選取試算表後複製網址。
 
@@ -210,12 +217,15 @@ mis.scan.location_history
 
 即時掃描使用瀏覽器 `getUserMedia()` 取得後置鏡頭影像，並以
 `requestAnimationFrame` 或等效的節流迴圈逐影格交給
-`@undecaf/zbar-wasm` 辨識。
+`@undecaf/zbar-wasm` 辨識；若瀏覽器提供 `BarcodeDetector`，會同時用來
+補強 QR Code 辨識。相機影格會縮小後再解碼，必要時再掃一次畫面中央裁切，
+避免手機高解析度畫面讓 WASM 過慢或對不到碼。
 
 需求：
 
 - 使用者按下「開始掃描」後才請求相機權限。
 - 預設使用後鏡頭，不要求麥克風權限。
+- 瀏覽器支援時啟用連續對焦；預覽畫面可點擊對焦，鍵盤啟動時對準畫面中央。
 - 提供清楚的「停止相機」按鈕；停止時釋放所有 MediaStream tracks。
 - QR Code 辨識期間顯示文字狀態，不可只顯示 loading 動畫。
 - 同一個 QR Code 持續出現在畫面中時，不得在每個影格重複送出；
@@ -241,7 +251,8 @@ mis.scan.location_history
 ## QR Code 圖片辨識
 
 使用 `@undecaf/zbar-wasm` 對相機影格或圖片轉成的 `ImageData` 進行本機
-辨識。
+辨識；支援 `BarcodeDetector` 的瀏覽器會並行使用原生 QR 偵測，結果與
+zbar 合併去重。
 
 需求：
 

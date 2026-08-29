@@ -27,7 +27,7 @@ export default {
       "Optional. Leave it blank to keep the existing Google Sheets location; enter a value to update it.",
     confirm_settings: "Confirm settings and enter inventory",
     confirm_settings_hint:
-      "Confirm the Apps Script URL to show the inventory controls; current location is optional.",
+      "Confirm the Apps Script URL to show the inventory controls; current location is optional. A saved valid URL opens the inventory controls automatically.",
     scanner_heading: "Start inventory check",
     scanner_description:
       "Place QR Codes in front of the camera and start scanning. You can also take or choose a photo; multiple QR Codes are supported.",
@@ -36,6 +36,10 @@ export default {
     capture_qr_code: "Take QR Code photo",
     choose_photo: "Choose a photo",
     camera_preview_label: "QR Code camera preview",
+    camera_tap_to_focus:
+      "Tap the preview to focus, or press Enter to focus on the center",
+    camera_tap_to_focus_hint: "Tap the preview to focus",
+    camera_focused: "Focused on the selected point.",
     clear_results: "Clear results and start a new check",
     pending_button: "List unchecked IDs",
     pending_control_description:
@@ -59,7 +63,8 @@ export default {
     ready: "Set the Apps Script URL to begin; current location is optional.",
     settings_confirmed: "Settings confirmed. You can start the inventory check.",
     camera_starting: "Starting camera…",
-    camera_active: "Camera is active. Place a QR Code in front of the camera.",
+    camera_active:
+      "Camera is active. Place a QR Code in front of the camera. Tap the preview to focus.",
     camera_stopped: "Camera stopped.",
     photo_recognizing: "Recognizing QR Codes in the photo…",
     ids_found: "Recognition complete. Found {count} QR Codes.",
