@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
-import * as fontkit from "pdflib-fontkit";
+import fontkit from "pdflib-fontkit";
 import {
   getLabelCaption,
   getQrPayload,
@@ -11,6 +11,17 @@ import {
 import { calculateLayout, getPageItems } from "../utils/print_layout";
 import { createQrMatrix } from "./qr_generator";
 import notoSansTcUrl from "../assets/fonts/noto_sans_tc_regular.otf?url";
+
+type FontkitInstance = {
+  create: (fontData: Uint8Array) => unknown;
+};
+
+function resolveFontkit(): FontkitInstance {
+  const candidate = fontkit as FontkitInstance & { default?: FontkitInstance };
+  if (typeof candidate.create === "function") return candidate;
+  if (typeof candidate.default?.create === "function") return candidate.default;
+  throw new Error("FONTKIT_UNAVAILABLE");
+}
 
 const POINTS_PER_MM = 72 / 25.4;
 const BLACK = rgb(0, 0, 0);
@@ -35,7 +46,9 @@ async function embedLabelFont(
     return document.embedFont(StandardFonts.Helvetica);
   }
 
-  document.registerFontkit(fontkit);
+  document.registerFontkit(
+    resolveFontkit() as Parameters<PDFDocument["registerFontkit"]>[0],
+  );
   const response = await fetch(notoSansTcUrl);
   if (!response.ok) {
     throw new Error("FONT_LOAD_FAILED");

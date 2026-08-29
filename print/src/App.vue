@@ -2,8 +2,10 @@
 import {
   computed,
   defineAsyncComponent,
+  nextTick,
   onUnmounted,
   ref,
+  toRaw,
   watch,
 } from "vue";
 import { useI18n } from "vue-i18n";
@@ -24,6 +26,7 @@ import {
   type SheetData,
 } from "./types/print";
 import { calculateLayout } from "./utils/print_layout";
+import { chooseSaveTarget, saveBlob } from "./utils/save_blob";
 import { tryParseSpreadsheetId } from "./utils/sheet_url";
 
 const SHEET_URL_DEBOUNCE_MS = 400;
@@ -83,6 +86,12 @@ const simulationSourceState = computed<SimulationSourceState>(() => {
 });
 const canUseSimulation = computed(
   () => simulationSourceState.value === "ready" && !isLoading.value,
+);
+const isPdfStatusVisible = computed(
+  () =>
+    statusKey.value === "status.pdf_generating" ||
+    statusKey.value === "status.pdf_success" ||
+    statusKey.value === "status.pdf_error",
 );
 
 function setStatus(
@@ -269,23 +278,28 @@ function scheduleSheetLoad(immediate = false): void {
 async function downloadPdf(): Promise<void> {
   if (!canDownload.value || !sheetData.value) return;
 
+  const date = new Date().toISOString().slice(0, 10);
+  const filename = `${t("print.pdf_filename")}-${date}.pdf`;
+  const saveTarget = await chooseSaveTarget(
+    filename,
+    t("print.download_pdf"),
+  );
+  if (saveTarget.kind === "cancelled") return;
+
   isGeneratingPdf.value = true;
   setStatus("status.pdf_generating");
+  await nextTick();
 
   try {
     const { generatePdf } = await import("./services/pdf_generator");
-    const blob = await generatePdf(sheetData.value.items, settings);
-    const objectUrl = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    const date = new Date().toISOString().slice(0, 10);
-    link.href = objectUrl;
-    link.download = `${t("print.pdf_filename")}-${date}.pdf`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    const blob = await generatePdf(
+      sheetData.value.items,
+      { ...toRaw(settings) },
+    );
+    await saveBlob(blob, filename, saveTarget);
     setStatus("status.pdf_success", {}, "success");
-  } catch {
+  } catch (error) {
+    console.error(error);
     setStatus("status.pdf_error", {}, "error");
   } finally {
     isGeneratingPdf.value = false;
@@ -368,7 +382,7 @@ onUnmounted(() => {
         />
 
         <v-alert
-          v-if="showStatusAlert"
+          v-if="showStatusAlert && !isPdfStatusVisible"
           class="status-alert"
           :type="statusTone"
           variant="tonal"
@@ -497,18 +511,30 @@ onUnmounted(() => {
             :metrics="metrics"
           >
             <template #actions>
-              <v-btn
-                type="button"
-                color="primary"
-                size="large"
-                block
-                prepend-icon="mdi-file-pdf-box"
-                :disabled="!canDownload"
-                :loading="isGeneratingPdf"
-                @click="downloadPdf"
-              >
-                {{ t("print.download_pdf") }}
-              </v-btn>
+              <div class="pdf-download-panel">
+                <v-btn
+                  type="button"
+                  color="primary"
+                  variant="flat"
+                  size="large"
+                  block
+                  prepend-icon="mdi-file-pdf-box"
+                  :disabled="!canDownload"
+                  :loading="isGeneratingPdf"
+                  aria-describedby="pdf-download-status"
+                  @click="downloadPdf"
+                >
+                  {{ t("print.download_pdf") }}
+                </v-btn>
+                <p
+                  id="pdf-download-status"
+                  class="pdf-download-status"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {{ isPdfStatusVisible ? statusMessage : "" }}
+                </p>
+              </div>
             </template>
           </PrintPreview>
         </template>

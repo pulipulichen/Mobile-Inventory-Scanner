@@ -419,6 +419,23 @@ a {
   justify-content: center;
 }
 
+.pdf-download-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.pdf-download-status {
+  margin: 0;
+  color: #334155;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+.pdf-download-status:not(:empty) {
+  margin-top: 0.75rem;
+}
+
 .simulation-card {
   overflow: hidden;
   background: #fff;
