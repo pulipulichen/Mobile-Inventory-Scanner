@@ -213,12 +213,7 @@ a {
   gap: 0.15rem;
 }
 
-.scanner-help-button {
-  flex: 0 0 auto;
-  min-width: 2.75rem;
-  min-height: 2.75rem;
-}
-
+.section-heading-row > .help-modal,
 .section-heading-row > .v-dialog,
 .section-heading-row > .v-overlay-container {
   flex: 0 0 auto;
@@ -281,21 +276,6 @@ a {
   width: 100%;
   min-height: 3rem;
   margin-top: 0.8rem;
-}
-
-.settings-confirmation-hint {
-  margin-bottom: 0;
-}
-
-.field-description,
-.privacy-note {
-  color: #475569;
-  line-height: 1.5;
-}
-
-.field-description {
-  margin: 0.5rem 0 0;
-  font-size: 0.9rem;
 }
 
 .secondary-link {
@@ -568,7 +548,9 @@ a {
 
 .privacy-note {
   margin: 1rem 0 0;
+  color: #475569;
   font-size: 0.85rem;
+  line-height: 1.5;
   text-align: center;
 }
 

@@ -13,8 +13,9 @@ export default {
   scan: {
     app_bar_subtitle: "Mobile QR Code inventory",
     settings_heading: "Connection and location",
+    settings_help: "Settings instructions",
     settings_description:
-      "Enter the deployed Apps Script /exec URL. Current location is optional; Google sign-in is not required.",
+      "Enter the deployed Apps Script /exec URL. Current location is optional. Confirm the Apps Script URL to start scanning. A saved valid URL opens the scan tab automatically.",
     apps_script_url_label: "Apps Script /exec URL",
     apps_script_url_placeholder:
       "https://script.google.com/macros/s/…/exec",
@@ -25,8 +26,6 @@ export default {
     location_history_empty:
       "No location history yet. Locations appear here after a successful check.",
     confirm_settings: "Confirm settings and start scanning",
-    confirm_settings_hint:
-      "Confirm the Apps Script URL to start scanning; current location is optional. A saved valid URL opens the scan tab automatically.",
     scanner_heading: "Start inventory check",
     scanner_help: "Scanning instructions",
     scanner_description:
@@ -41,6 +40,7 @@ export default {
     camera_tap_to_focus_hint: "Tap the preview to focus",
     camera_focused: "Focused on the selected point.",
     pending_button: "List unchecked IDs",
+    pending_help: "Unchecked items instructions",
     pending_control_description:
       "Read items with a blank checked_time from Google Sheets, show them in one list card, and label their existing locations.",
     pending_heading: "Items not yet checked",

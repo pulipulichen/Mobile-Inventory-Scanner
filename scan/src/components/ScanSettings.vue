@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
 import CurrentLocationField from "./CurrentLocationField.vue";
+import HelpModal from "./HelpModal.vue";
 
 defineProps<{
   appsScriptUrl: string;
@@ -21,8 +22,13 @@ const { t } = useI18n({ useScope: "global" });
 <template>
   <section class="section-card settings-card" aria-labelledby="settings-heading">
     <div class="section-heading">
-      <h2 id="settings-heading">{{ t("scan.settings_heading") }}</h2>
-      <p>{{ t("scan.settings_description") }}</p>
+      <div class="section-heading-row">
+        <h2 id="settings-heading">{{ t("scan.settings_heading") }}</h2>
+        <HelpModal
+          :title="t('scan.settings_help')"
+          :description="t('scan.settings_description')"
+        />
+      </div>
     </div>
 
     <div class="settings-fields">
@@ -73,9 +79,6 @@ const { t } = useI18n({ useScope: "global" });
       >
         {{ t("scan.confirm_settings") }}
       </v-btn>
-      <p class="field-description settings-confirmation-hint">
-        {{ t("scan.confirm_settings_hint") }}
-      </p>
     </div>
   </section>
 </template>

@@ -12,8 +12,9 @@ export default {
   scan: {
     app_bar_subtitle: "QR Code 行動盤點",
     settings_heading: "連線與位置",
+    settings_help: "設定說明",
     settings_description:
-      "輸入 Apps Script 部署後的 /exec 網址；目前位置可選填，不需要登入 Google。",
+      "輸入 Apps Script 部署後的 /exec 網址；目前位置可選填。確認 Apps Script 網址後即可開始掃描。若網址已保存且正確，開啟頁面會自動進入掃描。",
     apps_script_url_label: "Apps Script /exec 網址",
     apps_script_url_placeholder:
       "https://script.google.com/macros/s/…/exec",
@@ -24,8 +25,6 @@ export default {
     location_history_empty:
       "尚無歷史位置。成功盤點後，曾使用的位置會出現在這裡。",
     confirm_settings: "確認設定並開始掃描",
-    confirm_settings_hint:
-      "確認 Apps Script 網址後即可開始掃描；目前位置可選填。若網址已保存且正確，開啟頁面會自動進入掃描。",
     scanner_heading: "開始盤點",
     scanner_help: "掃描說明",
     scanner_description:
@@ -39,6 +38,7 @@ export default {
     camera_tap_to_focus_hint: "點擊畫面可對焦",
     camera_focused: "已對準點選位置對焦。",
     pending_button: "列出尚未盤點的 ID",
+    pending_help: "尚未盤點說明",
     pending_control_description:
       "讀取 Google Sheet 中 checked_time 為空白的項目，集中顯示在同一張清單卡片，並標示既有位置。",
     pending_heading: "尚未盤點項目",

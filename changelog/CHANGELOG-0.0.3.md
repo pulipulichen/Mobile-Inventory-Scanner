@@ -50,6 +50,10 @@
   the preview no longer jumps when IDs are added.
 - Moved the `scan` start-inventory instructions behind a help-icon button next
   to the heading. The previous on-page paragraph now opens in a dialog.
+- Moved the `scan` unchecked-items instructions behind the same heading help
+  icon and dialog, using a shared `HelpModal` component.
+- Moved `scan` settings instructions behind the heading help icon, dropped the
+  Google sign-in note, and removed the confirmation hint under the button.
 
 ## Fixed
 

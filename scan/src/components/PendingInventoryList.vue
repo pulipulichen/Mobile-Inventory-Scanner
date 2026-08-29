@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
+import HelpModal from "./HelpModal.vue";
 import type { PendingLocationGroup } from "../types/scan";
 
 const props = defineProps<{
@@ -26,8 +27,13 @@ const itemCount = computed(() =>
     :aria-busy="loading"
   >
     <div class="section-heading">
-      <h2 id="pending-heading">{{ t("scan.pending_heading") }}</h2>
-      <p>{{ t("scan.pending_control_description") }}</p>
+      <div class="section-heading-row">
+        <h2 id="pending-heading">{{ t("scan.pending_heading") }}</h2>
+        <HelpModal
+          :title="t('scan.pending_help')"
+          :description="t('scan.pending_control_description')"
+        />
+      </div>
     </div>
 
     <v-btn
