@@ -8,19 +8,47 @@ CDN。
 更新依賴時，必須同步更新 lockfile，並使用根目錄的 `frontend.sh` 執行
 npm 命令。
 
+## UI framework 決策
+
+`scan` 與 `print` 統一使用 **Vuetify 4.x** 作為 UI framework，並以
+`vite-plugin-vuetify` 在 Vite 編譯時按需載入元件。
+
+選擇 Vuetify 的原因：
+
+- 原生支援 Vue 3、TypeScript、Vite 與 SCSS。
+- 提供表單、按鈕、訊息、對話框、進度與 responsive layout 等兩個 App
+  共用的 UI 基礎。
+- 元件具備鍵盤操作與 ARIA 支援，可作為本專案 WCAG 2.2 AA 實作的基礎；
+  仍必須遵守 `.cursor/rules/accessibility.mdc` 並完成鍵盤、螢幕閱讀器、
+  200% 縮放與對比度檢查。
+- Vuetify 採 MIT License，與本專案授權一致。
+- 透過 Vite 打包後是純靜態資源，不增加正式環境的 Node.js 或後端需求。
+
+Vuetify 只負責 App 操作介面。`scan` 的拍照／讀取相片仍使用規格指定的
+原生 `<input type="file">`；`print` 的 QR label、A4 預覽實體尺寸與
+`pdf-lib` PDF 繪製仍由專案自己的元件、SCSS 與 service 負責，不以 UI
+framework 取代實體輸出邏輯。語系選擇器等規格指定原生元素的控制項也必須
+保留原生 HTML 語意。
+
 ## 核心 npm 套件
 
-| 套件 | App | 用途 |
-| --- | --- | --- |
-| `vue` | `scan`、`print` | Vue 3 UI 與 Composition API |
-| `vue-i18n` | `scan`、`print` | Vue 3 Composition API 的多語系、插值、複數與 locale 格式化 |
-| `typescript` | `scan`、`print` | 業務資料、API 回應與元件型別 |
-| `vite` | `scan`、`print` | 開發伺服器與正式 bundle |
-| `sass` | `scan`、`print` | SCSS / Sass 樣式編譯 |
-| `qrcode` | `print` | 產生 QR Code；預覽可輸出 SVG，PDF 產生器使用 QR matrix |
-| `pdf-lib` | `print` | 在瀏覽器本機產生並下載 PDF；以向量方塊繪製 QR Code |
-| `@undecaf/zbar-wasm` | `scan` | 在瀏覽器本機辨識 `ImageData`，支援同一張圖片多個 barcode / QR Code |
-| `vite-plugin-pwa` | `scan` | 產生 PWA manifest 與 Service Worker，快取 App shell 與靜態資源 |
+以下連結以官方文件或套件維護者的 repository 為主。`Demo 網頁` 欄的
+`—` 表示目前沒有套件維護者提供的獨立線上 Demo；建置工具的 examples
+若需要本機啟動，會在連結名稱中註明。
+
+| 套件 | App | 用途 | 參考網址 | Demo 網頁 |
+| --- | --- | --- | --- | --- |
+| `vue` | `scan`、`print` | Vue 3 UI 與 Composition API | [官方文件](https://vuejs.org/guide/introduction.html) | [官方 Examples](https://vuejs.org/examples/) |
+| `vuetify` | `scan`、`print` | 共用 Vue 3 UI framework 與 responsive 元件 | [官方文件](https://vuetifyjs.com/en/getting-started/installation/) | [全部元件展示](https://vuetifyjs.com/en/components/all/) |
+| `vite-plugin-vuetify` | `scan`、`print` | Vite 編譯時按需載入 Vuetify 元件與 tree-shaking | [GitHub README](https://github.com/vuetifyjs/vuetify-loader/tree/master/packages/vite-plugin) | —（建置工具，無獨立 UI Demo） |
+| `vue-i18n` | `scan`、`print` | Vue 3 Composition API 的多語系、插值、複數與 locale 格式化 | [Composition API 文件](https://vue-i18n.intlify.dev/guide/advanced/composition) | [官方 CodeSandbox 範例](https://codesandbox.io/s/vue-i18n-9-template-h28c0) |
+| `typescript` | `scan`、`print` | 業務資料、API 回應與元件型別 | [官方 Handbook](https://www.typescriptlang.org/docs/handbook/intro.html) | [TypeScript Playground](https://www.typescriptlang.org/play/) |
+| `vite` | `scan`、`print` | 開發伺服器與正式 bundle | [官方文件](https://vite.dev/guide/) | [Vite 線上 Playground](https://vite.new/vue-ts) |
+| `sass` | `scan`、`print` | SCSS / Sass 樣式編譯 | [官方文件](https://sass-lang.com/documentation/) | [Sass Playground](https://sass-lang.com/playground/) |
+| `qrcode` | `print` | 產生 QR Code；預覽可輸出 SVG，PDF 產生器使用 QR matrix | [GitHub README](https://github.com/soldair/node-qrcode) | — |
+| `pdf-lib` | `print` | 在瀏覽器本機產生並下載 PDF；以向量方塊繪製 QR Code | [官方文件](https://pdf-lib.js.org/) | [建立 PDF 的 JSFiddle](https://jsfiddle.net/Hopding/rxwsc8f5/13/) |
+| `@undecaf/zbar-wasm` | `scan` | 在瀏覽器本機辨識 `ImageData`，支援同一張圖片多個 barcode / QR Code | [GitHub README](https://github.com/undecaf/zbar-wasm) | [官方掃描 Demo](https://undecaf.github.io/zbar-wasm/example/) |
+| `vite-plugin-pwa` | `scan` | 產生 PWA manifest 與 Service Worker，快取 App shell 與靜態資源 | [官方文件](https://vite-pwa-org.netlify.app/guide/) | [官方 Examples（需本機啟動）](https://vite-pwa-org.netlify.app/examples/) |
 
 `pdf-lib` 取代瀏覽器 `window.print()` 作為 PDF 產生方式。`print` 不引入
 `jsPDF` 或其他第二套 PDF renderer；QR Code 的編碼仍統一由 `qrcode` 負責。
@@ -52,7 +80,8 @@ private key 放入前端：
 
 - Vue Router：兩個 App 都是單頁工具。
 - Pinia：狀態量小，以 composable 管理即可。
-- Bootstrap、Vuetify、Quasar、Element Plus：避免引入大型 UI framework。
+- Bootstrap、PrimeVue、Quasar、Element Plus 或其他第二套 UI framework：
+  UI 元件統一使用 Vuetify。
 - `googleapis`：前端直接使用 Google Sheets API，不建立 Node.js 中介層。
 - `jsPDF` 或瀏覽器列印：PDF 統一由 `pdf-lib` 產生。
 - QR decode CDN：`@undecaf/zbar-wasm` 的 WASM 必須隨 Vite build 部署。
@@ -62,6 +91,10 @@ private key 放入前端：
 依賴應在對應 App 目錄管理，範例：
 
 ```bash
+./frontend.sh npm scan install vuetify
+./frontend.sh npm scan install --save-dev vite-plugin-vuetify
+./frontend.sh npm print install vuetify
+./frontend.sh npm print install --save-dev vite-plugin-vuetify
 ./frontend.sh npm print install qrcode pdf-lib
 ./frontend.sh npm scan install @undecaf/zbar-wasm vite-plugin-pwa
 ```

@@ -22,11 +22,13 @@ alwaysApply: true
 兩個 App 統一使用：
 
 - Vue 3
+- Vuetify 4.x：`scan` 與 `print` 共用的 UI framework
 - `vue-i18n`
 - Composition API
 - `<script setup lang="ts">`
 - TypeScript
 - Vite
+- `vite-plugin-vuetify`：Vite 編譯時按需載入 Vuetify 元件
 - SCSS / Sass
 - npm
 
@@ -35,9 +37,12 @@ alwaysApply: true
 - Vue Router：兩個 App 都是單頁工具，不需要路由。
 - Pinia：狀態量小，優先使用 composable 與 Vue reactive/ref。
 - SSR / Nuxt：不需要伺服器端 rendering。
-- UI framework：第一版不引入 Bootstrap、Vuetify、Quasar、Element Plus 等大型框架。
+- 第二套 UI framework：所有共用 UI 元件統一使用 Vuetify，不混用
+  Bootstrap、PrimeVue、Quasar、Element Plus 或其他 UI framework。
 
-如後續功能明確需要上述套件，再加入並同步修改 README。
+Vuetify 只在建置階段由 Vite 打包進靜態資源；正式環境不需要 Node.js
+runtime、Vuetify server 或其他自建後端。使用元件時應透過
+`vite-plugin-vuetify` 按需載入，避免把未使用的元件全部加入 bundle。
 
 ## 3. 專案結構
 
@@ -80,6 +85,8 @@ print/
 
 - 全域 SCSS 放 `src/styles/`。
 - Component-specific 樣式優先使用 `<style scoped lang="scss">`。
+- Vuetify 的 theme、SCSS 變數與元件設定集中管理；不可在各 component
+  重複覆寫同一組設計 token。
 - PDF 版面尺寸涉及實體輸出時，使用 `mm` / `pt`，不要以畫面 pixel 假裝實際尺寸。
 - `print` 預設桌面優先但必須支援平板與手機 RWD。
 - 手機掃描頁採 mobile-first。

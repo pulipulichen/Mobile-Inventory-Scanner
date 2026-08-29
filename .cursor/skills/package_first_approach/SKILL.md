@@ -29,7 +29,7 @@ description: >-
 | QR Code 解碼 | `@undecaf/zbar-wasm` | `scan/`；在瀏覽器本機處理 `ImageData`，一次支援多個 barcode |
 | PWA manifest／Service Worker | `vite-plugin-pwa` | `scan/`；只快取 App shell 與靜態資源 |
 | QR Code 產生 | `qrcode` | `print/`；預覽輸出 SVG，PDF 使用 QR matrix 產生向量模組 |
-| UI 元件與互動 | Vue 3 Composition API | `scan/`、`print/`；元件使用 `<script setup lang="ts">` |
+| UI 元件與互動 | `vuetify` + `vite-plugin-vuetify` | `scan/`、`print/`；共用 Vuetify 4.x，Vite 編譯時按需載入 |
 | 版面與元件樣式 | SCSS 與 component scoped styles | `src/styles/` 或元件內 `<style scoped lang="scss">` |
 | 圖片取得 | `<input type="file" accept="image/*">` | `scan/`；拍照入口使用 `capture="environment"` |
 | Google Sheet 讀取 | Google Identity Services OAuth + Google Sheets API | `print/`；集中在 `src/services/` |
@@ -49,8 +49,8 @@ description: >-
 - QR 解碼的 WASM 必須跟著 Vite build 部署，不依賴第三方 CDN。
 - 需要自行寫 UI 時，使用 Vue component、TypeScript 與 SCSS；避免直接在
   component 內散落 `fetch()`、localStorage 或 QR 解碼邏輯。
-- 第一版不引入大型 UI、router 或 state framework；除非需求已明確需要，
-  否則不要以大型框架取代簡單的 Vue component 或 composable。
+- UI framework 已定案為 Vuetify 4.x；不要再引入第二套 UI framework。
+  小型專案特有介面仍使用 Vue component 或 composable 補足。
 - 修改 `scan/` 或 `print/` 後，至少執行對應的
   `./frontend.sh build <scan|print>` 確認可以成功打包。
 
@@ -58,7 +58,7 @@ description: >-
 
 ```text
 ❌ 把 server-side template 或其他後端框架的做法帶進純 Vue 靜態 App
-❌ 為了一個小效果引入整套 UI framework 或 router／state framework
+❌ 為了一個小效果引入第二套 UI framework 或 router／state framework
 ❌ 用 `<script src="https://cdn.jsdelivr.net/...">` 讓正式功能依賴執行期 CDN
 ❌ 在 component 內直接散落 `fetch()`、localStorage 或 QR 解碼程式碼
 ❌ 直接假設 Google API 或 Apps Script 回傳資料永遠符合型別

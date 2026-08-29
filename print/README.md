@@ -5,8 +5,8 @@
 可以透過頁面入口前往 `scan` 進行盤點。
 
 共通流程以 [`docs/architecture.md`](../docs/architecture.md) 為準，套件
-清單見 [`docs/packages.md`](../docs/packages.md)。Google Sheet URL 與
-Apps Script URL 的取得方式見 [`google_sheet/README.md`](../google_sheet/README.md)。
+清單見 [`docs/packages.md`](../docs/packages.md)。Google Sheet URL 的取得方式
+見 [`google_sheet/GET_GOOGLE_SHEET_URL.md`](../google_sheet/GET_GOOGLE_SHEET_URL.md)。
 
 ## 前端技術決策
 
@@ -19,35 +19,32 @@ Apps Script URL 的取得方式見 [`google_sheet/README.md`](../google_sheet/RE
 - TypeScript。
 - Vite。
 - SCSS / Sass。
+- Vuetify 4.x：操作介面使用的 UI framework。
+- `vite-plugin-vuetify`：Vite 編譯時按需載入 Vuetify 元件。
 - npm `qrcode`：在瀏覽器產生 QR Code，預覽使用 SVG。
 - npm `pdf-lib`：在瀏覽器本機產生可下載的 PDF，QR Code 使用向量模組。
-- Google Identity Services：Google OAuth 登入。
-- Google Sheets API：直接從瀏覽器讀取使用者有權限的 Sheet。
-- Google Drive API：列出使用者最近開啟的 Google Sheets，供快速選取。
+- Google Drive 最近使用頁面：透過固定網址開啟，讓使用者手動選取
+  Google Sheet 並複製網址。
 
-第一版不使用 Vue Router、Pinia、Nuxt、大型 UI framework 或自建後端。
+第一版不使用 Vue Router、Pinia、Nuxt、第二套 UI framework 或自建後端。
 
-### 編譯方式
+### UI framework 使用範圍
 
-主機只需要安裝 Podman，不要求安裝 Node.js / npm。
+`print` 的操作介面統一使用 Vuetify 4.x，包含表單控制項、按鈕、訊息、
+對話框、進度狀態與 responsive layout。元件透過 `vite-plugin-vuetify`
+按需載入；theme 與共用設計 token 集中設定。
 
-專案根目錄提供：
+Vuetify 不取代列印資料的語意與實體尺寸處理：
 
-```text
-Containerfile.frontend
-frontend.sh
-```
+- QR label 與 A4 預覽仍使用語意化 HTML、專案 SCSS，以及 `mm` / `pt`
+  實體單位。
+- PDF 仍由 `qrcode` + `pdf-lib` 在瀏覽器本機產生，不由 Vuetify 或
+  `window.print()` 產生。
+- 語系選擇器等規格指定的原生 HTML 控制項必須保留；所有操作仍須符合
+  [`accessibility.mdc`](../.cursor/rules/accessibility.mdc) 的鍵盤、焦點、
+  live region 與螢幕閱讀器要求。
 
-```bash
-./frontend.sh image
-./frontend.sh install print
-./frontend.sh dev print
-./frontend.sh build print
-```
-
-開發預設網址：`http://localhost:5174`。
-
-正式輸出目錄：`print/dist/`，可直接部署成靜態網站，不需要 Node.js runtime。
+編譯方式與部署規範請參考 [`build/README.md`](../build/README.md)。
 
 ---
 
@@ -55,21 +52,19 @@ frontend.sh
 
 ```mermaid
 flowchart TB
-    A["開啟 print"] --> B{"選擇 Google Sheet 來源"}
+    A["開啟 print"] --> B{"取得 Google Sheet URL"}
     B -->|"手動輸入"| C["輸入 Google Sheet URL"]
-    B -->|"快速選取"| D["Google OAuth 登入"]
-    D --> E["Google Drive API 顯示最近開啟的 Google Sheets"]
-    E --> F["選取 Sheet，自動帶入 Google Sheet URL"]
-    C --> G["Google OAuth 登入"]
-    F --> G
-    G --> H["Google Sheets API 讀取 id 欄與儲存格位置"]
-    H --> I["檢查空白與重複 ID"]
-    I -->|"有重複"| J["指出重複 ID 與 A1 儲存格位置"]
-    I -->|"無重複"| K["設定 QR Code / A4 參數"]
-    K --> L["產生 responsive 預覽"]
-    L --> M["qrcode 產生 QR Code"]
-    M --> N["pdf-lib 產生向量 PDF"]
-    N --> O["下載 .pdf 檔案"]
+    B -->|"開啟最近使用頁面"| D["開啟 Google Drive 固定網址"]
+    D --> E["選取 Sheet 並複製網址"]
+    E --> C
+    C --> F["載入 id 欄與儲存格位置"]
+    F --> G["檢查空白與重複 ID"]
+    G -->|"有重複"| H["指出重複 ID 與 A1 儲存格位置"]
+    G -->|"無重複"| I["設定 QR Code / A4 參數"]
+    I --> J["產生 responsive 預覽"]
+    J --> K["qrcode 產生 QR Code"]
+    K --> L["pdf-lib 產生向量 PDF"]
+    L --> M["下載 .pdf 檔案"]
     A -.-> S["前往 scan"]
 ```
 
@@ -87,71 +82,29 @@ Google Sheet，也不呼叫 Apps Script 寫入盤點結果。
 
 ---
 
-## Google OAuth 設定
+## 開啟最近使用的 Google Sheet
 
-列印頁使用 Google Identity Services 取得 OAuth access token，再由瀏覽器呼叫 Google Sheets API 與 Google Drive API。
+`print` 只提供固定連結開啟 Google Drive 最近使用的試算表頁面，不建立
+Google Cloud Project、不設定 OAuth Client ID，也不使用 Google Drive API：
 
-前端 build-time 設定使用：
+[開啟最近使用的 Google Sheet](https://drive.google.com/drive/u/0/recent?q=type:spreadsheet)
 
-```text
-VITE_GOOGLE_CLIENT_ID
-```
+操作步驟：
 
-開發機可放在 `print/.env.local`：
+1. 開啟上方連結。
+2. 在 Google Drive 中選取要使用的 Google Sheet。
+3. 複製瀏覽器網址列的完整 Google Sheet URL。
+4. 回到 `print`，將網址貼到 Google Sheet URL 欄位。
 
-```dotenv
-VITE_GOOGLE_CLIENT_ID=xxxxxxxxxxxx.apps.googleusercontent.com
-```
-
-注意：
-
-- OAuth Client ID 是前端公開識別值，可以進入 bundle。
-- **不可使用 Client Secret。**
-- 不可放 service account private key。
-- `.env.local` 不 commit。
-- 正式網域與 localhost 必須依 Google OAuth 設定加入允許的 JavaScript origin。
-- OAuth scope 採最小權限；讀取 Sheet 與最近使用檔案只要求必要的唯讀權限。
-- OAuth access token 不長期保存到 `localStorage`。
-
----
-
-## Google Drive 最近使用的 Sheet 快速選取
-
-Google Sheet 網址輸入欄旁必須提供明顯按鈕：
-
-```text
-從最近使用的 Google Sheet 選取
-```
-
-目的：避免使用者先切換到 Google Drive、找到檔案、複製網址，再回到 `print` 貼上。
-
-按下按鈕後：
-
-1. 若尚未取得 Google OAuth 權限，先執行登入 / 授權。
-2. 使用 Google Drive API `files.list` 取得目前帳號可存取的檔案。
-3. 只顯示 MIME type 為 `application/vnd.google-apps.spreadsheet` 的 Google Sheets。
-4. 依 `viewedByMeTime desc` 排序，最近開啟的 Sheet 放最前面。
-5. 第一版預設顯示最近 20 筆，可視需要提供「載入更多」。
-6. 每筆至少顯示檔名與最近開啟時間；不得要求使用者辨識 Spreadsheet ID。
-7. 使用者點選後，自動組成並填入該檔案的 Google Sheet URL。
-8. 選取完成後立即保存至 `mis.print.google_sheet_url`，並可直接開始讀取資料。
-9. 提供取消 / 關閉，不得因取消而覆寫原本已設定的 Sheet URL。
-
-Drive 查詢概念：
-
-```text
-q: mimeType = 'application/vnd.google-apps.spreadsheet' and trashed = false
-orderBy: viewedByMeTime desc
-fields: nextPageToken, files(id,name,viewedByMeTime,modifiedTime,webViewLink)
-```
-
-快速選取是主要操作入口之一，但仍保留手動貼上 Google Sheet URL，避免 OAuth / Drive API 異常時完全無法使用。
+這個連結只負責導覽，不會自動列出檔案，也不會自動把 Sheet URL
+帶回 `print`；使用者仍可直接手動貼上已知的 Google Sheet URL。
 
 ---
 
 ## 資料來源
 
-使用者可以手動輸入完整 Google Sheet 網址，或由「從最近使用的 Google Sheet 選取」自動帶入。
+使用者可以手動輸入完整 Google Sheet 網址，也可以先開啟「最近使用的
+Google Sheet」連結，選取檔案後複製網址再貼上。
 
 ```text
 https://docs.google.com/spreadsheets/d/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/edit
@@ -170,11 +123,12 @@ id | checked_time | location
 
 ### Google Sheet 權限
 
-- Google Sheet 不要求公開分享。
-- 使用者在列印頁登入 Google 帳號。
-- 登入帳號只要有該 Sheet 讀取權限即可。
+- 使用者必須具備該 Google Sheet 的讀取權限。
+- 開啟最近使用頁面時，Google Drive 會依使用者目前的 Google 帳號與權限
+  顯示可存取的檔案。
+- 固定連結不會繞過 Google Sheet 的存取權限，也不會替 `print` 建立登入
+  或授權流程。
 - 不建立自建後端代讀 Sheet。
-- access token 只保留在必要的 session / memory 範圍。
 
 ---
 
@@ -197,7 +151,7 @@ QR Code 下方顯示同一筆 ID 的可讀文字。使用 npm `qrcode` 套件在
 需求：
 
 - 可手動輸入 / 貼上。
-- 提供「從最近使用的 Google Sheet 選取」。
+- 提供「開啟最近使用的 Google Sheet」連結。
 - 驗證 Google Sheet URL。
 - 解析 Spreadsheet ID。
 - 保存到 `localStorage`。
@@ -228,7 +182,7 @@ mis.print.page_margin_mm
 mis.print.orientation
 ```
 
-OAuth access token 不應長期寫入 localStorage。可提供「重設為預設值」清除本頁設定。
+可提供「重設為預設值」清除本頁設定。
 
 ---
 
@@ -297,17 +251,13 @@ PDF 產生器必須：
 src/
 ├── components/
 │   ├── GoogleSheetSource.vue
-│   ├── RecentGoogleSheetsPicker.vue
 │   ├── PrintSettings.vue
 │   ├── PrintPreview.vue
 │   └── QrLabel.vue
 ├── composables/
-│   ├── usePrintSettings.ts
-│   └── useGoogleAuth.ts
+│   └── usePrintSettings.ts
 ├── services/
-│   ├── google_auth.ts
-│   ├── google_drive.ts
-│   ├── google_sheets.ts
+│   ├── sheet_source.ts
 │   ├── qr_generator.ts
 │   └── pdf_generator.ts
 ├── styles/
@@ -319,7 +269,7 @@ src/
 └── main.ts
 ```
 
-Component 不直接散落 OAuth、Drive API、Sheets API 或 QR library 操作；統一透過 service / composable。
+Component 不直接散落資料來源讀取或 QR library 操作；統一透過 service / composable。
 
 ---
 
@@ -328,12 +278,8 @@ Component 不直接散落 OAuth、Drive API、Sheets API 或 QR library 操作�
 至少處理：
 
 - Google Sheet URL 格式錯誤。
-- 尚未登入 Google。
-- OAuth 設定錯誤。
-- Drive 最近檔案讀取失敗。
-- 最近沒有可用的 Google Sheet。
-- 登入帳號沒有 Sheet 權限。
-- Google API 無法連線。
+- Google Sheet 資料讀取失敗。
+- 使用者沒有該 Sheet 的讀取權限。
 - 找不到 `id` 欄位。
 - Sheet 沒有有效 ID。
 - 出現重複 ID。
@@ -347,14 +293,12 @@ Component 不直接散落 OAuth、Drive API、Sheets API 或 QR library 操作�
 - [ ] Vue 3 + TypeScript + Vite + SCSS 專案可用 Podman build。
 - [ ] `./frontend.sh build print` 成功產生 `print/dist/`。
 - [ ] 可手動輸入並保存 Google Sheet URL。
-- [ ] 有「從最近使用的 Google Sheet 選取」按鈕。
-- [ ] 可透過 Google Drive API 顯示最近開啟的 Google Sheets。
-- [ ] 最近使用清單依 `viewedByMeTime` 由新到舊排序。
-- [ ] 選取 Sheet 後可自動帶入 URL 並保存。
+- [ ] 有「開啟最近使用的 Google Sheet」連結。
+- [ ] 連結使用 `https://drive.google.com/drive/u/0/recent?q=type:spreadsheet`。
+- [ ] 使用者可從 Google Drive 複製 Sheet URL，再貼回 `print`。
+- [ ] 不需要 Google Cloud Project、OAuth Client ID 或 Google Drive API。
 - [ ] 可從 URL 解析 Spreadsheet ID。
-- [ ] 可透過 Google Identity Services 登入。
-- [ ] 可由瀏覽器直接用 Google Sheets API 讀取有權限的 Sheet。
-- [ ] 不需要 Sheet 公開分享。
+- [ ] 可依輸入的 Google Sheet URL 讀取有權限的 Sheet。
 - [ ] 可從 `id` 欄取得所有有效 ID。
 - [ ] 載入時可找出重複 ID，並指出每個重複 ID 所在的 A1 儲存格位置。
 - [ ] 有重複 ID 時不產生 QR Code 預覽、PDF 或直接列印結果。

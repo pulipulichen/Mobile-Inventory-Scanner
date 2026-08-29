@@ -2,6 +2,18 @@
 
 ### Changed
 
+- Standardized both frontend apps on Vuetify 4.x with `vite-plugin-vuetify`
+  for shared, tree-shaken UI components and responsive layouts.
+- Added the bound Apps Script Web App implementation for inventory writes,
+  including JSON `POST` validation, dynamic required-column lookup, duplicate
+  and missing-ID handling, script locking, server-side timestamps, and blank
+  location preservation.
+- Simplified the `print` Google Sheet source flow to use the Google Drive
+  recent-files link and manual URL copy/paste, removing the Google OAuth and
+  Drive API quick-picker requirement.
+- Defined the Podman-based frontend build workflow for producing deployable
+  static `scan/dist/` and `print/dist/` artifacts.
+
 - Updated the frontend architecture guidance to define responsive `print`
   behavior and browser-local vector PDF generation with `pdf-lib`.
 - Clarified the package-first approach for QR Code previews and vector PDF
@@ -15,6 +27,13 @@
 
 ### Documentation
 
+- Added a project roles document describing responsibilities and boundaries for
+  the development environment, CI, static hosting, frontend apps, Google Sheet,
+  and bound Apps Script.
+- Added the frontend build guide with Podman commands, development ports, and
+  static deployment output directories.
+- Updated package and app documentation to record the Vuetify UI boundary,
+  retained native controls, and the revised Google Sheet access workflow.
 - Expanded the Google Sheet setup guide with deployment steps for the Apps
   Script Web App and instructions for obtaining the Sheet URL.
 - Split the Google Sheet and Apps Script URL instructions into dedicated

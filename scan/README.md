@@ -19,27 +19,31 @@
 - TypeScript。
 - Vite。
 - SCSS / Sass。
+- Vuetify 4.x：手機盤點操作介面使用的 UI framework。
+- `vite-plugin-vuetify`：Vite 編譯時按需載入 Vuetify 元件。
 - `vite-plugin-pwa`：產生 PWA manifest / Service Worker。
 - `@undecaf/zbar-wasm`：在瀏覽器本機辨識 QR Code，支援同張圖片多個 QR Code。
 - Google Identity Services：僅在使用「最近使用的 Google Sheet」快速入口時進行 Google OAuth。
 - Google Drive API：列出最近開啟的 Google Sheets，方便快速開啟對應盤點表。
 
-第一版不使用 Vue Router、Pinia、Nuxt 或大型 UI framework。影像只在使用者裝置內處理，不把照片上傳到伺服器。
+第一版不使用 Vue Router、Pinia、Nuxt 或第二套 UI framework。影像只在使用者
+裝置內處理，不把照片上傳到伺服器。
 
-### 編譯方式
+### UI framework 使用範圍
 
-主機只需要安裝 Podman，不要求安裝 Node.js / npm。
+`scan` 的手機優先操作介面統一使用 Vuetify 4.x，包含表單控制項、主要
+操作按鈕、狀態訊息、結果列表、對話框與 responsive layout。元件透過
+`vite-plugin-vuetify` 按需載入；theme 與共用設計 token 集中設定。
 
-```bash
-./frontend.sh image
-./frontend.sh install scan
-./frontend.sh dev scan
-./frontend.sh build scan
-```
+拍照與讀取相片仍必須使用規格指定的原生
+`<input type="file" accept="image/*" capture="environment">`，不可用 UI
+framework 的替代元件破壞 Android Chrome 與 iPhone Safari 的相機入口。
+QR Code 圖片辨識、Apps Script 呼叫與 PWA 行為也不屬於 UI framework 責任。
+所有控制項、動態狀態與錯誤通知仍須符合
+[`accessibility.mdc`](../.cursor/rules/accessibility.mdc) 的鍵盤、焦點、
+live region 與螢幕閱讀器要求。
 
-開發預設網址：`http://localhost:5173`。
-
-正式輸出目錄：`scan/dist/`，可直接部署到 HTTPS 靜態網站，不需要 Node.js runtime。
+編譯方式與部署規範請參考 [`build/README.md`](../build/README.md)。
 
 ---
 
