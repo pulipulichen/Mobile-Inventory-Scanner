@@ -4,17 +4,15 @@ import {
 } from "@undecaf/zbar-wasm";
 import wasmUrl from "@undecaf/zbar-wasm/dist/zbar.wasm?url";
 
-let isConfigured = false;
+setModuleArgs({
+  locateFile: () => wasmUrl,
+});
+
 let barcodeDetector: BarcodeDetector | null | undefined;
 let barcodeDetectorPromise: Promise<BarcodeDetector | null> | null = null;
 
 function configureWasm(): void {
-  if (isConfigured) return;
-
-  setModuleArgs({
-    locateFile: () => wasmUrl,
-  });
-  isConfigured = true;
+  // setModuleArgs is already invoked at module level
 }
 
 function getBarcodeDetector(): Promise<BarcodeDetector | null> {
@@ -112,7 +110,22 @@ export async function decodeQrImageFile(file: File): Promise<string[]> {
   if (!context) throw new Error("IMAGE_READ_FAILED");
 
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  return decodeQrImageData(
+  let ids = await decodeQrImageData(
     context.getImageData(0, 0, canvas.width, canvas.height),
   );
+
+  if (!ids.length && scale < 1) {
+    const fullCanvas = document.createElement("canvas");
+    fullCanvas.width = image.naturalWidth;
+    fullCanvas.height = image.naturalHeight;
+    const fullContext = fullCanvas.getContext("2d", { willReadFrequently: true });
+    if (fullContext) {
+      fullContext.drawImage(image, 0, 0, fullCanvas.width, fullCanvas.height);
+      ids = await decodeQrImageData(
+        fullContext.getImageData(0, 0, fullCanvas.width, fullCanvas.height),
+      );
+    }
+  }
+
+  return ids;
 }

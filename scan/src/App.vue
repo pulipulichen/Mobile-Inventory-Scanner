@@ -15,6 +15,7 @@ import {
   loadPendingInventory,
   postInventoryChecks,
 } from "./services/apps_script";
+import { decodeQrImageFile } from "./services/qr_decoder";
 import {
   loadAppsScriptUrl,
   loadLocation,
@@ -610,7 +611,6 @@ async function handlePhoto(file: File): Promise<void> {
   isPhotoLoading.value = true;
   setStatus("status.photo_recognizing");
   try {
-    const { decodeQrImageFile } = await import("./services/qr_decoder");
     const ids = await decodeQrImageFile(file);
     if (!ids.length) {
       setStatus("status.no_qr_code", {}, "warning");

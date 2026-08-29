@@ -10,6 +10,7 @@ import {
   openRearCamera,
   waitForVideoFrame,
 } from "../services/camera";
+import { decodeQrImageData } from "../services/qr_decoder";
 
 const props = defineProps<{
   videoLabel: string;
@@ -33,13 +34,6 @@ let lastFrameAt = 0;
 let isDecoding = false;
 let lastDecodeErrorAt = 0;
 let focusReticleTimeout = 0;
-let decoderPromise: Promise<typeof import("../services/qr_decoder")> | null =
-  null;
-
-function loadDecoder(): Promise<typeof import("../services/qr_decoder")> {
-  decoderPromise ??= import("../services/qr_decoder");
-  return decoderPromise;
-}
 
 function stopTracks(): void {
   stream?.getTracks().forEach((track) => track.stop());
@@ -81,7 +75,6 @@ async function processFrame(timestamp: number): Promise<void> {
     isDecoding = true;
     try {
       const currentVideo = video.value;
-      const { decodeQrImageData } = await loadDecoder();
       let ids = await decodeQrImageData(
         captureVideoImageData(currentVideo, canvas),
       );

@@ -36,6 +36,9 @@
 
 ## Fixed
 
+- Fixed Vite `504 (Outdated Optimize Dep)` error during photo recognition in `scan`
+  by explicitly configuring `@undecaf/zbar-wasm` in `optimizeDeps.include`, statically
+  importing QR decoder modules, and adding a full-resolution fallback when scaled photo decoding detects no QR codes.
 - Mapped the optional Google Sheet `name` column in Apps Script so pending
   inventory items return their human-readable names instead of repeating the ID.
 - Stopped `scan` results from remaining stuck on “waiting to send” or

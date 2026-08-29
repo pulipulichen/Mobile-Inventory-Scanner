@@ -8,6 +8,9 @@ export default defineConfig({
     vue(),
     vuetify({ autoImport: true }),
   ],
+  optimizeDeps: {
+    include: ["@undecaf/zbar-wasm"],
+  },
   build: {
     rollupOptions: {
       output: {
