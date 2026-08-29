@@ -99,8 +99,8 @@ Mobile-Inventory-Scanner/
 負責手機端圖片辨識與盤點寫入：
 
 - 以手機瀏覽器 / PWA 為主要操作環境。
-- 使用者輸入 Apps Script Web App URL 與目前位置；也可先開啟 Apps Script
-  首頁，選取最近使用的專案後複製 `/exec` 網址。
+- 使用者輸入 Apps Script Web App URL 與目前位置；也可先開啟 Google Drive
+  最近使用的試算表，進入該 Sheet 的 Apps Script 部署後複製 `/exec` 網址。
 - 透過即時後置鏡頭、拍照或相片選擇器取得影像。
 - 在瀏覽器本機辨識影格或圖片中的一個或多個 QR Code。
 - 同一張圖片與同一個掃描 session 中的重複 ID 只送出一次。
@@ -129,7 +129,7 @@ flowchart TB
     I --> K["開始手機盤點"]
 ```
 
-完整的畫面操作與權限設定請依 [`google_sheet/README.md`](../google_sheet/README.md) 執行。`id` 必須視為字串，且在同一張表中唯一。已經部署過的 Apps Script 專案，也可以從 [Apps Script 首頁](https://script.google.com/home) 選取後複製 `/exec` 網址。
+完整的畫面操作與權限設定請依 [`google_sheet/README.md`](../google_sheet/README.md) 執行。`id` 必須視為字串，且在同一張表中唯一。已經部署過的 Apps Script 專案，也可以先從 [Google Drive 最近使用的 Google Sheet](https://drive.google.com/drive/u/0/recent?q=type:spreadsheet) 選取試算表，再進入 Apps Script 複製 `/exec` 網址。
 
 ---
 

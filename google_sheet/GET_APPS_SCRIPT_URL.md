@@ -2,9 +2,9 @@
 
 `scan` 透過 Apps Script Web App 讀取尚未盤點的項目，並將 `id` 與 `location`
 寫回同一份 Google Sheet。建議使用與試算表綁定的 **Bound Script**，讓程式
-可以直接取得目前的 Spreadsheet。若專案已經部署過，也可以先開啟
-[最近使用的 Apps Script](https://script.google.com/home)，選取專案後從
-**Deploy > Manage deployments** 複製結尾為 `/exec` 的 Web app URL。
+可以直接取得目前的 Spreadsheet。若要先找到盤點用試算表，也可以開啟
+[Google Drive 最近使用的 Google Sheet](https://drive.google.com/drive/u/0/recent?q=type:spreadsheet)，
+選取試算表後再進入 **Extensions > Apps Script**。
 
 ## 操作步驟
 

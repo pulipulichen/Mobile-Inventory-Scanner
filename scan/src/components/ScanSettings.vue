@@ -45,9 +45,9 @@ const { t } = useI18n({ useScope: "global" });
             icon="mdi-history"
             color="secondary"
             variant="outlined"
-            :aria-label="t('scan.recent_apps_script')"
-            :title="t('scan.recent_apps_script')"
-            href="https://script.google.com/home"
+            :aria-label="t('scan.recent_sheets')"
+            :title="t('scan.recent_sheets')"
+            href="https://drive.google.com/drive/u/0/recent?q=type:spreadsheet"
             target="_blank"
             rel="noopener noreferrer"
           />
@@ -57,7 +57,7 @@ const { t } = useI18n({ useScope: "global" });
         {{ t("scan.apps_script_url_hint") }}
       </p>
       <p id="recent-apps-script-hint" class="field-description">
-        {{ t("scan.recent_apps_script_hint") }}
+        {{ t("scan.recent_sheets_hint") }}
       </p>
 
       <v-combobox
@@ -66,6 +66,8 @@ const { t } = useI18n({ useScope: "global" });
         :items="locationHistory"
         :label="t('scan.location_label')"
         :placeholder="t('scan.location_placeholder')"
+        menu-icon="mdi-history"
+        persistent-placeholder
         :hint="t('scan.location_hint')"
         autocomplete="off"
         aria-required="true"

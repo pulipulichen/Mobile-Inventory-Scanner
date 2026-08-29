@@ -65,9 +65,8 @@
 - Hid the `scan` camera, pending-inventory, and result UI until both a valid
   Apps Script `/exec` URL and a location are set, and showed an error alert
   for invalid URLs.
-- Added a `scan` Apps Script source action that opens the Apps Script home
-  page so users can copy a deployed `/exec` URL, matching the `print` Google
-  Drive recent-files control.
+- Added a `scan` source action that opens the same Google Drive recent
+  spreadsheets link as `print`.
 - Loaded a saved Google Sheet URL automatically when opening `print`.
 - Kept print settings visible in scan-simulation mode and regenerated QR Codes
   when the label-text setting changes.
@@ -98,7 +97,7 @@
   `print/dist/` and `scan/dist/`.
 - Documented that `print` automatically loads a valid Google Sheet URL and
   keeps the source button for a manual reload.
-- Documented the `scan` Apps Script home-page link for copying a deployed
-  `/exec` URL without Google OAuth or Drive API.
+- Documented the `scan` Google Drive recent-spreadsheets link for finding the
+  Sheet used by the Apps Script deployment without Google OAuth or Drive API.
 - Added illustrated Apps Script deployment and authorization steps, including
   copying the deployed Web App URL back into `scan`.

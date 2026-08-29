@@ -418,6 +418,68 @@ onBeforeUnmount(() => {
         />
       </div>
 
+      <div class="simulation-actions-row">
+        <div class="simulation-action-row">
+          <v-btn
+            type="button"
+            color="secondary"
+            variant="outlined"
+            prepend-icon="mdi-shuffle-variant"
+            :disabled="!canBuildScene"
+            @click="simulation.randomizeScene"
+          >
+            {{ t("simulation.randomize") }}
+          </v-btn>
+          <v-btn
+            type="button"
+            color="secondary"
+            variant="outlined"
+            prepend-icon="mdi-reload"
+            :disabled="!canBuildScene"
+            @click="simulation.rebuildWithSameSeed"
+          >
+            {{ t("simulation.rebuild_same_seed") }}
+          </v-btn>
+        </div>
+
+        <div class="simulation-zoom-controls">
+          <span id="simulation-zoom-label" class="simulation-control-label">
+            {{ t("simulation.zoom") }}: <strong>{{ zoomLabel }}</strong>
+          </span>
+          <v-btn
+            type="button"
+            variant="outlined"
+            size="small"
+            prepend-icon="mdi-minus"
+            :disabled="settings.zoom <= simulation.minZoom"
+            :aria-label="t('simulation.zoom_out')"
+            @click="decreaseZoom"
+          >
+            {{ t("simulation.zoom_out") }}
+          </v-btn>
+          <v-btn
+            type="button"
+            variant="outlined"
+            size="small"
+            prepend-icon="mdi-plus"
+            :disabled="settings.zoom >= simulation.maxZoom"
+            :aria-label="t('simulation.zoom_in')"
+            @click="increaseZoom"
+          >
+            {{ t("simulation.zoom_in") }}
+          </v-btn>
+          <v-btn
+            type="button"
+            variant="text"
+            size="small"
+            :disabled="settings.zoom === 100"
+            @click="resetZoom"
+          >
+            {{ t("simulation.zoom_reset") }}
+          </v-btn>
+        </div>
+      </div>
+
       <div class="simulation-build-row">
         <v-btn
           type="button"
@@ -430,66 +492,6 @@ onBeforeUnmount(() => {
           @click="buildScanScene"
         >
           {{ t("simulation.build_scene") }}
-        </v-btn>
-      </div>
-
-      <div class="simulation-action-row">
-        <v-btn
-          type="button"
-          color="secondary"
-          variant="outlined"
-          prepend-icon="mdi-shuffle-variant"
-          :disabled="!canBuildScene"
-          @click="simulation.randomizeScene"
-        >
-          {{ t("simulation.randomize") }}
-        </v-btn>
-        <v-btn
-          type="button"
-          color="secondary"
-          variant="outlined"
-          prepend-icon="mdi-reload"
-          :disabled="!canBuildScene"
-          @click="simulation.rebuildWithSameSeed"
-        >
-          {{ t("simulation.rebuild_same_seed") }}
-        </v-btn>
-      </div>
-
-      <div class="simulation-zoom-controls">
-        <span id="simulation-zoom-label" class="simulation-control-label">
-          {{ t("simulation.zoom") }}: <strong>{{ zoomLabel }}</strong>
-        </span>
-        <v-btn
-          type="button"
-          variant="outlined"
-          size="small"
-          prepend-icon="mdi-minus"
-          :disabled="settings.zoom <= simulation.minZoom"
-          :aria-label="t('simulation.zoom_out')"
-          @click="decreaseZoom"
-        >
-          {{ t("simulation.zoom_out") }}
-        </v-btn>
-        <v-btn
-          type="button"
-          variant="outlined"
-          size="small"
-          prepend-icon="mdi-plus"
-          :disabled="settings.zoom >= simulation.maxZoom"
-          :aria-label="t('simulation.zoom_in')"
-          @click="increaseZoom"
-        >
-          {{ t("simulation.zoom_in") }}
-        </v-btn>
-        <v-btn
-          type="button"
-          variant="text"
-          size="small"
-          :disabled="settings.zoom === 100"
-          @click="resetZoom"
-        >
-          {{ t("simulation.zoom_reset") }}
         </v-btn>
       </div>
     </div>

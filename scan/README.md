@@ -59,8 +59,8 @@ live region 與螢幕閱讀器要求。
 flowchart TD
     A["手機開啟 scan 網頁 / PWA"] --> B{"取得 Apps Script /exec URL"}
     B -->|"手動輸入"| C["輸入 /exec 網址"]
-    B -->|"開啟最近使用頁面"| D["開啟 Apps Script 首頁"]
-    D --> E["開啟專案並複製 /exec 網址"]
+    B -->|"開啟最近使用頁面"| D["開啟 Google Drive 最近使用的試算表"]
+    D --> E["選取試算表並複製網址"]
     E --> C
     C --> F["輸入或選擇目前 location"]
     F --> G{"選擇掃描方式"}
@@ -118,25 +118,24 @@ https://script.google.com/macros/s/xxxxxxxxxxxxxxxx/exec
 需求：只能使用部署後的 `/exec` 網址，不使用 `/dev` 測試網址；可手動輸入或
 貼上、保存到 `localStorage`、下次自動帶入、呼叫失敗時顯示清楚錯誤。
 `scan` 不提供 Google 登入功能，權限與資料存取由 Apps Script Web App 處理。
-使用者也可以先開啟「最近使用的 Apps Script」連結，選取專案後複製 `/exec`
-網址再貼上。
+使用者也可以先開啟「最近使用的 Google Sheet」連結，選取試算表後複製網址。
 
-### 開啟最近使用的 Apps Script
+### 開啟最近使用的 Google Sheet
 
-`scan` 只提供固定連結開啟 Google Apps Script 首頁，不建立 Google Cloud
-Project、不設定 OAuth Client ID，也不使用 Google Drive API：
+`scan` 提供與 `print` 相同的固定連結開啟 Google Drive 最近使用的試算表，
+不建立 Google Cloud Project、不設定 OAuth Client ID，也不使用 Google Drive API：
 
-[開啟最近使用的 Apps Script](https://script.google.com/home)
+[開啟最近使用的 Google Sheet](https://drive.google.com/drive/u/0/recent?q=type:spreadsheet)
 
 操作步驟：
 
 1. 開啟上方連結。
-2. 在 Apps Script 首頁選取要使用的專案。
-3. 選擇 **Deploy > Manage deployments**，複製結尾為 `/exec` 的 Web app URL。
-4. 回到 `scan`，將網址貼到 Apps Script URL 欄位。
+2. 在 Google Drive 中選取要使用的 Google Sheet。
+3. 進入該 Google Sheet 的 **Extensions > Apps Script**。
+4. 依部署流程取得結尾為 `/exec` 的 Web app URL，貼回 `scan`。
 
-這個連結只負責導覽，不會自動列出專案，也不會自動把 `/exec` URL 帶回
-`scan`；使用者仍可直接手動貼上已知的 `/exec` 網址。
+這個連結只負責導覽，不會自動把網址帶回 `scan`；使用者仍可直接手動貼上
+已知的 Apps Script `/exec` 網址。
 
 ### 目前位置
 
@@ -377,9 +376,9 @@ service / composable。
 - [ ] `./frontend_build.sh` 成功產生 `scan/dist/` 與 `print/dist/`。
 - [ ] 手機可開啟 HTTPS 網頁並安裝成 PWA。
 - [ ] 可輸入並保存 Apps Script Web App URL。
-- [ ] 有「開啟最近使用的 Apps Script」連結。
-- [ ] 連結使用 `https://script.google.com/home`。
-- [ ] 使用者可從 Apps Script 專案複製 `/exec` URL，再貼回 `scan`。
+- [ ] 有「開啟最近使用的 Google Sheet」連結。
+- [ ] 連結使用 `https://drive.google.com/drive/u/0/recent?q=type:spreadsheet`。
+- [ ] 使用者可從 Google Sheet 的 Apps Script 部署複製 `/exec` URL，再貼回 `scan`。
 - [ ] 不需要 Google Cloud Project、OAuth Client ID 或 Google Drive API。
 - [ ] 可輸入並保存目前位置，並有歷史位置下拉選單。
 - [ ] 可啟動後置鏡頭進行即時 QR Code 掃描。
