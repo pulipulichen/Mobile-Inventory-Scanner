@@ -8,6 +8,7 @@ export default {
     chinese: "繁體中文",
     english: "English",
     dismiss: "Dismiss notification",
+    close: "Close",
   },
   scan: {
     app_bar_subtitle: "Mobile QR Code inventory",
@@ -27,6 +28,7 @@ export default {
     confirm_settings_hint:
       "Confirm the Apps Script URL to start scanning; current location is optional. A saved valid URL opens the scan tab automatically.",
     scanner_heading: "Start inventory check",
+    scanner_help: "Scanning instructions",
     scanner_description:
       "Place QR Codes in front of the camera and start scanning. You can also take or choose a photo; multiple QR Codes are supported. After scanning, the app waits 3 seconds with no new IDs, then sends one batch. The same ID is not sent again within 10 seconds.",
     start_camera: "Start scanning",

@@ -86,6 +86,7 @@ type PendingConfirmation = {
 const toastQueue = ref<ToastItem[]>([]);
 const activeToast = ref<ToastItem | null>(null);
 const isToastVisible = ref(false);
+const isScannerHelpOpen = ref(false);
 let resolveActiveToast: (() => void) | null = null;
 let isToastProcessing = false;
 const recentScanAt = new Map<string, number>();
@@ -770,8 +771,45 @@ function handleLocaleChange(event: Event): void {
               aria-labelledby="scanner-heading"
             >
               <div class="section-heading">
-                <h2 id="scanner-heading">{{ t("scan.scanner_heading") }}</h2>
-                <p>{{ t("scan.scanner_description") }}</p>
+                <div class="section-heading-row">
+                  <h2 id="scanner-heading">{{ t("scan.scanner_heading") }}</h2>
+                  <v-dialog
+                    v-model="isScannerHelpOpen"
+                    max-width="32rem"
+                    aria-labelledby="scanner-help-title"
+                  >
+                    <template #activator="{ props: activatorProps }">
+                      <v-btn
+                        v-bind="activatorProps"
+                        class="scanner-help-button"
+                        type="button"
+                        icon="mdi-help-circle-outline"
+                        variant="text"
+                        color="secondary"
+                        :aria-label="t('scan.scanner_help')"
+                        :title="t('scan.scanner_help')"
+                      />
+                    </template>
+                    <v-card>
+                      <v-card-title id="scanner-help-title">
+                        {{ t("scan.scanner_help") }}
+                      </v-card-title>
+                      <v-card-text>
+                        {{ t("scan.scanner_description") }}
+                      </v-card-text>
+                      <v-card-actions>
+                        <v-spacer />
+                        <v-btn
+                          type="button"
+                          variant="text"
+                          @click="isScannerHelpOpen = false"
+                        >
+                          {{ t("common.close") }}
+                        </v-btn>
+                      </v-card-actions>
+                    </v-card>
+                  </v-dialog>
+                </div>
               </div>
 
               <CameraScanner

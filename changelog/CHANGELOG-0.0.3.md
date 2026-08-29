@@ -48,6 +48,8 @@
 - Stopped inserting in-page info banners above the `scan` camera. Queue and
   camera progress stay in a visually hidden live region or a bottom toast, so
   the preview no longer jumps when IDs are added.
+- Moved the `scan` start-inventory instructions behind a help-icon button next
+  to the heading. The previous on-page paragraph now opens in a dialog.
 
 ## Fixed
 

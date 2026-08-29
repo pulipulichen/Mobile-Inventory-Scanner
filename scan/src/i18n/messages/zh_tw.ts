@@ -7,6 +7,7 @@ export default {
     chinese: "繁體中文",
     english: "English",
     dismiss: "關閉提示",
+    close: "關閉",
   },
   scan: {
     app_bar_subtitle: "QR Code 行動盤點",
@@ -26,6 +27,7 @@ export default {
     confirm_settings_hint:
       "確認 Apps Script 網址後即可開始掃描；目前位置可選填。若網址已保存且正確，開啟頁面會自動進入掃描。",
     scanner_heading: "開始盤點",
+    scanner_help: "掃描說明",
     scanner_description:
       "請將 QR Code 放在鏡頭前方並開始掃描，也可以拍照或讀取相片；一次可辨識多個 QR Code。掃描後會等 3 秒沒有新項目，再一次送出。同一 ID 10 秒內不會重複送出。",
     start_camera: "開始掃描",

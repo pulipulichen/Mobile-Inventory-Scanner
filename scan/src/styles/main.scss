@@ -207,6 +207,23 @@ a {
   margin-bottom: 1rem;
 }
 
+.section-heading-row {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.scanner-help-button {
+  flex: 0 0 auto;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+}
+
+.section-heading-row > .v-dialog,
+.section-heading-row > .v-overlay-container {
+  flex: 0 0 auto;
+}
+
 .section-heading h2,
 .section-heading h3 {
   margin: 0;
