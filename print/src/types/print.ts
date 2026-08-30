@@ -124,12 +124,18 @@ export function showsCode128(mode: BarcodeMode): boolean {
   return mode === "code128" || mode === "both";
 }
 
-export function getCode128WidthMm(qrSizeMm: number): number {
+export const BARCODE_STACK_GAP_MM = 2;
+
+export function getCode128WidthMm(
+  qrSizeMm: number,
+  barcodeMode: BarcodeMode,
+): number {
+  if (barcodeMode === "code128") return qrSizeMm;
   return qrSizeMm * 1.8;
 }
 
 export function getCode128HeightMm(qrSizeMm: number): number {
-  return Math.max(12, qrSizeMm * 0.45);
+  return Math.max(12, qrSizeMm * 0.4);
 }
 
 export function isLabelTextMode(value: unknown): value is LabelTextMode {

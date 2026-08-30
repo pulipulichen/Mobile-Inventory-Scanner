@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { createCode128Svg } from "../services/code128_generator";
 import {
+  BARCODE_STACK_GAP_MM,
   getCode128HeightMm,
   getCode128WidthMm,
   getLabelCaption,
@@ -29,19 +30,45 @@ const caption = computed(() =>
 const showText = computed(() => showsLabelText(props.settings.labelText));
 const showQr = computed(() => showsQrCode(props.settings.barcodeMode));
 const showCode128 = computed(() => showsCode128(props.settings.barcodeMode));
-const code128Markup = computed(() =>
-  showCode128.value ? createCode128Svg(props.item.id) : "",
+const code128Markup = computed(() => {
+  if (!showCode128.value) return "";
+  try {
+    return createCode128Svg(props.item.id);
+  } catch {
+    return "";
+  }
+});
+const code128WidthMm = computed(() =>
+  getCode128WidthMm(props.settings.qrSizeMm, props.settings.barcodeMode),
 );
-const code128WidthMm = computed(() => getCode128WidthMm(props.settings.qrSizeMm));
-const code128HeightMm = computed(() => getCode128HeightMm(props.settings.qrSizeMm));
-const accessibleName = computed(() =>
-  props.item.name
+const code128HeightMm = computed(() =>
+  getCode128HeightMm(props.settings.qrSizeMm),
+);
+const accessibleName = computed(() => {
+  const named = Boolean(props.item.name);
+  if (showQr.value && showCode128.value) {
+    return named
+      ? t("print.symbol_label_with_name", {
+          id: props.item.id,
+          name: props.item.name,
+        })
+      : t("print.symbol_label", { id: props.item.id });
+  }
+  if (showCode128.value) {
+    return named
+      ? t("print.code128_label_with_name", {
+          id: props.item.id,
+          name: props.item.name,
+        })
+      : t("print.code128_label", { id: props.item.id });
+  }
+  return named
     ? t("print.qr_label_with_name", {
         id: props.item.id,
         name: props.item.name,
       })
-    : t("print.qr_label", { id: props.item.id }),
-);
+    : t("print.qr_label", { id: props.item.id });
+});
 </script>
 
 <template>
@@ -62,7 +89,7 @@ const accessibleName = computed(() =>
       v-if="showQr"
       class="qr-image"
       role="img"
-      :aria-label="`QR Code: ${item.id}`"
+      :aria-label="t('print.qr_label', { id: item.id })"
       :style="{
         width: `${settings.qrSizeMm}mm`,
         height: `${settings.qrSizeMm}mm`,
@@ -71,14 +98,14 @@ const accessibleName = computed(() =>
       v-html="svgMarkup"
     />
     <div
-      v-if="showCode128"
+      v-if="showCode128 && code128Markup"
       class="code128-image"
       role="img"
-      :aria-label="`Code 128: ${item.id}`"
+      :aria-label="t('print.code128_label', { id: item.id })"
       :style="{
         width: `${code128WidthMm}mm`,
         height: `${code128HeightMm}mm`,
-        marginTop: showQr ? '2mm' : '0',
+        marginTop: showQr ? `${BARCODE_STACK_GAP_MM}mm` : '0',
         flex: '0 0 auto',
       }"
       v-html="code128Markup"

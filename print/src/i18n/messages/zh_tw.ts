@@ -12,7 +12,7 @@ export default {
   print: {
     page_title: "QR Code 標籤產生器",
     subtitle:
-      "從 Google Sheet 讀取盤點 ID，依選定紙張排列標籤，並下載向量 PDF。",
+      "從 Google Sheet 讀取盤點 ID，依選定紙張排列 QR Code 或 Code 128 標籤，並下載向量 PDF。",
     source_heading: "1. Google Sheet 資料來源",
     sheet_url_label: "Google Sheet 網址",
     sheet_url_hint:
@@ -27,11 +27,23 @@ export default {
     settings_heading: "2. 列印設定",
     settings_hint: "設定會保存於此瀏覽器，修改後立即更新 PDF 預覽與掃描模擬標籤。",
     qr_size: "QR Code 尺寸",
-    qr_size_hint: "每張 QR Code 的實體尺寸。",
+    qr_size_hint: "每張 QR Code 的實體邊長。",
+    qr_size_hint_with_code128:
+      "QR Code 的實體邊長。Code 128 寬度會依此尺寸自動加寬，方便掃描。",
+    code128_size: "條碼寬度",
+    code128_size_hint: "每張 Code 128 條碼的實體寬度。高度會依寬度自動換算。",
+    barcode_mode: "條碼格式",
+    barcode_mode_hint: "可單獨列印 QR Code、Code 128，或兩者同時列印。",
+    barcode_mode_qr: "QR Code",
+    barcode_mode_code128: "Code 128",
+    barcode_mode_both: "QR Code + Code 128",
     id_font_size: "文字大小",
     id_font_size_hint: "印在 QR Code 下方的文字大小。",
+    code128_font_size_hint: "印在條碼下方的文字大小。",
     qr_text_gap: "QR／文字間距",
     qr_text_gap_hint: "QR Code 與標籤文字之間的距離。",
+    code128_text_gap: "條碼／文字間距",
+    code128_text_gap_hint: "條碼與標籤文字之間的距離。",
     label_gap: "標籤間距",
     label_gap_hint: "相鄰標籤之間的距離。",
     page_margin: "頁面邊界",
@@ -44,6 +56,7 @@ export default {
     orientation_landscape: "橫向",
     label_text: "標籤文字",
     label_text_hint: "QR Code 下方可顯示 ID、名稱，或不顯示文字。沒有名稱時改顯示 ID。",
+    code128_label_text_hint: "條碼下方可顯示 ID、名稱，或不顯示文字。沒有名稱時改顯示 ID。",
     label_text_hidden: "不顯示",
     label_text_id: "ID",
     label_text_name: "名稱",
@@ -66,8 +79,18 @@ export default {
     page: "第 {page} 頁，共 {pages} 頁",
     qr_label: "ID {id} 的 QR Code",
     qr_label_with_name: "ID {id}，名稱 {name} 的 QR Code",
+    code128_label: "ID {id} 的 Code 128 條碼",
+    code128_label_with_name: "ID {id}，名稱 {name} 的 Code 128 條碼",
+    symbol_label: "ID {id} 的 QR Code 與 Code 128 條碼",
+    symbol_label_with_name: "ID {id}，名稱 {name} 的 QR Code 與 Code 128 條碼",
     download_pdf: "下載 PDF",
     pdf_filename: "inventory-qr-labels",
+    pdf_filename_code128: "inventory-code128-labels",
+    pdf_filename_both: "inventory-labels",
+    code128_unsupported_heading: "有 ID 無法編碼成 Code 128，暫停產生 PDF",
+    code128_unsupported_description:
+      "Code 128 只支援英數與常見符號。請改用 QR Code，或把這些 ID 改成可編碼的字元後重新載入。",
+    code128_unsupported_item: "{id}",
     footer_note:
       "PDF 在瀏覽器本機產生；本工具不會上傳你的 Sheet 資料。",
   },
@@ -99,6 +122,8 @@ export default {
     source_duplicates: "載入的 Sheet 有重複 ID，已停用掃描模擬。",
     source_qr_loading: "正在依列印設定更新 QR Code，請稍候。",
     source_qr_error: "部分 QR Code 產生失敗，已停用掃描模擬。",
+    source_code128_error:
+      "載入的 Sheet 有 ID 無法編碼成 Code 128，已停用掃描模擬。",
     ready: "選擇場景設定後，按下「建立場景」。",
     no_items: "目前沒有可用的有效 ID 可建立掃描場景。",
     scene_created: "掃描場景建立完成，共顯示 {count} 個 QR Code。",
@@ -140,6 +165,11 @@ export default {
       "Sheet 中沒有有效的非空 ID。",
     QR_GENERATION_FAILED:
       "QR Code 產生失敗，請重新讀取 Sheet 或稍後再試。",
+    CODE128_EMPTY: "ID 不可為空白，無法產生 Code 128。",
+    CODE128_UNSUPPORTED_CHARACTER:
+      "此 ID 含有 Code 128 不支援的字元。請改用 QR Code，或改成英數與常見符號。",
+    CODE128_ENCODING_FAILED:
+      "Code 128 產生失敗，請重新讀取 Sheet 或稍後再試。",
     SIMULATION_INVALID_ITEM_COUNT: "請選擇支援的 QR Code 數量。",
     SIMULATION_INVALID_QR_SIZE:
       "QR Code 尺寸必須介於 48 px 與 480 px 之間。",

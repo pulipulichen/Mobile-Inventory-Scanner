@@ -12,7 +12,7 @@ export default {
   print: {
     page_title: "QR Code label generator",
     subtitle:
-      "Load inventory IDs from Google Sheets, arrange labels for the selected paper size, and download a vector PDF.",
+      "Load inventory IDs from Google Sheets, arrange QR Code or Code 128 labels for the selected paper size, and download a vector PDF.",
     source_heading: "1. Google Sheet source",
     sheet_url_label: "Google Sheet URL",
     sheet_url_hint:
@@ -28,11 +28,25 @@ export default {
     settings_hint:
       "Changes are saved in this browser and update the PDF preview and scan-simulation labels immediately.",
     qr_size: "QR Code size",
-    qr_size_hint: "Physical size of each QR Code.",
+    qr_size_hint: "Physical edge length of each QR Code.",
+    qr_size_hint_with_code128:
+      "Physical edge length of each QR Code. Code 128 width is derived from this size so the barcode stays scannable.",
+    code128_size: "Barcode width",
+    code128_size_hint:
+      "Physical width of each Code 128 barcode. Height is calculated from the width.",
+    barcode_mode: "Barcode format",
+    barcode_mode_hint:
+      "Print QR Codes, Code 128 barcodes, or both on each label.",
+    barcode_mode_qr: "QR Code",
+    barcode_mode_code128: "Code 128",
+    barcode_mode_both: "QR Code + Code 128",
     id_font_size: "Text size",
     id_font_size_hint: "Text size printed below the QR Code.",
+    code128_font_size_hint: "Text size printed below the barcode.",
     qr_text_gap: "QR / text gap",
     qr_text_gap_hint: "Space between the QR Code and its label text.",
+    code128_text_gap: "Barcode / text gap",
+    code128_text_gap_hint: "Space between the barcode and its label text.",
     label_gap: "Label gap",
     label_gap_hint: "Space between adjacent labels.",
     page_margin: "Page margin",
@@ -46,6 +60,8 @@ export default {
     label_text: "Label text",
     label_text_hint:
       "Show the ID, the name, or no text below each QR Code. Empty names fall back to the ID.",
+    code128_label_text_hint:
+      "Show the ID, the name, or no text below each barcode. Empty names fall back to the ID.",
     label_text_hidden: "Hidden",
     label_text_id: "ID",
     label_text_name: "Name",
@@ -68,8 +84,20 @@ export default {
     page: "Page {page} of {pages}",
     qr_label: "QR Code for ID {id}",
     qr_label_with_name: "QR Code for ID {id}, name {name}",
+    code128_label: "Code 128 barcode for ID {id}",
+    code128_label_with_name: "Code 128 barcode for ID {id}, name {name}",
+    symbol_label: "QR Code and Code 128 barcode for ID {id}",
+    symbol_label_with_name:
+      "QR Code and Code 128 barcode for ID {id}, name {name}",
     download_pdf: "Download PDF",
     pdf_filename: "inventory-qr-labels",
+    pdf_filename_code128: "inventory-code128-labels",
+    pdf_filename_both: "inventory-labels",
+    code128_unsupported_heading:
+      "Some IDs cannot be encoded as Code 128, so PDF generation is paused",
+    code128_unsupported_description:
+      "Code 128 only supports ASCII letters, numbers, and common symbols. Switch to QR Code, or change these IDs and reload the Sheet.",
+    code128_unsupported_item: "{id}",
     footer_note:
       "PDF is generated locally in your browser. Your Sheet data is not uploaded to this app.",
   },
@@ -104,6 +132,8 @@ export default {
       "QR Codes are being updated to match the print settings. Please wait.",
     source_qr_error:
       "Scan simulation is disabled because one or more QR Codes could not be generated.",
+    source_code128_error:
+      "Scan simulation is disabled because one or more IDs cannot be encoded as Code 128.",
     ready: "Choose the scene settings, then select “Build scene”.",
     no_items: "There are no valid IDs available for the scan scene.",
     scene_created: "Scan scene built with {count} QR Codes.",
@@ -147,6 +177,11 @@ export default {
       "The Sheet contains no valid, non-empty IDs.",
     QR_GENERATION_FAILED:
       "QR Code generation failed. Reload the Sheet or try again later.",
+    CODE128_EMPTY: "The ID is empty, so a Code 128 barcode cannot be generated.",
+    CODE128_UNSUPPORTED_CHARACTER:
+      "This ID contains characters that Code 128 cannot encode. Switch to QR Code, or use letters, numbers, and common symbols.",
+    CODE128_ENCODING_FAILED:
+      "Code 128 generation failed. Reload the Sheet or try again later.",
     SIMULATION_INVALID_ITEM_COUNT:
       "Choose a supported QR Code count.",
     SIMULATION_INVALID_QR_SIZE:

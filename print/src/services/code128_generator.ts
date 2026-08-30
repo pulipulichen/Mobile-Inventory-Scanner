@@ -1,3 +1,18 @@
+export type Code128ErrorCode =
+  | "CODE128_EMPTY"
+  | "CODE128_UNSUPPORTED_CHARACTER"
+  | "CODE128_ENCODING_FAILED";
+
+export class Code128GeneratorError extends Error {
+  constructor(
+    public readonly code: Code128ErrorCode,
+    cause?: unknown,
+  ) {
+    super(code, { cause });
+    this.name = "Code128GeneratorError";
+  }
+}
+
 const CODE128_PATTERNS = [
   "212222", "222122", "222221", "121223", "121322", "131222", "122213", "122312",
   "132212", "221213", "221312", "231212", "112232", "122132", "122231", "113222",
@@ -19,13 +34,33 @@ const CODE_B_START = 104;
 const STOP_CODE = 106;
 const QUIET_ZONE_MODULES = 10;
 
+export interface Code128Bar {
+  x: number;
+  width: number;
+}
+
+export interface Code128Layout {
+  bars: Code128Bar[];
+  totalWidth: number;
+}
+
+export function canEncodeCode128(value: string): boolean {
+  return (
+    value.length > 0 &&
+    [...value].every((character) => {
+      const codePoint = character.codePointAt(0) ?? -1;
+      return codePoint >= 32 && codePoint <= 126;
+    })
+  );
+}
+
 function encodeCode128B(value: string): number[] {
-  if (!value.length) throw new Error("CODE128_EMPTY");
+  if (!value.length) throw new Code128GeneratorError("CODE128_EMPTY");
 
   const dataCodes = [...value].map((character) => {
     const codePoint = character.codePointAt(0) ?? -1;
     if (codePoint < 32 || codePoint > 126) {
-      throw new Error("CODE128_UNSUPPORTED_CHARACTER");
+      throw new Code128GeneratorError("CODE128_UNSUPPORTED_CHARACTER");
     }
     return codePoint - 32;
   });
@@ -38,14 +73,14 @@ function encodeCode128B(value: string): number[] {
   return [CODE_B_START, ...dataCodes, checksum, STOP_CODE];
 }
 
-function buildBars(value: string): { x: number; width: number }[] {
+export function createCode128Layout(value: string): Code128Layout {
   const codes = encodeCode128B(value);
-  const bars: { x: number; width: number }[] = [];
+  const bars: Code128Bar[] = [];
   let x = QUIET_ZONE_MODULES;
 
   codes.forEach((code) => {
     const pattern = CODE128_PATTERNS[code];
-    if (!pattern) throw new Error("CODE128_ENCODING_FAILED");
+    if (!pattern) throw new Code128GeneratorError("CODE128_ENCODING_FAILED");
 
     [...pattern].forEach((digit, index) => {
       const width = Number(digit);
@@ -54,16 +89,14 @@ function buildBars(value: string): { x: number; width: number }[] {
     });
   });
 
-  return bars;
+  return {
+    bars,
+    totalWidth: x + QUIET_ZONE_MODULES,
+  };
 }
 
 export function createCode128Svg(value: string): string {
-  const bars = buildBars(value);
-  const contentWidth = bars.reduce(
-    (max, bar) => Math.max(max, bar.x + bar.width),
-    QUIET_ZONE_MODULES,
-  );
-  const totalWidth = contentWidth + QUIET_ZONE_MODULES;
+  const { bars, totalWidth } = createCode128Layout(value);
   const rects = bars
     .map(
       (bar) =>
@@ -72,42 +105,4 @@ export function createCode128Svg(value: string): string {
     .join("");
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalWidth} 60" preserveAspectRatio="none" width="100%" height="100%" role="img"><rect width="100%" height="100%" fill="#fff"/>${rects}</svg>`;
-}
-
-export async function createCode128PngBytes(
-  value: string,
-  widthPx = 720,
-  heightPx = 180,
-): Promise<Uint8Array> {
-  const svgMarkup = createCode128Svg(value);
-  const blob = new Blob([svgMarkup], { type: "image/svg+xml;charset=utf-8" });
-  const objectUrl = URL.createObjectURL(blob);
-
-  try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const candidate = new Image();
-      candidate.onload = () => resolve(candidate);
-      candidate.onerror = () => reject(new Error("CODE128_RENDER_FAILED"));
-      candidate.src = objectUrl;
-    });
-
-    const canvas = document.createElement("canvas");
-    canvas.width = widthPx;
-    canvas.height = heightPx;
-    const context = canvas.getContext("2d", { alpha: false });
-    if (!context) throw new Error("CODE128_RENDER_FAILED");
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, widthPx, heightPx);
-    context.drawImage(image, 0, 0, widthPx, heightPx);
-
-    const pngBlob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob((result) => {
-        if (result) resolve(result);
-        else reject(new Error("CODE128_RENDER_FAILED"));
-      }, "image/png");
-    });
-    return new Uint8Array(await pngBlob.arrayBuffer());
-  } finally {
-    URL.revokeObjectURL(objectUrl);
-  }
 }

@@ -1,7 +1,7 @@
 # QR Code PDF 產生功能規格
 
-本目錄負責從 Google Sheet 讀取盤點項目，產生 QR Code 標籤 PDF 檔案。
-`print` 是獨立網頁，只負責產生 QR Code 標籤與 PDF，不包含掃描或盤點功能。
+本目錄負責從 Google Sheet 讀取盤點項目，產生 QR Code 或 Code 128 標籤 PDF 檔案。
+`print` 是獨立網頁，只負責產生標籤與 PDF，不包含掃描或盤點功能。
 它以電腦為主要操作環境，但必須支援平板與手機 RWD。
 
 共通流程以 [`docs/architecture.md`](../docs/architecture.md) 為準，套件
@@ -62,9 +62,9 @@ flowchart TB
     C --> F["有效網址自動下載 CSV 並分析 id 欄"]
     F --> G["檢查空白與重複 ID"]
     G -->|"有重複"| H["指出重複 ID 與 A1 儲存格位置"]
-    G -->|"無重複"| I["設定 QR Code / 紙張參數"]
+    G -->|"無重複"| I["設定條碼格式、QR Code / 紙張參數"]
     I --> J["產生 responsive 預覽"]
-    J --> K["qrcode 產生 QR Code"]
+    J --> K["產生 QR Code 與／或 Code 128"]
     K --> L["pdf-lib 產生向量 PDF"]
     L --> M["下載 .pdf 檔案"]
 ```
@@ -160,7 +160,7 @@ QR Code 預設在下方顯示同一筆 ID 的可讀文字；使用者可改顯�
 
 ### 列印參數
 
-第一版至少提供：紙張尺寸（A4、A3、A5、B4、B5，預設 A4）、紙張方向（直向 / 橫向）、標籤文字（不顯示 / ID / name）、QR Code 尺寸、文字大小、QR Code 與文字間距、標籤間距、頁面邊界。B 系列使用台灣常用的 JIS 尺寸。
+第一版至少提供：條碼格式（QR Code / Code 128 / 兩者，預設 QR Code）、紙張尺寸（A4、A3、A5、B4、B5，預設 A4）、紙張方向（直向 / 橫向）、標籤文字（不顯示 / ID / name）、QR Code 尺寸或 Code 128 寬度、文字大小、圖碼與文字間距、標籤間距、頁面邊界。B 系列使用台灣常用的 JIS 尺寸。
 
 所有參數修改後立即更新預覽，或提供明確「更新預覽」，並保存到 `localStorage`。
 
@@ -182,6 +182,7 @@ mis.print.label_gap_mm
 mis.print.page_margin_mm
 mis.print.orientation
 mis.print.label_text
+mis.print.barcode_mode
 ```
 
 可提供「重設為預設值」清除本頁設定。
@@ -228,6 +229,7 @@ PDF 產生器必須：
 - 使用選定紙張的實體尺寸與 `mm` / `pt` 轉換。
 - 依預覽使用的同一組版面參數計算欄列、間距與換頁。
 - 以 `qrcode` 的 QR matrix 繪製向量模組，保留足夠 quiet zone。
+- 以 Code 128 模組寬度繪製向量長條；不把條碼轉成 PNG 再嵌入 PDF。
 - 依標籤文字設定，在 QR Code 下方繪製 ID 或 name；QR Code payload 一律使用
   ID。選擇不顯示時不把文字畫進 PDF。中文 name 使用內嵌的 Noto Sans TC。
 - 確保每個標籤完整位於單一頁面內。

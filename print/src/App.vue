@@ -16,9 +16,12 @@ import { usePrintSettings } from "./composables/use_print_settings";
 import type { SimulationSourceState } from "./composables/use_scan_simulation";
 import { setLocale, type SupportedLocale } from "./i18n";
 import { createQrSvg, QrGeneratorError } from "./services/qr_generator";
+import { canEncodeCode128 } from "./services/code128_generator";
 import { readSheet, SheetSourceError } from "./services/sheet_source";
 import {
   getQrPayload,
+  showsCode128,
+  showsQrCode,
   type InventoryItem,
   type LayoutMetrics,
   type PrintMode,
@@ -64,13 +67,25 @@ const metrics = computed<LayoutMetrics>(() =>
 const duplicateGroups = computed(
   () => sheetData.value?.duplicateGroups ?? [],
 );
+const uniqueIds = computed(
+  () => new Set((sheetData.value?.items ?? []).map((item) => item.id)),
+);
+const code128UnsupportedIds = computed(() => {
+  if (!showsCode128(settings.barcodeMode) || !sheetData.value) return [];
+  return [...uniqueIds.value].filter((id) => !canEncodeCode128(id));
+});
+const qrReady = computed(
+  () =>
+    !showsQrCode(settings.barcodeMode) ||
+    Object.keys(qrSvgs.value).length === uniqueIds.value.size,
+);
 const canDownload = computed(
   () =>
     Boolean(sheetData.value) &&
     duplicateGroups.value.length === 0 &&
+    code128UnsupportedIds.value.length === 0 &&
     sheetData.value!.items.length > 0 &&
-    Object.keys(qrSvgs.value).length ===
-      new Set(sheetData.value!.items.map((item) => item.id)).size &&
+    qrReady.value &&
     !isLoading.value &&
     !isGeneratingQr.value &&
     !isGeneratingPdf.value,
@@ -78,10 +93,10 @@ const canDownload = computed(
 const simulationSourceState = computed<SimulationSourceState>(() => {
   if (!sheetData.value) return "not_loaded";
   if (duplicateGroups.value.length > 0) return "duplicates";
+  if (code128UnsupportedIds.value.length > 0) return "code128_error";
   if (isGeneratingQr.value) return "qr_loading";
-  const uniqueIds = new Set(sheetData.value.items.map((item) => item.id));
-  if (uniqueIds.size === 0) return "not_loaded";
-  if (Object.keys(qrSvgs.value).length !== uniqueIds.size) return "qr_error";
+  if (uniqueIds.value.size === 0) return "not_loaded";
+  if (!qrReady.value) return "qr_error";
   return "ready";
 });
 const canUseSimulation = computed(
@@ -116,7 +131,8 @@ watch(canUseSimulation, (available) => {
 
 function setError(error: unknown): void {
   const code =
-    error instanceof SheetSourceError || error instanceof QrGeneratorError
+    error instanceof SheetSourceError ||
+    error instanceof QrGeneratorError
       ? error.code
       : "UNKNOWN";
   lastErrorCode.value = code;
@@ -143,6 +159,10 @@ let qrGenerationVersion = 0;
 async function refreshQrSvgs(
   items: InventoryItem[],
 ): Promise<boolean> {
+  if (!showsQrCode(settings.barcodeMode)) {
+    return true;
+  }
+
   const generationVersion = ++qrGenerationVersion;
   isGeneratingQr.value = true;
 
@@ -279,7 +299,13 @@ async function downloadPdf(): Promise<void> {
   if (!canDownload.value || !sheetData.value) return;
 
   const date = new Date().toISOString().slice(0, 10);
-  const filename = `${t("print.pdf_filename")}-${date}.pdf`;
+  const filenameKey =
+    settings.barcodeMode === "code128"
+      ? "print.pdf_filename_code128"
+      : settings.barcodeMode === "both"
+        ? "print.pdf_filename_both"
+        : "print.pdf_filename";
+  const filename = `${t(filenameKey)}-${date}.pdf`;
   const saveTarget = await chooseSaveTarget(
     filename,
     t("print.download_pdf"),
@@ -330,6 +356,16 @@ watch(
     scheduleSheetLoad(previousValue === undefined);
   },
   { immediate: true },
+);
+
+watch(
+  () => settings.barcodeMode,
+  () => {
+    if (!sheetData.value || duplicateGroups.value.length > 0) return;
+    if (!showsQrCode(settings.barcodeMode)) return;
+    if (qrReady.value) return;
+    void refreshQrSvgs(sheetData.value.items);
+  },
 );
 
 onUnmounted(() => {
@@ -432,6 +468,23 @@ onUnmounted(() => {
             </dl>
           </v-card-text>
         </v-card>
+
+        <v-alert
+          v-if="code128UnsupportedIds.length"
+          class="duplicate-alert"
+          type="warning"
+          variant="tonal"
+          role="alert"
+          aria-live="assertive"
+        >
+          <h2 class="alert-heading">{{ t("print.code128_unsupported_heading") }}</h2>
+          <p>{{ t("print.code128_unsupported_description") }}</p>
+          <ul class="duplicate-list">
+            <li v-for="id in code128UnsupportedIds" :key="id">
+              {{ t("print.code128_unsupported_item", { id }) }}
+            </li>
+          </ul>
+        </v-alert>
 
         <v-alert
           v-if="duplicateGroups.length"

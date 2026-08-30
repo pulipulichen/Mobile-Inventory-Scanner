@@ -4,6 +4,7 @@ import {
   MIN_SIMULATION_QR_SIZE_PX,
   MIN_SIMULATION_ZOOM,
   SIMULATION_ITEM_COUNTS,
+  showsQrCode,
   type InventoryItem,
   type PrintSettings,
   type SceneLayout,
@@ -159,8 +160,10 @@ function layoutScreen(
   const layoutItems: SceneLayoutItem[] = [];
 
   items.forEach((item) => {
-    const svgMarkup = qrSvgs[item.id];
-    if (!svgMarkup) throw new SceneLayoutError("QR_GENERATION_FAILED");
+    const svgMarkup = qrSvgs[item.id] ?? "";
+    if (showsQrCode(printSettings.barcodeMode) && !svgMarkup) {
+      throw new SceneLayoutError("QR_GENERATION_FAILED");
+    }
 
     const qrSizePx = Math.round(
       settings.minQrSizePx +

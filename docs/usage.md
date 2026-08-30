@@ -2,7 +2,7 @@
 
 Mobile Inventory Scanner 是一套以 Google Sheet 管理盤點資料的 QR Code 盤點工具，包含兩個獨立網頁：
 
-- `print`：從 Google Sheet 讀取 ID，產生 QR Code 標籤 PDF。
+- `print`：從 Google Sheet 讀取 ID，產生 QR Code 或 Code 128 標籤 PDF。
 - `scan`：使用手機相機、照片或刷槍輸入 ID，將盤點時間與位置寫回 Google Sheet。
 
 兩個網頁都在瀏覽器本機執行，不需要另外安裝手機 App，也不需要自建後端。
@@ -26,7 +26,7 @@ Mobile Inventory Scanner 是一套以 Google Sheet 管理盤點資料的 QR Code
 flowchart TD
     sheet[("Google Sheet")]
     print["print"]
-    pdf["QR Code PDF"]
+    pdf["QR / Code 128 PDF"]
     scan["scan"]
     exec["Bound Apps Script /exec URL"]
 
@@ -111,7 +111,7 @@ https://script.google.com/macros/s/<DEPLOYMENT_ID>/exec
 
 ---
 
-## 4. 產生 QR Code 標籤
+## 4. 產生標籤 PDF
 
 ### 4.1 開啟 `print`
 
@@ -144,33 +144,37 @@ A01：A2、A8、A14
 
 | 設定 | 說明 |
 | --- | --- |
+| 條碼格式 | QR Code、Code 128，或兩者同時列印 |
 | 紙張尺寸 | A4、A3、A5、B4、B5 |
 | 紙張方向 | 直向或橫向 |
-| QR Code 尺寸 | QR Code 的實體尺寸，單位為 mm |
+| QR Code 尺寸 / 條碼寬度 | QR Code 的實體邊長，或 Code 128 的實體寬度，單位為 mm |
 | 標籤文字 | 不顯示、顯示 ID，或顯示名稱 |
-| 文字大小 | QR Code 下方文字的大小，單位為 pt |
-| QR／文字間距 | QR Code 與文字之間的距離 |
+| 文字大小 | 圖碼下方文字的大小，單位為 pt |
+| QR／文字間距 | QR Code 或條碼與文字之間的距離 |
 | 標籤間距 | 相鄰標籤之間的距離 |
 | 頁面邊界 | 標籤與紙張邊緣之間的距離 |
 
 建議第一次使用時：
 
 - 紙張選擇實際使用的尺寸，通常為 A4。
-- QR Code 先使用預設尺寸。
+- 條碼格式先使用 QR Code；若要用刷槍或一維條碼掃描，再改為 Code 128。
+- QR Code 或條碼寬度先使用預設尺寸。
 - 標籤文字選擇「ID」或「名稱」，方便紙本人工辨識。
-- 確認預覽中的 QR Code 與文字位於同一個標籤內。
+- 確認預覽中的圖碼與文字位於同一個標籤內。
 
 所有設定會保存於目前瀏覽器。
 
 ### 4.5 檢查預覽與下載 PDF
 
 1. 在「預覽」區確認標籤總數、每列數量、每頁列數與總頁數。
-2. 確認每個 QR Code 下方的 ID 或名稱與預期相符。
+2. 確認每個標籤的 QR Code 或 Code 128 下方的 ID 或名稱與預期相符。
 3. 按「下載 PDF」。
 4. 開啟下載的 PDF，檢查頁面方向與標籤排列。
 5. 以實際印表機或影印店使用 100% 原尺寸列印，不要讓列印程式自動縮放。
 
-`print` 產生的是向量 PDF，不會直接控制實體印表機。列印完成後，請確認紙本 QR Code 附近仍有可閱讀的 ID 或名稱；不要只依賴 QR Code 判斷項目。
+`print` 產生的是向量 PDF，不會直接控制實體印表機。列印完成後，請確認紙本 QR Code 或條碼附近仍有可閱讀的 ID 或名稱；不要只依賴圖碼判斷項目。
+
+Code 128 只支援英數與常見符號。若 ID 含有中文或其他不支援字元，請改用 QR Code，或先修正 Google Sheet 中的 ID。
 
 ![](Attachments/Pasted%20image%2020260830020251.png)
 

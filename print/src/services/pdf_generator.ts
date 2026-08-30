@@ -1,6 +1,7 @@
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import fontkit from "pdflib-fontkit";
 import {
+  BARCODE_STACK_GAP_MM,
   getCode128HeightMm,
   getCode128WidthMm,
   getLabelCaption,
@@ -13,7 +14,7 @@ import {
   type PrintSettings,
 } from "../types/print";
 import { calculateLayout, getPageItems } from "../utils/print_layout";
-import { createCode128PngBytes } from "./code128_generator";
+import { createCode128Layout } from "./code128_generator";
 import { createQrMatrix } from "./qr_generator";
 import notoSansTcUrl from "../assets/fonts/noto_sans_tc_regular.otf?url";
 
@@ -32,7 +33,6 @@ const POINTS_PER_MM = 72 / 25.4;
 const BLACK = rgb(0, 0, 0);
 const WHITE = rgb(1, 1, 1);
 const MIN_CAPTION_SIZE_PT = 6;
-const BARCODE_STACK_GAP_MM = 2;
 const LABEL_GRID_COLOR = rgb(203 / 255, 213 / 255, 225 / 255);
 const LABEL_GRID_WIDTH_PT = mmToPoints(0.2);
 const LABEL_GRID_DASH_PT = [mmToPoints(1), mmToPoints(1)];
@@ -66,17 +66,32 @@ async function embedLabelFont(
   return document.embedFont(fontBytes, { subset: true });
 }
 
-async function embedCode128Images(
-  document: PDFDocument,
-  items: InventoryItem[],
-): Promise<Map<string, PDFImage>> {
-  const images = new Map<string, PDFImage>();
-  const uniqueIds = [...new Set(items.map((item) => item.id))];
-  for (const id of uniqueIds) {
-    const pngBytes = await createCode128PngBytes(id);
-    images.set(id, await document.embedPng(pngBytes));
-  }
-  return images;
+function drawCode128(
+  page: PDFPage,
+  value: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): void {
+  const { bars, totalWidth } = createCode128Layout(value);
+  const moduleWidth = width / totalWidth;
+  page.drawRectangle({
+    x,
+    y,
+    width,
+    height,
+    color: WHITE,
+  });
+  bars.forEach((bar) => {
+    page.drawRectangle({
+      x: x + bar.x * moduleWidth,
+      y,
+      width: bar.width * moduleWidth,
+      height,
+      color: BLACK,
+    });
+  });
 }
 
 export async function generatePdf(
@@ -93,9 +108,6 @@ export async function generatePdf(
   const font = showText
     ? await embedLabelFont(document, captions)
     : await document.embedFont(StandardFonts.Helvetica);
-  const code128Images = showCode128
-    ? await embedCode128Images(document, items)
-    : new Map<string, PDFImage>();
   const metrics = calculateLayout(settings, items.length);
   const pages = getPageItems(items, metrics);
   const fontSize = settings.idFontSizePt;
@@ -114,7 +126,9 @@ export async function generatePdf(
     const labelGap = mmToPoints(settings.labelGapMm);
     const labelPadding = mmToPoints(metrics.labelPaddingMm);
     const qrSize = mmToPoints(settings.qrSizeMm);
-    const code128Width = mmToPoints(getCode128WidthMm(settings.qrSizeMm));
+    const code128Width = mmToPoints(
+      getCode128WidthMm(settings.qrSizeMm, settings.barcodeMode),
+    );
     const code128Height = mmToPoints(getCode128HeightMm(settings.qrSizeMm));
     const barcodeStackGap = mmToPoints(BARCODE_STACK_GAP_MM);
     const textHeight = showText ? mmToPoints(metrics.textHeightMm) : 0;
@@ -142,15 +156,14 @@ export async function generatePdf(
       });
 
       if (showCode128) {
-        const image = code128Images.get(item.id);
-        if (image) {
-          page.drawImage(image, {
-            x: x + (labelWidth - code128Width) / 2,
-            y: barcodeBaseY,
-            width: code128Width,
-            height: code128Height,
-          });
-        }
+        drawCode128(
+          page,
+          item.id,
+          x + (labelWidth - code128Width) / 2,
+          barcodeBaseY,
+          code128Width,
+          code128Height,
+        );
       }
 
       if (showQr) {

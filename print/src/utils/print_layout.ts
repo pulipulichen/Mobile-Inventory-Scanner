@@ -1,4 +1,5 @@
 import {
+  BARCODE_STACK_GAP_MM,
   getCode128HeightMm,
   getCode128WidthMm,
   getPaperSizeMm,
@@ -12,7 +13,6 @@ import {
 } from "../types/print";
 
 const LABEL_PADDING_MM = 3;
-const BARCODE_STACK_GAP_MM = 2;
 export const CSS_PX_PER_MM = 96 / 25.4;
 
 export function calculateLayout(
@@ -31,7 +31,10 @@ export function calculateLayout(
     : 0;
   const qrVisible = showsQrCode(settings.barcodeMode);
   const code128Visible = showsCode128(settings.barcodeMode);
-  const code128WidthMm = getCode128WidthMm(settings.qrSizeMm);
+  const code128WidthMm = getCode128WidthMm(
+    settings.qrSizeMm,
+    settings.barcodeMode,
+  );
   const code128HeightMm = getCode128HeightMm(settings.qrSizeMm);
   const barcodeWidthMm = Math.max(
     qrVisible ? settings.qrSizeMm : 0,

@@ -27,6 +27,7 @@ export type SimulationSourceState =
   | "duplicates"
   | "qr_loading"
   | "qr_error"
+  | "code128_error"
   | "ready";
 
 interface UseScanSimulationOptions {
@@ -53,6 +54,8 @@ function sourceStatusKey(state: SimulationSourceState): string {
       return "simulation.source_qr_loading";
     case "qr_error":
       return "simulation.source_qr_error";
+    case "code128_error":
+      return "simulation.source_code128_error";
     case "ready":
       return "simulation.ready";
     case "not_loaded":

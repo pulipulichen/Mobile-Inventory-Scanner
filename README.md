@@ -7,7 +7,7 @@ Mobile-first inventory scanning and QR-code label printing system with Google Sh
 
 https://pulipulichen.github.io/Mobile-Inventory-Scanner/print/dist/
 
-- `print`：從有權限的 Google Sheet 讀取 `id`，批次產生 QR Code 向量 PDF。
+- `print`：從有權限的 Google Sheet 讀取 `id`，批次產生 QR Code 或 Code 128 向量 PDF。
 
 https://pulipulichen.github.io/Mobile-Inventory-Scanner/scan/dist/
 

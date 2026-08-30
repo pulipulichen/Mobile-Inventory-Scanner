@@ -10,6 +10,7 @@ import {
   PAPER_SIZE_DIMENSIONS,
   PAPER_SIZES,
   showsLabelText,
+  showsQrCode,
   type Orientation,
   type PrintSettings as PrintSettingsModel,
 } from "../types/print";
@@ -50,11 +51,60 @@ const orientationOptions = computed(() => [
   },
 ]);
 
-const barcodeModeOptions = [
-  { label: "QR Code", value: "qr" as const },
-  { label: "Code 128", value: "code128" as const },
-  { label: "QR Code + Code 128", value: "both" as const },
-];
+const barcodeModeOptions = computed(() => [
+  {
+    label: t("print.barcode_mode_qr"),
+    value: "qr" as const,
+  },
+  {
+    label: t("print.barcode_mode_code128"),
+    value: "code128" as const,
+  },
+  {
+    label: t("print.barcode_mode_both"),
+    value: "both" as const,
+  },
+]);
+
+const sizeLabel = computed(() =>
+  showsQrCode(props.settings.barcodeMode)
+    ? t("print.qr_size")
+    : t("print.code128_size"),
+);
+
+const sizeHint = computed(() => {
+  if (props.settings.barcodeMode === "both") {
+    return t("print.qr_size_hint_with_code128");
+  }
+  if (props.settings.barcodeMode === "code128") {
+    return t("print.code128_size_hint");
+  }
+  return t("print.qr_size_hint");
+});
+
+const textGapLabel = computed(() =>
+  showsQrCode(props.settings.barcodeMode)
+    ? t("print.qr_text_gap")
+    : t("print.code128_text_gap"),
+);
+
+const textGapHint = computed(() =>
+  showsQrCode(props.settings.barcodeMode)
+    ? t("print.qr_text_gap_hint")
+    : t("print.code128_text_gap_hint"),
+);
+
+const fontSizeHint = computed(() =>
+  showsQrCode(props.settings.barcodeMode)
+    ? t("print.id_font_size_hint")
+    : t("print.code128_font_size_hint"),
+);
+
+const labelTextHint = computed(() =>
+  showsQrCode(props.settings.barcodeMode)
+    ? t("print.label_text_hint")
+    : t("print.code128_label_text_hint"),
+);
 
 const labelTextOptions = computed(() => [
   {
@@ -122,8 +172,8 @@ function updateLabelText(value: unknown): void {
           :items="barcodeModeOptions"
           item-title="label"
           item-value="value"
-          label="條碼格式"
-          hint="可單獨列印 QR Code、Code 128，或兩者同時列印"
+          :label="t('print.barcode_mode')"
+          :hint="t('print.barcode_mode_hint')"
           persistent-hint
           variant="outlined"
           @update:model-value="updateBarcodeMode"
@@ -171,8 +221,8 @@ function updateLabelText(value: unknown): void {
         <v-text-field
           id="qr-size-mm"
           :model-value="settings.qrSizeMm"
-          :label="t('print.qr_size')"
-          hint="QR Code 邊長；Code 128 將依此尺寸自動換算"
+          :label="sizeLabel"
+          :hint="sizeHint"
           suffix="mm"
           type="number"
           min="10"
@@ -190,7 +240,7 @@ function updateLabelText(value: unknown): void {
           item-title="label"
           item-value="value"
           :label="t('print.label_text')"
-          :hint="t('print.label_text_hint')"
+          :hint="labelTextHint"
           persistent-hint
           variant="outlined"
           @update:model-value="updateLabelText"
@@ -215,7 +265,7 @@ function updateLabelText(value: unknown): void {
           id="id-font-size-pt"
           :model-value="settings.idFontSizePt"
           :label="t('print.id_font_size')"
-          :hint="t('print.id_font_size_hint')"
+          :hint="fontSizeHint"
           suffix="pt"
           type="number"
           min="6"
@@ -230,8 +280,8 @@ function updateLabelText(value: unknown): void {
         <v-text-field
           id="qr-text-gap-mm"
           :model-value="settings.qrTextGapMm"
-          :label="t('print.qr_text_gap')"
-          :hint="t('print.qr_text_gap_hint')"
+          :label="textGapLabel"
+          :hint="textGapHint"
           suffix="mm"
           type="number"
           min="0"
