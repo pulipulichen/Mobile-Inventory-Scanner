@@ -42,6 +42,8 @@
 - Unified the `print` app's generic QR Code and Code 128 wording as
   "barcode", while retaining each format name where the choice or error
   requires it.
+- Moved the `print` app's output mode selector below print settings so PDF
+  preview and scan simulation switching stays with the generated output.
 
 ## Improved
 

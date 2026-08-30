@@ -484,6 +484,12 @@ onUnmounted(() => {
           </ul>
         </v-alert>
 
+        <PrintSettings
+          :settings="settings"
+          @update="updateSettings"
+          @reset="handleResetSettings"
+        />
+
         <section
           class="section-card mode-card"
           aria-labelledby="mode-heading"
@@ -527,12 +533,6 @@ onUnmounted(() => {
             </p>
           </div>
         </section>
-
-        <PrintSettings
-          :settings="settings"
-          @update="updateSettings"
-          @reset="handleResetSettings"
-        />
 
         <template v-if="mode === 'pdf'">
           <PrintPreview
