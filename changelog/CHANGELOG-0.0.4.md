@@ -16,6 +16,8 @@
 
 ## Fixed
 
+- Removed the custom yellow focus outline from focused controls in the
+  `scan` and `print` apps.
 - Fixed `print` PDF downloads with Traditional Chinese label text by registering
   `pdflib-fontkit` correctly so `pdf-lib` can embed Noto Sans TC, and opening
   the save target from the original click before generation starts.
