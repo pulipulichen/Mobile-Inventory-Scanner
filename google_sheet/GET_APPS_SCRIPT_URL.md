@@ -12,7 +12,7 @@
 1. 在盤點用 Google Sheet 選擇 **Extensions > Apps Script**。
 
 ![[Pasted image 20260829214254.png]]
-1. 將本專案的 Apps Script 程式碼 `main.gs` 貼到編輯器，確認它使用目前綁定的
+1. 將本專案的 Apps Script 程式碼  [[main.gs]] 貼到編輯器，確認它使用目前綁定的
    Spreadsheet，並儲存專案。
 ![[Pasted image 20260829214329.png]]
 

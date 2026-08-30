@@ -33,6 +33,9 @@ const BLACK = rgb(0, 0, 0);
 const WHITE = rgb(1, 1, 1);
 const MIN_CAPTION_SIZE_PT = 6;
 const BARCODE_STACK_GAP_MM = 2;
+const LABEL_GRID_COLOR = rgb(203 / 255, 213 / 255, 225 / 255);
+const LABEL_GRID_WIDTH_PT = mmToPoints(0.2);
+const LABEL_GRID_DASH_PT = [mmToPoints(1), mmToPoints(1)];
 
 function mmToPoints(value: number): number {
   return value * POINTS_PER_MM;
@@ -127,6 +130,16 @@ export async function generatePdf(
         labelHeight -
         row * (labelHeight + labelGap);
       const barcodeBaseY = y + labelPadding + textHeight + textGap;
+
+      page.drawRectangle({
+        x,
+        y,
+        width: labelWidth,
+        height: labelHeight,
+        borderColor: LABEL_GRID_COLOR,
+        borderWidth: LABEL_GRID_WIDTH_PT,
+        borderDashArray: LABEL_GRID_DASH_PT,
+      });
 
       if (showCode128) {
         const image = code128Images.get(item.id);
