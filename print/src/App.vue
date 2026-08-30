@@ -29,7 +29,7 @@ import {
   type SheetData,
 } from "./types/print";
 import { calculateLayout } from "./utils/print_layout";
-import { chooseSaveTarget, saveBlob } from "./utils/save_blob";
+import { saveBlob } from "./utils/save_blob";
 import { tryParseSpreadsheetId } from "./utils/sheet_url";
 
 const SHEET_URL_DEBOUNCE_MS = 400;
@@ -306,11 +306,6 @@ async function downloadPdf(): Promise<void> {
         ? "print.pdf_filename_both"
         : "print.pdf_filename";
   const filename = `${t(filenameKey)}-${date}.pdf`;
-  const saveTarget = await chooseSaveTarget(
-    filename,
-    t("print.download_pdf"),
-  );
-  if (saveTarget.kind === "cancelled") return;
 
   isGeneratingPdf.value = true;
   setStatus("status.pdf_generating");
@@ -322,7 +317,7 @@ async function downloadPdf(): Promise<void> {
       sheetData.value.items,
       { ...toRaw(settings) },
     );
-    await saveBlob(blob, filename, saveTarget);
+    saveBlob(blob, filename);
     setStatus("status.pdf_success", {}, "success");
   } catch (error) {
     console.error(error);

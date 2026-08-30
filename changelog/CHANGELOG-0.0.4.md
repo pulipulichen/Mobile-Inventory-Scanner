@@ -23,6 +23,8 @@
   labels remains visible for cutting.
 - Prevented adjacent PDF label borders from overlapping when the label gap is
   zero, keeping shared dividers dashed instead of turning solid.
+- Stopped `print` PDF downloads from using the File System Access save picker,
+  so Chrome records the file in download history like a normal browser download.
 
 ## Changed
 
