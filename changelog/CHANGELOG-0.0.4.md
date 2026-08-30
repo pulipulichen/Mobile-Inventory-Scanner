@@ -1,5 +1,12 @@
 # 0.0.4
 
+## Added
+
+- Added a scanner-gun input mode on the `scan` tab so handheld barcode
+  scanners can enter multiple IDs; after 3 seconds with no new input, the
+  queued IDs are posted to Google Sheets. The camera/scanner-gun choice is
+  saved in `localStorage`.
+
 ## Fixed
 
 - Fixed `print` PDF downloads with Traditional Chinese label text by registering

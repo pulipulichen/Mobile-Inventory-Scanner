@@ -264,21 +264,23 @@ flowchart TB
 ## 6. 手機盤點流程
 
 ```mermaid
-flowchart TB
+flowchart TD
     A["開啟 scan PWA"] --> B["帶入已保存的 Apps Script URL"]
     B --> C["輸入或選擇 location"]
     C --> D{"底部功能分頁"}
     D -->|"未盤點"| E["GET /exec?action=pending"]
     E --> F["依 location 分組顯示 id + name"]
-    D -->|"掃描"| G{"圖片來源"}
+    D -->|"掃描"| G{"輸入方式"}
     G -->|"拍照"| H["呼叫手機後鏡頭拍照"]
     G -->|"讀取相片"| I["選取既有圖片"]
     G -->|"即時掃描"| J["取得後置鏡頭影格"]
+    G -->|"刷槍輸入"| S["刷槍或鍵盤輸入 ID"]
     H --> K["在瀏覽器本機解碼"]
     I --> K
     J --> K
     K --> L["取得影格或圖片中的所有 QR Code"]
     L --> M["去除前後空白並依 ID 去重"]
+    S --> M
     M --> N["10 秒冷卻後加入本次結果"]
     N --> O{"3 秒內還有新掃描？"}
     O -->|"是"| N
@@ -298,7 +300,7 @@ QR decode 必須支援 multi-code detection，不能只處理第一個結果。�
 兩個 App 是獨立部署、獨立設定的靜態網站，各自只提供自己的主要流程：
 
 - `print` 只讀取 Google Sheet、產生 QR Code 預覽與下載 PDF。
-- `scan` 只取得相機或照片、辨識 QR Code，並透過 Apps Script 寫入盤點結果。
+- `scan` 只取得相機、照片或刷槍輸入的 ID，辨識後透過 Apps Script 寫入盤點結果。
 - 兩個 App 不互相嵌入、不提供跨 App 導覽，也不把另一個 App 的 URL
   編入 QR Code。
 - `print` 使用 Google Sheet URL；`scan` 只使用 Apps Script Web App URL。
@@ -326,6 +328,7 @@ QR decode 必須支援 multi-code detection，不能只處理第一個結果。�
 - `mis.scan.apps_script_url`
 - `mis.scan.location`
 - `mis.scan.location_history`
+- `mis.scan.input_mode`
 
 網路需求：
 

@@ -1,9 +1,14 @@
+import { isScanInputMode, type ScanInputMode } from "../types/scan";
+
 const STORAGE_KEYS = {
   appsScriptUrl: "mis.scan.apps_script_url",
   location: "mis.scan.location",
   locationHistory: "mis.scan.location_history",
   locale: "mis.scan.locale",
+  inputMode: "mis.scan.input_mode",
 } as const;
+
+const DEFAULT_INPUT_MODE: ScanInputMode = "camera";
 
 const MAX_LOCATION_HISTORY = 20;
 
@@ -72,4 +77,13 @@ export function loadLocale(): string | null {
 
 export function saveLocale(locale: string): void {
   setItem(STORAGE_KEYS.locale, locale);
+}
+
+export function loadInputMode(): ScanInputMode {
+  const stored = getItem(STORAGE_KEYS.inputMode);
+  return isScanInputMode(stored) ? stored : DEFAULT_INPUT_MODE;
+}
+
+export function saveInputMode(mode: ScanInputMode): void {
+  setItem(STORAGE_KEYS.inputMode, mode);
 }

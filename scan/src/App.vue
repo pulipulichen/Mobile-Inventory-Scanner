@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import CameraScanner from "./components/CameraScanner.vue";
@@ -9,6 +9,7 @@ import ImageSourceButtons from "./components/ImageSourceButtons.vue";
 import PendingInventoryList from "./components/PendingInventoryList.vue";
 import ScanResultList from "./components/ScanResultList.vue";
 import ScanSettings from "./components/ScanSettings.vue";
+import ScannerGunInput from "./components/ScannerGunInput.vue";
 import SettingsRequiredCard from "./components/SettingsRequiredCard.vue";
 import {
   AppsScriptError,
@@ -22,18 +23,22 @@ import {
 import { decodeQrImageFile } from "./services/qr_decoder";
 import {
   loadAppsScriptUrl,
+  loadInputMode,
   loadLocation,
   loadLocationHistory,
   saveAppsScriptUrl,
+  saveInputMode,
   saveLocation,
   saveLocationToHistory,
 } from "./services/scan_storage";
 import { setLocale, type SupportedLocale } from "./i18n";
 import { isAppTab, type AppTab } from "./router";
-import type {
-  InventoryItem,
-  PendingLocationGroup,
-  ScanResult,
+import {
+  isScanInputMode,
+  type InventoryItem,
+  type PendingLocationGroup,
+  type ScanInputMode,
+  type ScanResult,
 } from "./types/scan";
 
 const { t, locale } = useI18n({ useScope: "global" });
@@ -50,6 +55,8 @@ const isPendingLoading = ref(false);
 const isPhotoLoading = ref(false);
 const isCameraActive = ref(false);
 const camera = ref<InstanceType<typeof CameraScanner> | null>(null);
+const scannerGun = ref<{ focus: () => void } | null>(null);
+const inputMode = ref<ScanInputMode>(loadInputMode());
 const isInventoryConfirmed = ref(isAppsScriptUrl(appsScriptUrl.value));
 const activeTab = computed<AppTab>({
   get: () => (isAppTab(route.name) ? route.name : "settings"),
@@ -311,6 +318,15 @@ watch(
   { immediate: true },
 );
 
+watch(
+  () => [activeTab.value, inputMode.value] as const,
+  ([tab, mode]) => {
+    if (tab !== "scan" || mode !== "scanner") return;
+    void nextTick(() => scannerGun.value?.focus());
+  },
+  { flush: "post" },
+);
+
 onBeforeUnmount(() => {
   window.clearTimeout(batchIdleTimer);
   flushQueuedResults();
@@ -344,7 +360,7 @@ function handleCameraStatus(
   }
   if (state === "stopped") {
     isCameraActive.value = false;
-    if (activeTab.value === "scan") {
+    if (activeTab.value === "scan" && inputMode.value === "camera") {
       setStatus("status.camera_stopped");
     }
     return;
@@ -371,7 +387,35 @@ function stopCamera(): void {
   flushQueuedResults();
 }
 
-function queueIds(ids: string[], source: "camera" | "photo" = "camera"): void {
+function setInputMode(mode: unknown): void {
+  if (!isScanInputMode(String(mode))) return;
+  const nextMode = mode as ScanInputMode;
+  if (nextMode === inputMode.value) return;
+
+  if (inputMode.value === "camera") {
+    stopCamera();
+  }
+  inputMode.value = nextMode;
+  saveInputMode(nextMode);
+  if (nextMode === "scanner") {
+    setStatus("status.scanner_gun_ready");
+  }
+}
+
+function handleScannerActivity(): void {
+  const hasQueued = results.value.some((result) => result.state === "queued");
+  if (hasQueued) scheduleBatchSubmit();
+}
+
+function handleScannerLeftover(ids: string[]): void {
+  queueIds(ids, "scanner");
+  flushQueuedResults();
+}
+
+function queueIds(
+  ids: string[],
+  source: "camera" | "photo" | "scanner" = "camera",
+): void {
   const now = Date.now();
   const normalizedIds = ids
     .map((id) => id.trim())
@@ -774,48 +818,99 @@ function handleLocaleChange(event: Event): void {
                 <div class="section-heading-row">
                   <h2 id="scanner-heading">{{ t("scan.scanner_heading") }}</h2>
                   <HelpModal
-                    :title="t('scan.scanner_help')"
-                    :description="t('scan.scanner_description')"
+                    :title="
+                      inputMode === 'scanner'
+                        ? t('scan.scanner_gun_help')
+                        : t('scan.scanner_help')
+                    "
+                    :description="
+                      inputMode === 'scanner'
+                        ? t('scan.scanner_gun_description')
+                        : t('scan.scanner_description')
+                    "
                   />
                 </div>
               </div>
 
-              <CameraScanner
-                ref="camera"
-                :video-label="t('scan.camera_preview_label')"
-                @detected="queueIds"
-                @status="handleCameraStatus"
-              />
-
-              <div class="scanner-actions">
-                <v-btn
-                  type="button"
-                  color="primary"
-                  size="large"
-                  prepend-icon="mdi-qrcode-scan"
-                  :disabled="!canStartCamera"
-                  @click="startCamera"
-                >
-                  {{ t("scan.start_camera") }}
-                </v-btn>
-                <v-btn
-                  type="button"
-                  color="error"
-                  variant="outlined"
-                  size="large"
-                  stacked
-                  block
-                  prepend-icon="mdi-camera-off"
-                  :disabled="!isCameraActive"
-                  @click="stopCamera"
-                >
-                  {{ t("scan.stop_camera") }}
-                </v-btn>
-                <ImageSourceButtons
-                  :disabled="isPhotoLoading"
-                  @file="handlePhoto"
-                />
+              <div
+                class="scan-input-mode"
+                role="group"
+                aria-labelledby="scan-input-mode-label"
+              >
+                <p id="scan-input-mode-label" class="scan-input-mode-label">
+                  {{ t("scan.input_mode_label") }}
+                </p>
+                <div class="scan-input-mode-buttons">
+                  <v-btn
+                    type="button"
+                    :variant="inputMode === 'camera' ? 'flat' : 'outlined'"
+                    :color="inputMode === 'camera' ? 'primary' : 'secondary'"
+                    prepend-icon="mdi-camera"
+                    :aria-pressed="inputMode === 'camera'"
+                    @click="setInputMode('camera')"
+                  >
+                    {{ t("scan.input_mode_camera") }}
+                  </v-btn>
+                  <v-btn
+                    type="button"
+                    :variant="inputMode === 'scanner' ? 'flat' : 'outlined'"
+                    :color="inputMode === 'scanner' ? 'primary' : 'secondary'"
+                    prepend-icon="mdi-barcode-scan"
+                    :aria-pressed="inputMode === 'scanner'"
+                    @click="setInputMode('scanner')"
+                  >
+                    {{ t("scan.input_mode_scanner") }}
+                  </v-btn>
+                </div>
               </div>
+
+              <template v-if="inputMode === 'scanner'">
+                <ScannerGunInput
+                  ref="scannerGun"
+                  :idle-ms="BATCH_IDLE_MS"
+                  @detected="queueIds($event, 'scanner')"
+                  @activity="handleScannerActivity"
+                  @idle-leftover="handleScannerLeftover"
+                />
+              </template>
+              <template v-else>
+                <CameraScanner
+                  ref="camera"
+                  :video-label="t('scan.camera_preview_label')"
+                  @detected="queueIds"
+                  @status="handleCameraStatus"
+                />
+
+                <div class="scanner-actions">
+                  <v-btn
+                    type="button"
+                    color="primary"
+                    size="large"
+                    prepend-icon="mdi-qrcode-scan"
+                    :disabled="!canStartCamera"
+                    @click="startCamera"
+                  >
+                    {{ t("scan.start_camera") }}
+                  </v-btn>
+                  <v-btn
+                    type="button"
+                    color="error"
+                    variant="outlined"
+                    size="large"
+                    stacked
+                    block
+                    prepend-icon="mdi-camera-off"
+                    :disabled="!isCameraActive"
+                    @click="stopCamera"
+                  >
+                    {{ t("scan.stop_camera") }}
+                  </v-btn>
+                  <ImageSourceButtons
+                    :disabled="isPhotoLoading"
+                    @file="handlePhoto"
+                  />
+                </div>
+              </template>
 
               <CurrentLocationField
                 id="scanner-current-location"
@@ -825,7 +920,9 @@ function handleLocaleChange(event: Event): void {
                 @update:model-value="updateLocation"
               />
             </section>
-            <p class="privacy-note">{{ t("scan.privacy_note") }}</p>
+            <p v-if="inputMode === 'camera'" class="privacy-note">
+              {{ t("scan.privacy_note") }}
+            </p>
           </template>
           <SettingsRequiredCard
             v-else

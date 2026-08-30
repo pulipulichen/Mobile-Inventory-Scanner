@@ -28,7 +28,7 @@ export default {
     scanner_heading: "開始盤點",
     scanner_help: "掃描說明",
     scanner_description:
-      "請將 QR Code 放在鏡頭前方並開始掃描，也可以拍照或讀取相片；一次可辨識多個 QR Code。掃描後會等 3 秒沒有新項目，再一次送出。同一 ID 10 秒內不會重複送出。",
+      "請將 QR Code 放在鏡頭前方並開始掃描，也可以拍照或讀取相片；一次可辨識多個 QR Code。掃描後會等 3 秒沒有新項目，再一次送出。同一 ID 10 秒內不會重複送出。需要刷槍時，可切換成刷槍輸入。",
     start_camera: "開始掃描",
     stop_camera: "停止相機",
     capture_qr_code: "拍攝 QR Code",
@@ -37,6 +37,17 @@ export default {
     camera_tap_to_focus: "點擊預覽畫面以對焦，或按 Enter 對準畫面中央對焦",
     camera_tap_to_focus_hint: "點擊畫面可對焦",
     camera_focused: "已對準點選位置對焦。",
+    input_mode_label: "盤點輸入方式",
+    input_mode_camera: "相機",
+    input_mode_scanner: "刷槍",
+    scanner_gun_label: "刷槍輸入 ID",
+    scanner_gun_placeholder: "掃描條碼或 QR Code，或手動輸入後按 Enter",
+    scanner_gun_hint:
+      "連續掃描多個 ID。3 秒內沒有新輸入時，會一次送到 Google Sheet 盤點。手動輸入請按 Enter。",
+    scanner_gun_submit: "加入這個 ID",
+    scanner_gun_help: "刷槍輸入說明",
+    scanner_gun_description:
+      "把游標放在輸入框，用刷槍連續掃描多個 ID。刷槍通常會自動送出 Enter；若沒有，3 秒沒有新輸入也會把目前內容加入並一次送出。同一 ID 10 秒內不會重複送出。",
     pending_button: "列出尚未盤點的 ID",
     pending_help: "尚未盤點說明",
     pending_control_description:
@@ -91,6 +102,8 @@ export default {
     pending_empty: "目前沒有尚未盤點的 ID。",
     location_changed_results_cleared:
       "位置已變更，本次盤點結果已重新開始。",
+    scanner_gun_ready:
+      "刷槍輸入已就緒。連續掃描多個 ID，3 秒內沒有新輸入就會一次送出。",
   },
   errors: {
     INVALID_REQUEST: "Apps Script URL 無效，請貼上完整的 /exec 網址。",

@@ -27,7 +27,6 @@ const video = ref<HTMLVideoElement | null>(null);
 const isScanning = ref(false);
 const focusReticle = ref<{ x: number; y: number } | null>(null);
 const focusStatus = ref("");
-const scannerInput = ref("");
 const canvas = document.createElement("canvas");
 let stream: MediaStream | null = null;
 let frameRequest = 0;
@@ -56,13 +55,6 @@ function showFocusReticle(x: number, y: number): void {
   focusReticleTimeout = window.setTimeout(() => {
     focusReticle.value = null;
   }, 900);
-}
-
-function submitScannerInput(): void {
-  const value = scannerInput.value.trim();
-  if (!value) return;
-  emit("detected", [value]);
-  scannerInput.value = "";
 }
 
 function scheduleFrame(): void {
@@ -214,22 +206,5 @@ onBeforeUnmount(stop);
         {{ focusStatus }}
       </p>
     </div>
-
-    <form class="scanner-gun-input" @submit.prevent="submitScannerInput">
-      <v-text-field
-        v-model="scannerInput"
-        label="刷槍／條碼輸入"
-        placeholder="掃描 Code 128、QR Code，或手動輸入 ID 後按 Enter"
-        prepend-inner-icon="mdi-barcode-scan"
-        append-inner-icon="mdi-keyboard-return"
-        variant="outlined"
-        autocomplete="off"
-        autocapitalize="off"
-        spellcheck="false"
-        hide-details="auto"
-        clearable
-        @click:append-inner="submitScannerInput"
-      />
-    </form>
   </div>
 </template>

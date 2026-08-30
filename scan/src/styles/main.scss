@@ -278,6 +278,51 @@ a {
   margin-top: 0.85rem;
 }
 
+.scan-input-mode {
+  margin-bottom: 1rem;
+}
+
+.scan-input-mode-label {
+  margin: 0 0 0.5rem;
+  color: #334155;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.scan-input-mode-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.scan-input-mode-buttons .v-btn {
+  min-height: 2.75rem;
+}
+
+.scanner-gun-panel {
+  display: grid;
+  gap: 0.85rem;
+  min-height: 12rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border: 1px dashed #94a3b8;
+  border-radius: 1rem;
+}
+
+.scanner-gun-field .v-field {
+  min-height: 3.5rem;
+}
+
+.scanner-gun-hint {
+  margin: 0;
+  color: #475569;
+  line-height: 1.55;
+}
+
+.scanner-gun-panel > .v-btn {
+  min-height: 3rem;
+}
+
 .confirm-settings-button {
   width: 100%;
   min-height: 3rem;

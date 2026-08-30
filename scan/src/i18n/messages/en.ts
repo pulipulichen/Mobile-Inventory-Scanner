@@ -29,7 +29,7 @@ export default {
     scanner_heading: "Start inventory check",
     scanner_help: "Scanning instructions",
     scanner_description:
-      "Place QR Codes in front of the camera and start scanning. You can also take or choose a photo; multiple QR Codes are supported. After scanning, the app waits 3 seconds with no new IDs, then sends one batch. The same ID is not sent again within 10 seconds.",
+      "Place QR Codes in front of the camera and start scanning. You can also take or choose a photo; multiple QR Codes are supported. After scanning, the app waits 3 seconds with no new IDs, then sends one batch. The same ID is not sent again within 10 seconds. Switch to scanner gun input when using a handheld scanner.",
     start_camera: "Start scanning",
     stop_camera: "Stop camera",
     capture_qr_code: "Take QR Code photo",
@@ -39,6 +39,18 @@ export default {
       "Tap the preview to focus, or press Enter to focus on the center",
     camera_tap_to_focus_hint: "Tap the preview to focus",
     camera_focused: "Focused on the selected point.",
+    input_mode_label: "Inventory input method",
+    input_mode_camera: "Camera",
+    input_mode_scanner: "Scanner gun",
+    scanner_gun_label: "Scanner gun ID input",
+    scanner_gun_placeholder:
+      "Scan a barcode or QR Code, or type an ID and press Enter",
+    scanner_gun_hint:
+      "Scan multiple IDs in a row. After 3 seconds with no new input, they are sent to Google Sheets as one batch. Press Enter after typing an ID.",
+    scanner_gun_submit: "Add this ID",
+    scanner_gun_help: "Scanner gun instructions",
+    scanner_gun_description:
+      "Keep focus in the input field and scan multiple IDs with a handheld scanner. Most scanners send Enter automatically. If they do not, the current value is added and sent after 3 seconds with no new input. The same ID is not sent again within 10 seconds.",
     pending_button: "List unchecked IDs",
     pending_help: "Unchecked items instructions",
     pending_control_description:
@@ -96,6 +108,8 @@ export default {
     pending_empty: "There are no unchecked IDs right now.",
     location_changed_results_cleared:
       "The location changed, so the current check results were reset.",
+    scanner_gun_ready:
+      "Scanner gun input is ready. Scan multiple IDs; they will be sent as one batch after 3 seconds with no new input.",
   },
   errors: {
     INVALID_REQUEST: "The Apps Script URL is invalid. Use the complete /exec URL.",
