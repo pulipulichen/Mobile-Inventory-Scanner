@@ -20,6 +20,8 @@ interface AdvancedTrackConstraint {
 const LIVE_SCAN_MAX_DIMENSION = 960;
 const LIVE_SCAN_CROP_RATIO = 0.55;
 const LIVE_SCAN_CROP_MAX_DIMENSION = 720;
+const LIVE_SCAN_BAND_HEIGHT_RATIO = 0.4;
+const LIVE_SCAN_BAND_MAX_WIDTH = 1280;
 
 function readCapabilities(track: MediaStreamTrack): LiveCameraCapabilities {
   try {
@@ -306,6 +308,36 @@ export function captureVideoCenterCropImageData(
     sourceY,
     cropWidth,
     cropHeight,
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  );
+  return context.getImageData(0, 0, canvas.width, canvas.height);
+}
+
+export function captureVideoHorizontalBandImageData(
+  video: HTMLVideoElement,
+  canvas: HTMLCanvasElement,
+  heightRatio = LIVE_SCAN_BAND_HEIGHT_RATIO,
+  maxWidth = LIVE_SCAN_BAND_MAX_WIDTH,
+): ImageData {
+  if (!video.videoWidth || !video.videoHeight) {
+    throw new Error("CAMERA_FRAME_UNAVAILABLE");
+  }
+
+  const bandHeight = Math.max(1, video.videoHeight * heightRatio);
+  const sourceY = (video.videoHeight - bandHeight) / 2;
+  const scale = Math.min(1, maxWidth / video.videoWidth);
+  canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+  canvas.height = Math.max(1, Math.round(bandHeight * scale));
+  const context = getContext(canvas);
+  context.drawImage(
+    video,
+    0,
+    sourceY,
+    video.videoWidth,
+    bandHeight,
     0,
     0,
     canvas.width,

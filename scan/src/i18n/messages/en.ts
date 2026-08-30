@@ -1,8 +1,8 @@
 export default {
   common: {
-    app_title: "Mobile QR Code Inventory",
+    app_title: "Mobile Barcode Inventory",
     app_description:
-      "Scan QR Codes, record item locations, and find items not yet checked.",
+      "Scan QR Codes or Code 128 barcodes, record item locations, and find items not yet checked.",
     skip_to_content: "Skip to main content",
     language: "Language",
     chinese: "繁體中文",
@@ -11,7 +11,7 @@ export default {
     close: "Close",
   },
   scan: {
-    app_bar_subtitle: "Mobile QR Code inventory",
+    app_bar_subtitle: "QR Code and Code 128 inventory",
     settings_heading: "Connection and location",
     settings_help: "Settings instructions",
     settings_description:
@@ -29,12 +29,12 @@ export default {
     scanner_heading: "Start inventory check",
     scanner_help: "Scanning instructions",
     scanner_description:
-      "Place QR Codes in front of the camera and start scanning. You can also take or choose a photo; multiple QR Codes are supported. After scanning, the app waits 3 seconds with no new IDs, then sends one batch. The same ID is not sent again within 10 seconds. Switch to scanner gun input when using a handheld scanner.",
+      "Place a QR Code or Code 128 barcode in front of the camera and start scanning. You can also take or choose a photo; multiple barcodes are supported. After scanning, the app waits 3 seconds with no new IDs, then sends one batch. The same ID is not sent again within 10 seconds. Switch to scanner gun input when using a handheld scanner.",
     start_camera: "Start scanning",
     stop_camera: "Stop camera",
-    capture_qr_code: "Take QR Code photo",
+    capture_qr_code: "Take barcode photo",
     choose_photo: "Choose a photo",
-    camera_preview_label: "QR Code camera preview",
+    camera_preview_label: "Barcode camera preview",
     camera_tap_to_focus:
       "Tap the preview to focus, or press Enter to focus on the center",
     camera_tap_to_focus_hint: "Tap the preview to focus",
@@ -44,7 +44,7 @@ export default {
     input_mode_scanner: "Scanner gun",
     scanner_gun_label: "Scanner gun ID input",
     scanner_gun_placeholder:
-      "Scan a barcode or QR Code, or type an ID and press Enter",
+      "Scan a QR Code or Code 128 barcode, or type an ID and press Enter",
     scanner_gun_hint:
       "Scan multiple IDs in a row. After 3 seconds with no new input, they are sent to Google Sheets as one batch. Press Enter after typing an ID.",
     scanner_gun_submit: "Add this ID",
@@ -71,7 +71,7 @@ export default {
       "Check succeeded; time {checked_time}; location {location}",
     result_error: "Check failed ({error})",
     privacy_note:
-      "QR Code images are decoded locally in this browser. Photos and camera frames are not uploaded.",
+      "Barcode images are decoded locally in this browser. Photos and camera frames are not uploaded.",
     tab_navigation: "Main features",
     tab_settings: "Settings",
     tab_scan: "Scan",
@@ -81,24 +81,24 @@ export default {
     tab_needs_settings:
       "Confirm the Apps Script /exec URL in Settings before using this feature.",
     go_to_settings: "Go to Settings",
-    results_empty: "No checked items yet. Scanned QR Codes will appear here.",
+    results_empty: "No checked items yet. Scanned QR Codes or Code 128 barcodes will appear here.",
   },
   status: {
     ready: "Set the Apps Script URL to begin; current location is optional.",
     settings_confirmed: "Settings confirmed. You can start scanning.",
     camera_starting: "Starting camera…",
     camera_active:
-      "Camera is active. Place a QR Code in front of the camera. Tap the preview to focus.",
+      "Camera is active. Place a QR Code or Code 128 barcode in front of the camera. Tap the preview to focus.",
     camera_stopped: "Camera stopped.",
-    photo_recognizing: "Recognizing QR Codes in the photo…",
-    ids_found: "Recognition complete. Found {count} QR Codes.",
-    no_qr_code: "No QR Code was detected. Take another photo or choose a different one.",
+    photo_recognizing: "Recognizing barcodes in the photo…",
+    ids_found: "Recognition complete. Found {count} barcodes.",
+    no_qr_code: "No QR Code or Code 128 barcode was detected. Take another photo or choose a different one.",
     ids_duplicate_ignored:
-      "These QR Codes were already scanned within 10 seconds and were ignored.",
+      "These barcodes were already scanned within 10 seconds and were ignored.",
     ids_found_with_duplicates:
-      "Added {count} QR Codes. They will be sent as one batch after 3 seconds with no new scans. {ignored} duplicates scanned within 10 seconds were ignored.",
+      "Added {count} barcodes. They will be sent as one batch after 3 seconds with no new scans. {ignored} duplicates scanned within 10 seconds were ignored.",
     ids_batch_waiting:
-      "Added {count} QR Codes. They will be sent as one batch after 3 seconds with no new scans.",
+      "Added {count} barcodes. They will be sent as one batch after 3 seconds with no new scans.",
     sending: "Sending the inventory result for {id}…",
     batch_sending: "Sending {count} inventory results as one batch…",
     confirming: "Confirming {count} submitted inventory results…",
@@ -129,7 +129,7 @@ export default {
       "The camera could not start. Allow camera access or use a photo instead.",
     CAMERA_FRAME_UNAVAILABLE: "The camera frame is unavailable. Start scanning again.",
     QR_DECODE_FAILED:
-      "QR Code recognition temporarily failed. Adjust the distance or lighting and try again.",
+      "Barcode recognition temporarily failed. Adjust the distance or lighting and try again.",
     IMAGE_READ_FAILED: "The photo could not be read. Choose it again.",
     UNKNOWN: "An unexpected error occurred. Please try again.",
   },

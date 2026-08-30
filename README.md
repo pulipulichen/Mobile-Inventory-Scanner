@@ -11,8 +11,8 @@ https://pulipulichen.github.io/Mobile-Inventory-Scanner/print/dist/
 
 https://pulipulichen.github.io/Mobile-Inventory-Scanner/scan/dist/
 
-- `scan`：手機 PWA；以即時相機、拍照或讀取相片辨識 QR Code，成功後回寫
-  `checked_time` 與 `location`。
+- `scan`：手機 PWA；以即時相機、拍照、讀取相片或刷槍輸入辨識 QR Code
+  與 Code 128，成功後回寫 `checked_time` 與 `location`。
 - `scan` 可透過 Apps Script `/exec?action=pending` 列出尚未盤點的 ID，
   顯示人類可識別名稱，並依既有位置分組。
 - Google Sheet 欄位：`id`, `name`, `checked_time`, `location`。

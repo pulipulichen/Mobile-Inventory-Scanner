@@ -1,6 +1,9 @@
 import {
   scanImageData,
   setModuleArgs,
+  ZBarConfigType,
+  ZBarScanner,
+  ZBarSymbolType,
 } from "@undecaf/zbar-wasm";
 import wasmUrl from "@undecaf/zbar-wasm/dist/zbar.wasm?url";
 
@@ -13,10 +16,7 @@ type NativeFormat = (typeof NATIVE_FORMATS)[number];
 
 let barcodeDetector: BarcodeDetector | null | undefined;
 let barcodeDetectorPromise: Promise<BarcodeDetector | null> | null = null;
-
-function configureWasm(): void {
-  // setModuleArgs is already invoked at module level
-}
+let inventoryScannerPromise: Promise<ZBarScanner> | null = null;
 
 function getBarcodeDetector(): Promise<BarcodeDetector | null> {
   if (barcodeDetector !== undefined) return Promise.resolve(barcodeDetector);
@@ -47,6 +47,43 @@ function getBarcodeDetector(): Promise<BarcodeDetector | null> {
   return barcodeDetectorPromise;
 }
 
+function getInventoryScanner(): Promise<ZBarScanner> {
+  if (inventoryScannerPromise) return inventoryScannerPromise;
+
+  inventoryScannerPromise = (async () => {
+    const scanner = await ZBarScanner.create();
+    scanner.setConfig(
+      ZBarSymbolType.ZBAR_NONE,
+      ZBarConfigType.ZBAR_CFG_ENABLE,
+      0,
+    );
+    scanner.setConfig(
+      ZBarSymbolType.ZBAR_QRCODE,
+      ZBarConfigType.ZBAR_CFG_ENABLE,
+      1,
+    );
+    scanner.setConfig(
+      ZBarSymbolType.ZBAR_CODE128,
+      ZBarConfigType.ZBAR_CFG_ENABLE,
+      1,
+    );
+    scanner.setConfig(
+      ZBarSymbolType.ZBAR_NONE,
+      ZBarConfigType.ZBAR_CFG_X_DENSITY,
+      1,
+    );
+    scanner.setConfig(
+      ZBarSymbolType.ZBAR_NONE,
+      ZBarConfigType.ZBAR_CFG_Y_DENSITY,
+      1,
+    );
+    scanner.enableCache(false);
+    return scanner;
+  })();
+
+  return inventoryScannerPromise;
+}
+
 async function decodeWithBarcodeDetector(
   imageData: ImageData,
 ): Promise<string[]> {
@@ -68,13 +105,11 @@ async function decodeWithBarcodeDetector(
   }
 }
 
-function normalizeSymbolType(typeName: string): string {
-  return typeName.replace(/[_-\s]/g, "").toUpperCase();
-}
-
-function isSupportedSymbol(typeName: string): boolean {
-  const normalized = normalizeSymbolType(typeName);
-  return normalized.includes("QRCODE") || normalized.includes("CODE128");
+function isSupportedSymbolType(type: ZBarSymbolType): boolean {
+  return (
+    type === ZBarSymbolType.ZBAR_QRCODE ||
+    type === ZBarSymbolType.ZBAR_CODE128
+  );
 }
 
 function drawScaledImage(
@@ -98,11 +133,11 @@ function drawScaledImage(
 }
 
 async function decodeWithZbar(imageData: ImageData): Promise<string[]> {
-  configureWasm();
-  const symbols = await scanImageData(imageData);
+  const scanner = await getInventoryScanner();
+  const symbols = await scanImageData(imageData, scanner);
   return [...new Set(
     symbols
-      .filter((symbol) => isSupportedSymbol(symbol.typeName))
+      .filter((symbol) => isSupportedSymbolType(symbol.type))
       .map((symbol) => symbol.decode().trim())
       .filter(Boolean),
   )];

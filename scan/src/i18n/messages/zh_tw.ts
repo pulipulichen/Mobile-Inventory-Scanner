@@ -1,7 +1,7 @@
 export default {
   common: {
-    app_title: "手機 QR Code 盤點",
-    app_description: "掃描 QR Code，記錄設備位置並查看尚未盤點項目。",
+    app_title: "手機條碼盤點",
+    app_description: "掃描 QR Code 或 Code 128，記錄設備位置並查看尚未盤點項目。",
     skip_to_content: "跳到主要內容",
     language: "語言",
     chinese: "繁體中文",
@@ -10,7 +10,7 @@ export default {
     close: "關閉",
   },
   scan: {
-    app_bar_subtitle: "QR Code 行動盤點",
+    app_bar_subtitle: "QR Code 與 Code 128 盤點",
     settings_heading: "連線與位置",
     settings_help: "設定說明",
     settings_description:
@@ -28,12 +28,12 @@ export default {
     scanner_heading: "開始盤點",
     scanner_help: "掃描說明",
     scanner_description:
-      "請將 QR Code 放在鏡頭前方並開始掃描，也可以拍照或讀取相片；一次可辨識多個 QR Code。掃描後會等 3 秒沒有新項目，再一次送出。同一 ID 10 秒內不會重複送出。需要刷槍時，可切換成刷槍輸入。",
+      "請將 QR Code 或 Code 128 放在鏡頭前方並開始掃描，也可以拍照或讀取相片；一次可辨識多個條碼。掃描後會等 3 秒沒有新項目，再一次送出。同一 ID 10 秒內不會重複送出。需要刷槍時，可切換成刷槍輸入。",
     start_camera: "開始掃描",
     stop_camera: "停止相機",
-    capture_qr_code: "拍攝 QR Code",
+    capture_qr_code: "拍攝條碼",
     choose_photo: "讀取相片",
-    camera_preview_label: "QR Code 相機預覽",
+    camera_preview_label: "條碼相機預覽",
     camera_tap_to_focus: "點擊預覽畫面以對焦，或按 Enter 對準畫面中央對焦",
     camera_tap_to_focus_hint: "點擊畫面可對焦",
     camera_focused: "已對準點選位置對焦。",
@@ -41,7 +41,7 @@ export default {
     input_mode_camera: "相機",
     input_mode_scanner: "刷槍",
     scanner_gun_label: "刷槍輸入 ID",
-    scanner_gun_placeholder: "掃描條碼或 QR Code，或手動輸入後按 Enter",
+    scanner_gun_placeholder: "掃描 QR Code 或 Code 128，或手動輸入後按 Enter",
     scanner_gun_hint:
       "連續掃描多個 ID。3 秒內沒有新輸入時，會一次送到 Google Sheet 盤點。手動輸入請按 Enter。",
     scanner_gun_submit: "加入這個 ID",
@@ -67,7 +67,7 @@ export default {
     result_success_with_location:
       "盤點成功；時間 {checked_time}；位置 {location}",
     result_error: "盤點失敗（{error}）",
-    privacy_note: "QR Code 影像只在此瀏覽器本機辨識，不會上傳照片或相機影像。",
+    privacy_note: "條碼影像只在此瀏覽器本機辨識，不會上傳照片或相機影像。",
     tab_navigation: "主要功能",
     tab_settings: "設定",
     tab_scan: "掃描",
@@ -77,22 +77,22 @@ export default {
     tab_needs_settings:
       "請先在設定確認 Apps Script /exec 網址，才能使用這個功能。",
     go_to_settings: "前往設定",
-    results_empty: "目前沒有已盤點項目。掃描 QR Code 後會顯示在這裡。",
+    results_empty: "目前沒有已盤點項目。掃描 QR Code 或 Code 128 後會顯示在這裡。",
   },
   status: {
     ready: "請先設定 Apps Script URL；目前位置可選填。",
     settings_confirmed: "設定完成，可以開始掃描。",
     camera_starting: "正在啟動相機…",
-    camera_active: "相機已啟動，請將 QR Code 對準鏡頭；可點擊畫面對焦。",
+    camera_active: "相機已啟動，請將 QR Code 或 Code 128 對準鏡頭；可點擊畫面對焦。",
     camera_stopped: "相機已停止。",
-    photo_recognizing: "正在辨識照片中的 QR Code…",
-    ids_found: "辨識完成，共找到 {count} 個 QR Code。",
-    no_qr_code: "未辨識到 QR Code，請重新拍照或選擇其他相片。",
-    ids_duplicate_ignored: "這些 QR Code 在 10 秒內已掃描過，已忽略。",
+    photo_recognizing: "正在辨識照片中的條碼…",
+    ids_found: "辨識完成，共找到 {count} 個條碼。",
+    no_qr_code: "未辨識到 QR Code 或 Code 128，請重新拍照或選擇其他相片。",
+    ids_duplicate_ignored: "這些條碼在 10 秒內已掃描過，已忽略。",
     ids_found_with_duplicates:
-      "已加入 {count} 個 QR Code，3 秒內沒有新掃描就會一次送出；另有 {ignored} 個在 10 秒內重複掃描，已忽略。",
+      "已加入 {count} 個條碼，3 秒內沒有新掃描就會一次送出；另有 {ignored} 個在 10 秒內重複掃描，已忽略。",
     ids_batch_waiting:
-      "已加入 {count} 個 QR Code。3 秒內沒有新掃描就會一次送出。",
+      "已加入 {count} 個條碼。3 秒內沒有新掃描就會一次送出。",
     sending: "正在送出 {id} 的盤點結果…",
     batch_sending: "正在一次送出 {count} 筆盤點結果…",
     confirming: "正在確認 {count} 筆已送出的盤點結果…",
@@ -119,7 +119,7 @@ export default {
     CAMERA_PERMISSION_DENIED:
       "相機啟動失敗，請允許相機權限，或改用拍照與讀取相片。",
     CAMERA_FRAME_UNAVAILABLE: "目前無法取得相機畫面，請重新開始掃描。",
-    QR_DECODE_FAILED: "QR Code 辨識暫時失敗，請調整距離或光線後再試。",
+    QR_DECODE_FAILED: "條碼辨識暫時失敗，請調整距離或光線後再試。",
     IMAGE_READ_FAILED: "無法讀取相片，請重新選擇相片。",
     UNKNOWN: "發生未預期的錯誤，請再試一次。",
   },

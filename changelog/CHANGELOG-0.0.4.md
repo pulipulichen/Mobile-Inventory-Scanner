@@ -30,6 +30,15 @@
   interaction.
 - Enlarged the scan language selector and displayed the active language to
   make mobile language switching easier to tap.
+- Moved the scan-tab help button next to the heading, and replaced the
+  camera / scanner-gun toggle buttons with a compact dropdown in the card's
+  top-right corner.
+
+## Improved
+
+- Live camera scanning now also reads a central horizontal band so wide
+  Code 128 barcodes are easier to decode, and zbar is limited to QR Code
+  and Code 128 so other 1D formats are not treated as inventory IDs.
 
 ## Documentation
 

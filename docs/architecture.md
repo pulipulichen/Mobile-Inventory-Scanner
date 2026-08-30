@@ -102,7 +102,7 @@ Mobile-Inventory-Scanner/
 - 使用者輸入 Apps Script Web App URL 與目前位置；也可先開啟 Google Drive
   最近使用的試算表，進入該 Sheet 的 Apps Script 部署後複製 `/exec` 網址。
 - 透過即時後置鏡頭、拍照或相片選擇器取得影像。
-- 在瀏覽器本機辨識影格或圖片中的一個或多個 QR Code。
+- 在瀏覽器本機辨識影格或圖片中的 QR Code 與 Code 128。
 - 同一張圖片中的重複 ID 只送出一次；同一個 ID 在 10 秒內不重複送出。
 - 掃描後若 3 秒內沒有新的 ID，再一次批次呼叫 Apps Script；不守候 POST 回應，改以 GET 確認寫入。
 - 變更目前位置時，清除本次盤點結果。
@@ -278,7 +278,7 @@ flowchart TD
     H --> K["在瀏覽器本機解碼"]
     I --> K
     J --> K
-    K --> L["取得影格或圖片中的所有 QR Code"]
+    K --> L["取得影格或圖片中的 QR Code 與 Code 128"]
     L --> M["去除前後空白並依 ID 去重"]
     S --> M
     M --> N["10 秒冷卻後加入本次結果"]
@@ -289,7 +289,7 @@ flowchart TD
     Q --> R["GET 確認後顯示成功或失敗"]
 ```
 
-QR decode 必須支援 multi-code detection，不能只處理第一個結果。影像不離開使用者裝置；若同一張圖片有多筆 ID，其中一筆失敗時仍要繼續處理其他 ID。
+QR decode 必須支援 multi-code detection，不能只處理第一個結果。影像不離開使用者裝置；若同一張圖片有多筆 ID，其中一筆失敗時仍要繼續處理其他 ID。相機掃描同時接受 QR Code 與 Code 128。
 
 結果至少顯示 ID、處理狀態、成功時的 `checked_time` 與 `location`，以及失敗時的 API `error` / `message`。
 
@@ -346,7 +346,7 @@ QR decode 必須支援 multi-code detection，不能只處理第一個結果。�
 
 - 使用者介面與 RWD。
 - `print` 的 CSV 下載、Sheet 讀取、QR Code 預覽與 PDF 產生。
-- `scan` 的圖片取得、multi-code QR decode、去重與結果呈現。
+- `scan` 的圖片取得、QR Code 與 Code 128 decode、去重與結果呈現。
 - localStorage 設定保存。
 - 呼叫 Apps Script 並依回應顯示狀態。
 

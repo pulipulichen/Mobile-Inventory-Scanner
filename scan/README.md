@@ -1,6 +1,6 @@
-# QR Code 手機即時掃描與盤點功能規格
+# QR Code 與 Code 128 手機即時掃描與盤點功能規格
 
-本目錄負責手機端的 QR Code 即時掃描、圖片辨識與盤點寫入。
+本目錄負責手機端的 QR Code 與 Code 128 即時掃描、圖片辨識與盤點寫入。
 `scan` 是獨立網頁，只負責掃描與盤點，不包含 QR Code 列印功能。
 
 共通流程以 [`docs/architecture.md`](../docs/architecture.md) 為準，套件
@@ -9,7 +9,7 @@
 [`google_sheet/GET_APPS_SCRIPT_URL.md`](../google_sheet/GET_APPS_SCRIPT_URL.md)。
 
 第一版支援持續開啟後鏡頭的即時掃描，也支援以「拍照」或「讀取相片」
-取得圖片後辨識一個或多個 QR Code。兩種模式都在瀏覽器本機處理影像，
+取得圖片後辨識一個或多個 QR Code 或 Code 128。兩種模式都在瀏覽器本機處理影像，
 不會上傳照片。
 
 ## 前端技術決策
@@ -28,10 +28,10 @@
 - `vue-router`：底部功能分頁使用 hash 路由，可用網址切換。
 - `@mdi/font`：提供 Material Design Icons，供掃描操作按鈕與「最近使用的
   Apps Script」圖示使用。
-- `@undecaf/zbar-wasm`：在瀏覽器本機辨識 QR Code，支援相機影格與
-  圖片中的多個 QR Code。
+- `@undecaf/zbar-wasm`：在瀏覽器本機辨識 QR Code 與 Code 128，支援相機影格與
+  圖片中的多個條碼。
 - `MediaDevices.getUserMedia()`：取得使用者同意的後置鏡頭影像，供即時掃描使用。
-- 瀏覽器 `BarcodeDetector`：在支援的環境補強 QR Code 辨識，與 zbar 結果合併。
+- 瀏覽器 `BarcodeDetector`：在支援的環境補強 QR Code 與 Code 128 辨識，與 zbar 結果合併。
 
 第一版不使用 Pinia、Nuxt 或第二套 UI framework。影像只在使用者
 裝置內處理，不把照片上傳到伺服器。`scan` 使用 `vue-router` 的 hash
@@ -78,7 +78,7 @@ flowchart TD
     L --> O["瀏覽器本機執行 QR decode"]
     M --> O
     N --> O
-    O --> P["辨識影格或圖片中的所有 QR Code"]
+    O --> P["辨識影格或圖片中的 QR Code 與 Code 128"]
     P --> Q["清理並依 id 去重"]
     Z --> Q
     Q --> R["10 秒內重複 ID 忽略，其餘加入本次結果"]
@@ -238,8 +238,8 @@ mis.scan.input_mode
 即時掃描使用瀏覽器 `getUserMedia()` 取得後置鏡頭影像，並以
 `requestAnimationFrame` 或等效的節流迴圈逐影格交給
 `@undecaf/zbar-wasm` 辨識；若瀏覽器提供 `BarcodeDetector`，會同時用來
-補強 QR Code 辨識。相機影格會縮小後再解碼，必要時再掃一次畫面中央裁切，
-避免手機高解析度畫面讓 WASM 過慢或對不到碼。
+補強 QR Code 與 Code 128 辨識。相機影格會縮小後再解碼，必要時再掃一次
+畫面中央水平條帶與中央裁切，讓較寬的 Code 128 與較小的 QR Code 都較容易對到。
 
 需求：
 
@@ -247,10 +247,10 @@ mis.scan.input_mode
 - 預設使用後鏡頭，不要求麥克風權限。
 - 瀏覽器支援時啟用連續對焦；預覽畫面可點擊對焦，鍵盤啟動時對準畫面中央。
 - 提供清楚的「停止相機」按鈕；停止時釋放所有 MediaStream tracks。
-- QR Code 辨識期間顯示文字狀態，不可只顯示 loading 動畫。
-- 同一個 QR Code 持續出現在畫面中時，不得在每個影格重複送出；
+- QR Code 與 Code 128 辨識期間顯示文字狀態，不可只顯示 loading 動畫。
+- 同一個條碼持續出現在畫面中時，不得在每個影格重複送出；
   同一 ID 在 10 秒內不重複送出，超過 10 秒可以再次盤點。
-- 一個影格辨識到多個 QR Code 時，先依 `id` 去重；掃描後若 3 秒內沒有
+- 一個影格辨識到多個條碼時，先依 `id` 去重；掃描後若 3 秒內沒有
   新的 ID，再一次批次送出。
 - 相機權限被拒絕、裝置沒有相機或串流啟動失敗時，顯示可理解的錯誤與
   下一步提示，並保留「拍照辨識」替代流程。
@@ -269,7 +269,7 @@ mis.scan.input_mode
 
 ### 刷槍輸入
 
-掃描分頁可切換成輸入框，供手持刷槍或條碼機使用。刷槍以鍵盤方式輸入
+掃描分頁右上角可用下拉選單切換成輸入框，供手持刷槍或條碼機使用。刷槍以鍵盤方式輸入
 ID，通常會自動送出 Enter。連續掃描多個 ID 後，若 3 秒內沒有新輸入，
 就與相機掃描相同，一次批次送出。輸入方式保存在
 `mis.scan.input_mode`。
@@ -285,25 +285,26 @@ ID，通常會自動送出 Enter。連續掃描多個 ID 後，若 3 秒內沒�
 
 ---
 
-## QR Code 圖片辨識
+## QR Code 與 Code 128 圖片辨識
 
 使用 `@undecaf/zbar-wasm` 對相機影格或圖片轉成的 `ImageData` 進行本機
-辨識；支援 `BarcodeDetector` 的瀏覽器會並行使用原生 QR 偵測，結果與
-zbar 合併去重。
+辨識；支援 `BarcodeDetector` 的瀏覽器會並行使用原生 QR Code 與
+Code 128 偵測，結果與 zbar 合併去重。zbar 掃描器只啟用這兩種碼，避免
+其他一維碼被誤讀成盤點 ID。
 
 需求：
 
-- 即時掃描每次辨識影格中所有可辨識 QR Code，不可只取第一個。
-- 圖片模式一次取得圖片中所有可辨識 QR Code，不可只取第一個。
-- 只接受 QR Code 類型作為盤點 ID。
-- QR Code payload 直接視為 `id`。
+- 即時掃描每次辨識影格中所有可辨識 QR Code 與 Code 128，不可只取第一個。
+- 圖片模式一次取得圖片中所有可辨識 QR Code 與 Code 128，不可只取第一個。
+- 只接受 QR Code 與 Code 128 作為盤點 ID。
+- 條碼 payload 直接視為 `id`。
 - 去除 ID 前後空白，不修改大小寫。
 - ID 保持字串型態。
 - 同一影格或同一張圖片相同 ID 只送出一次；即時掃描同一個 ID 在 10 秒內
   不重複送出。超過 10 秒後可以再次盤點。
 - 圖片不離開瀏覽器。
 
-若沒有 QR Code，顯示：`此圖片中沒有辨識到 QR Code`。
+若沒有 QR Code 或 Code 128，顯示：`未辨識到 QR Code 或 Code 128`。
 
 ---
 
@@ -413,7 +414,7 @@ service / composable。
 - 未設定 Apps Script URL：`Please enter the Apps Script Web App URL`。
 - 未輸入位置：`Please enter the current location`。
 - 相機權限被拒絕、裝置沒有相機或相機啟動失敗。
-- 圖片無 QR Code：`No QR Code was detected in this image`。
+- 圖片無 QR Code 或 Code 128：`未辨識到 QR Code 或 Code 128`。
 - 圖片讀取失敗：`Unable to read the image. Please select it again`。
 - Apps Script 無法連線：`Unable to connect to the inventory service`。
 - 尚未盤點清單讀取失敗：顯示可理解的錯誤，不能顯示為空清單。
@@ -446,17 +447,17 @@ service / composable。
 - [ ] 底部四個功能分頁可切換設定、掃描、已盤點與未盤點。
 - [ ] 可用 `#/settings`、`#/scan`、`#/checked`、`#/pending` 直接開啟對應分頁。
 - [ ] 可輸入並保存目前位置，並有歷史位置下拉選單。
-- [ ] 可啟動後置鏡頭進行即時 QR Code 掃描。
+- [ ] 可啟動後置鏡頭進行即時 QR Code 與 Code 128 掃描。
 - [ ] 可停止相機並釋放相機串流。
-- [ ] 即時掃描中同一個 QR Code 在 10 秒內不會因持續出現在畫面中而重複送出。
+- [ ] 即時掃描中同一個條碼在 10 秒內不會因持續出現在畫面中而重複送出。
 - [ ] 可按「拍照」取得新照片。
 - [ ] 可按「讀取相片」選擇既有圖片。
-- [ ] 可從一張圖片辨識多個 QR Code。
-- [ ] QR decode 全部在本機瀏覽器完成。
+- [ ] 可從一張圖片辨識多個 QR Code 或 Code 128。
+- [ ] 條碼 decode 全部在本機瀏覽器完成。
 - [ ] 同張圖片的重複 ID 不重複送出。
 - [ ] 3 秒內沒有新掃描後，一次批次送出 `ids` 與 location。
 - [ ] 可顯示每個 ID 的等待批次送出 / 寫入中 / 成功 / 失敗狀態。
-- [ ] 單筆失敗不影響其他 QR Code。
+- [ ] 單筆失敗不影響其他條碼。
 - [ ] 可透過同一個 Apps Script `/exec` URL 列出 `checked_time` 空白的 ID。
 - [ ] 尚未盤點清單顯示 `name` 與 `id`，並依 `location` 分組。
 - [ ] 沒有 `location` 的項目會歸入「尚未設定位置」。

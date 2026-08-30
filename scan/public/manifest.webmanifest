@@ -1,7 +1,7 @@
 {
-  "name": "手機 QR Code 盤點",
+  "name": "手機條碼盤點",
   "short_name": "行動盤點",
-  "description": "掃描 QR Code、記錄設備位置並查看尚未盤點項目",
+  "description": "掃描 QR Code 或 Code 128、記錄設備位置並查看尚未盤點項目",
   "theme_color": "#0f766e",
   "background_color": "#f5f7f8",
   "display": "standalone",

@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 import {
   applyLiveCameraTuning,
   captureVideoCenterCropImageData,
+  captureVideoHorizontalBandImageData,
   captureVideoImageData,
   focusVideoTrack,
   mapCoverPointToVideo,
@@ -78,6 +79,11 @@ async function processFrame(timestamp: number): Promise<void> {
       let ids = await decodeQrImageData(
         captureVideoImageData(currentVideo, canvas),
       );
+      if (!ids.length) {
+        ids = await decodeQrImageData(
+          captureVideoHorizontalBandImageData(currentVideo, canvas),
+        );
+      }
       if (!ids.length) {
         ids = await decodeQrImageData(
           captureVideoCenterCropImageData(currentVideo, canvas),

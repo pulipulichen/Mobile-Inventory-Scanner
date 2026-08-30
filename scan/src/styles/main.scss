@@ -298,24 +298,33 @@ a {
   margin-top: 0.85rem;
 }
 
+.scanner-heading-start {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.scanner-heading-start > h2 {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .scan-input-mode {
-  margin-bottom: 1rem;
+  flex: 0 0 auto;
+  width: min(10.5rem, 46vw);
+  margin: 0;
 }
 
-.scan-input-mode-label {
-  margin: 0 0 0.5rem;
-  color: #334155;
-  font-size: 0.9rem;
-  font-weight: 700;
+.scan-input-mode-select {
+  min-height: 2.75rem;
 }
 
-.scan-input-mode-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-}
-
-.scan-input-mode-buttons .v-btn {
+.scan-input-mode-select .v-field {
   min-height: 2.75rem;
 }
 

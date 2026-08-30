@@ -141,6 +141,10 @@ const liveStatusMessage = computed(() => {
   return effectiveStatusMessage.value;
 });
 const canStartCamera = computed(() => !isCameraActive.value);
+const inputModeItems = computed(() => [
+  { title: t("scan.input_mode_camera"), value: "camera" as const },
+  { title: t("scan.input_mode_scanner"), value: "scanner" as const },
+]);
 const pendingGroups = computed<PendingLocationGroup[]>(() => {
   const currentLocation = location.value.trim();
   const groups = new Map<string, InventoryItem[]>();
@@ -819,51 +823,39 @@ function handleLocaleChange(event: Event): void {
             >
               <div class="section-heading">
                 <div class="section-heading-row">
-                  <h2 id="scanner-heading">{{ t("scan.scanner_heading") }}</h2>
-                  <HelpModal
-                    :title="
-                      inputMode === 'scanner'
-                        ? t('scan.scanner_gun_help')
-                        : t('scan.scanner_help')
-                    "
-                    :description="
-                      inputMode === 'scanner'
-                        ? t('scan.scanner_gun_description')
-                        : t('scan.scanner_description')
-                    "
-                  />
-                </div>
-              </div>
-
-              <div
-                class="scan-input-mode"
-                role="group"
-                aria-labelledby="scan-input-mode-label"
-              >
-                <p id="scan-input-mode-label" class="scan-input-mode-label">
-                  {{ t("scan.input_mode_label") }}
-                </p>
-                <div class="scan-input-mode-buttons">
-                  <v-btn
-                    type="button"
-                    :variant="inputMode === 'camera' ? 'flat' : 'outlined'"
-                    :color="inputMode === 'camera' ? 'primary' : 'secondary'"
-                    prepend-icon="mdi-camera"
-                    :aria-pressed="inputMode === 'camera'"
-                    @click="setInputMode('camera')"
-                  >
-                    {{ t("scan.input_mode_camera") }}
-                  </v-btn>
-                  <v-btn
-                    type="button"
-                    :variant="inputMode === 'scanner' ? 'flat' : 'outlined'"
-                    :color="inputMode === 'scanner' ? 'primary' : 'secondary'"
-                    prepend-icon="mdi-barcode-scan"
-                    :aria-pressed="inputMode === 'scanner'"
-                    @click="setInputMode('scanner')"
-                  >
-                    {{ t("scan.input_mode_scanner") }}
-                  </v-btn>
+                  <div class="scanner-heading-start">
+                    <h2 id="scanner-heading">{{ t("scan.scanner_heading") }}</h2>
+                    <HelpModal
+                      :title="
+                        inputMode === 'scanner'
+                          ? t('scan.scanner_gun_help')
+                          : t('scan.scanner_help')
+                      "
+                      :description="
+                        inputMode === 'scanner'
+                          ? t('scan.scanner_gun_description')
+                          : t('scan.scanner_description')
+                      "
+                    />
+                  </div>
+                  <div class="scan-input-mode">
+                    <label for="scan-input-mode" class="visually-hidden">
+                      {{ t("scan.input_mode_label") }}
+                    </label>
+                    <v-select
+                      id="scan-input-mode"
+                      class="scan-input-mode-select"
+                      :model-value="inputMode"
+                      :items="inputModeItems"
+                      item-title="title"
+                      item-value="value"
+                      :aria-label="t('scan.input_mode_label')"
+                      hide-details
+                      density="comfortable"
+                      variant="outlined"
+                      @update:model-value="setInputMode"
+                    />
+                  </div>
                 </div>
               </div>
 
