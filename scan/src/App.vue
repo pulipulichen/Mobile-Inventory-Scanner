@@ -6,6 +6,7 @@ import CameraScanner from "./components/CameraScanner.vue";
 import CurrentLocationField from "./components/CurrentLocationField.vue";
 import HelpModal from "./components/HelpModal.vue";
 import ImageSourceButtons from "./components/ImageSourceButtons.vue";
+import LocaleModal from "./components/LocaleModal.vue";
 import PendingInventoryList from "./components/PendingInventoryList.vue";
 import ScanResultList from "./components/ScanResultList.vue";
 import ScanSettings from "./components/ScanSettings.vue";
@@ -31,7 +32,6 @@ import {
   saveLocation,
   saveLocationToHistory,
 } from "./services/scan_storage";
-import { setLocale, type SupportedLocale } from "./i18n";
 import { isAppTab, type AppTab } from "./router";
 import {
   isScanInputMode,
@@ -745,12 +745,6 @@ async function loadPending(): Promise<void> {
   }
 }
 
-function handleLocaleChange(event: Event): void {
-  const value = (event.target as HTMLSelectElement).value;
-  if (value === "zh-TW" || value === "en") {
-    setLocale(value as SupportedLocale);
-  }
-}
 </script>
 
 <template>
@@ -769,23 +763,7 @@ function handleLocaleChange(event: Event): void {
           </div>
         </div>
 
-        <div class="locale-control">
-          <label for="locale-select" class="locale-trigger">
-            <span class="language-icon" aria-hidden="true">🌐</span>
-            <span class="language-label-text">{{ t("common.language") }}</span>
-            <span class="language-current">
-              {{ locale === "zh-TW" ? t("common.chinese") : t("common.english") }}
-            </span>
-          </label>
-          <select
-            id="locale-select"
-            :value="locale"
-            @change="handleLocaleChange"
-          >
-            <option value="zh-TW">{{ t("common.chinese") }}</option>
-            <option value="en">{{ t("common.english") }}</option>
-          </select>
-        </div>
+        <LocaleModal />
       </div>
     </header>
 

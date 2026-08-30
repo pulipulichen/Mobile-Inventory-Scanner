@@ -28,8 +28,8 @@ Vuetify 只負責 App 操作介面。`scan` 的即時掃描使用瀏覽器
 `MediaDevices.getUserMedia()`，拍照／讀取相片仍使用規格指定的原生
 `<input type="file">`；`print` 的 QR label、紙張預覽實體尺寸與
 `pdf-lib` PDF 繪製仍由專案自己的元件、SCSS 與 service 負責，不以 UI
-framework 取代實體輸出邏輯。語系選擇器等規格指定原生元素的控制項也必須
-保留原生 HTML 語意。
+framework 取代實體輸出邏輯。規格指定原生元素的控制項必須保留原生 HTML
+語意；語系切換改以可搜尋的 dialog 呈現，方便手機點選。
 
 ## 核心 npm 套件
 

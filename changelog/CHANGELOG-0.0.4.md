@@ -30,8 +30,8 @@
 
 - Increased the PDF download button height and text size for easier touch
   interaction.
-- Enlarged the scan language selector and displayed the active language to
-  make mobile language switching easier to tap.
+- Replaced the `scan` and `print` language dropdowns with a globe-only icon
+  that opens a searchable dialog of large language buttons.
 - Moved the scan-tab help button next to the heading, and replaced the
   camera / scanner-gun toggle buttons with a compact dropdown in the card's
   top-right corner.

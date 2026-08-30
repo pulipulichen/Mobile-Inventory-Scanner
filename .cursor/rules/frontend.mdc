@@ -169,7 +169,7 @@ mis.print.qr_size_mm
 - 各語系必須維持相同的 key schema，缺少 key 應在測試或 CI 中被發現；不可把英文原文或 translation key 當成正式 UI fallback。
 - 使用 `vue-i18n` 的插值與複數功能處理變數文字，不以字串串接組合句子；日期與數字依 locale 使用 `Intl` 或 `vue-i18n` 格式化。
 - Apps Script / Google API 的英文 `message` 與 `error` code 是資料契約；前端依 `error` code 使用 `t()` 顯示本地化訊息，不把翻譯後文字送回 API。ID、location 等使用者資料不可翻譯。
-- 語系選擇器必須使用有 label 的原生 `<select>`，支援鍵盤操作；重要狀態通知需沿用可存取的 live region，切換語系後也必須更新其文字。
+- 語系選擇器使用有 accessible name 的地球圖示按鈕，開啟可搜尋語言的 dialog；語言選項必須是大型按鈕、可用鍵盤操作，且目前語系不可只靠顏色表示。重要狀態通知需沿用可存取的 live region，切換語系後也必須更新其文字。
 
 ## 11. Podman 開發與編譯
 

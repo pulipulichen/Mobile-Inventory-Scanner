@@ -9,12 +9,12 @@ import {
   watch,
 } from "vue";
 import { useI18n } from "vue-i18n";
+import LocaleModal from "./components/LocaleModal.vue";
 import GoogleSheetSource from "./components/GoogleSheetSource.vue";
 import PrintPreview from "./components/PrintPreview.vue";
 import PrintSettings from "./components/PrintSettings.vue";
 import { usePrintSettings } from "./composables/use_print_settings";
 import type { SimulationSourceState } from "./composables/use_scan_simulation";
-import { setLocale, type SupportedLocale } from "./i18n";
 import { createQrSvg, QrGeneratorError } from "./services/qr_generator";
 import { canEncodeCode128 } from "./services/code128_generator";
 import { readSheet, SheetSourceError } from "./services/sheet_source";
@@ -39,7 +39,7 @@ const ScanSimulator = defineAsyncComponent(
 );
 
 const { googleSheetUrl, settings, resetSettings } = usePrintSettings();
-const { t, locale, n } = useI18n({ useScope: "global" });
+const { t, n } = useI18n({ useScope: "global" });
 
 const sheetData = ref<SheetData | null>(null);
 const qrSvgs = ref<Record<string, string>>({});
@@ -338,13 +338,6 @@ function handleResetSettings(): void {
   setStatus("status.settings_reset", {}, "success");
 }
 
-function handleLocaleChange(event: Event): void {
-  const value = (event.target as HTMLSelectElement).value;
-  if (value === "zh-TW" || value === "en") {
-    setLocale(value as SupportedLocale);
-  }
-}
-
 watch(
   googleSheetUrl,
   (_value, previousValue) => {
@@ -386,17 +379,7 @@ onUnmounted(() => {
         </div>
 
         <div class="header-actions">
-          <div class="locale-control">
-            <label for="locale-select">{{ t("common.language") }}</label>
-            <select
-              id="locale-select"
-              :value="locale"
-              @change="handleLocaleChange"
-            >
-              <option value="zh-TW">{{ t("common.chinese") }}</option>
-              <option value="en">{{ t("common.english") }}</option>
-            </select>
-          </div>
+          <LocaleModal tone="dark" />
         </div>
       </div>
     </header>
