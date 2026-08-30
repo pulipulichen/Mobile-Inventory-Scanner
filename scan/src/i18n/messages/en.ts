@@ -41,7 +41,7 @@ export default {
     camera_focused: "Focused on the selected point.",
     input_mode_label: "Inventory input method",
     input_mode_camera: "Camera",
-    input_mode_scanner: "Scanner gun",
+    input_mode_scanner: "External scanner (scanner gun)",
     scanner_gun_label: "Scanner gun ID input",
     scanner_gun_placeholder:
       "Scan a QR Code or Code 128 barcode, or type an ID and press Enter",

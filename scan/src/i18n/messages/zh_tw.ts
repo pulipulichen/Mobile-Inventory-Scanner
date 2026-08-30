@@ -39,7 +39,7 @@ export default {
     camera_focused: "已對準點選位置對焦。",
     input_mode_label: "盤點輸入方式",
     input_mode_camera: "相機",
-    input_mode_scanner: "刷槍",
+    input_mode_scanner: "外接掃描器 (刷槍)",
     scanner_gun_label: "刷槍輸入 ID",
     scanner_gun_placeholder: "掃描 QR Code 或 Code 128，或手動輸入後按 Enter",
     scanner_gun_hint:

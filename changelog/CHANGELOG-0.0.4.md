@@ -35,6 +35,8 @@
 - Moved the scan-tab help button next to the heading, and replaced the
   camera / scanner-gun toggle buttons with a compact dropdown in the card's
   top-right corner.
+- Renamed the scanner-gun input option to "External scanner (scanner gun)"
+  to make the input method clearer.
 
 ## Improved
 
