@@ -513,6 +513,7 @@ onUnmounted(() => {
             <template #actions>
               <div class="pdf-download-panel">
                 <v-btn
+                  class="pdf-download-button"
                   type="button"
                   color="primary"
                   variant="flat"

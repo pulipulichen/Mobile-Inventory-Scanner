@@ -425,6 +425,12 @@ a {
   width: 100%;
 }
 
+.pdf-download-button {
+  min-height: 64px;
+  padding-block: 0.75rem;
+  font-size: 1.1rem;
+}
+
 .pdf-download-status {
   margin: 0;
   color: #334155;
