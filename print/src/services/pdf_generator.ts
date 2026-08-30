@@ -94,6 +94,68 @@ function drawCode128(
   });
 }
 
+type PdfPoint = { x: number; y: number };
+
+function formatGridCoordinate(value: number): string {
+  return value.toFixed(6);
+}
+
+function getGridLineKey(start: PdfPoint, end: PdfPoint): string {
+  if (Math.abs(start.x - end.x) < 0.000001) {
+    return [
+      "vertical",
+      formatGridCoordinate(start.x),
+      formatGridCoordinate(Math.min(start.y, end.y)),
+      formatGridCoordinate(Math.max(start.y, end.y)),
+    ].join(":");
+  }
+  return [
+    "horizontal",
+    formatGridCoordinate(start.y),
+    formatGridCoordinate(Math.min(start.x, end.x)),
+    formatGridCoordinate(Math.max(start.x, end.x)),
+  ].join(":");
+}
+
+function drawUniqueGridLine(
+  page: PDFPage,
+  drawnLines: Set<string>,
+  start: PdfPoint,
+  end: PdfPoint,
+): void {
+  const key = getGridLineKey(start, end);
+  if (drawnLines.has(key)) return;
+  drawnLines.add(key);
+  page.drawLine({
+    start,
+    end,
+    thickness: LABEL_GRID_WIDTH_PT,
+    color: LABEL_GRID_COLOR,
+    dashArray: LABEL_GRID_DASH_PT,
+  });
+}
+
+function drawLabelGrid(
+  page: PDFPage,
+  drawnLines: Set<string>,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): void {
+  const right = x + width;
+  const top = y + height;
+  drawUniqueGridLine(page, drawnLines, { x, y }, { x: right, y });
+  drawUniqueGridLine(page, drawnLines, { x, y: top }, { x: right, y: top });
+  drawUniqueGridLine(page, drawnLines, { x, y }, { x, y: top });
+  drawUniqueGridLine(
+    page,
+    drawnLines,
+    { x: right, y },
+    { x: right, y: top },
+  );
+}
+
 export async function generatePdf(
   items: InventoryItem[],
   settings: PrintSettings,
@@ -133,6 +195,7 @@ export async function generatePdf(
     const barcodeStackGap = mmToPoints(BARCODE_STACK_GAP_MM);
     const textHeight = showText ? mmToPoints(metrics.textHeightMm) : 0;
     const textGap = showText ? mmToPoints(settings.qrTextGapMm) : 0;
+    const drawnGridLines = new Set<string>();
 
     pageItems.forEach((item, index) => {
       const column = index % metrics.columns;
@@ -145,15 +208,7 @@ export async function generatePdf(
         row * (labelHeight + labelGap);
       const barcodeBaseY = y + labelPadding + textHeight + textGap;
 
-      page.drawRectangle({
-        x,
-        y,
-        width: labelWidth,
-        height: labelHeight,
-        borderColor: LABEL_GRID_COLOR,
-        borderWidth: LABEL_GRID_WIDTH_PT,
-        borderDashArray: LABEL_GRID_DASH_PT,
-      });
+      drawLabelGrid(page, drawnGridLines, x, y, labelWidth, labelHeight);
 
       if (showCode128) {
         drawCode128(
