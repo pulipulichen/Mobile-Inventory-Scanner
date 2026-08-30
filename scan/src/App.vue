@@ -769,6 +769,9 @@ function handleLocaleChange(event: Event): void {
           <label for="locale-select" class="locale-trigger">
             <span class="language-icon" aria-hidden="true">🌐</span>
             <span class="language-label-text">{{ t("common.language") }}</span>
+            <span class="language-current">
+              {{ locale === "zh-TW" ? t("common.chinese") : t("common.english") }}
+            </span>
           </label>
           <select
             id="locale-select"
