@@ -39,15 +39,21 @@
   top-right corner.
 - Renamed the scanner-gun input option to "External scanner (scanner gun)"
   to make the input method clearer.
+- Unified the `print` app's generic QR Code and Code 128 wording as
+  "barcode", while retaining each format name where the choice or error
+  requires it.
 
 ## Improved
 
 - Live camera scanning now also reads a central horizontal band so wide
   Code 128 barcodes are easier to decode, and zbar is limited to QR Code
   and Code 128 so other 1D formats are not treated as inventory IDs.
+- Centered the scan pending-list loading message for clearer presentation.
 
 ## Documentation
 
 - Added a Traditional Chinese usage guide covering Google Sheet setup, Apps
   Script deployment, QR and Code 128 label generation, mobile scanning,
   troubleshooting, privacy, and accessible operation.
+- Fixed image links and the repository README link in the Apps Script setup
+  guide.

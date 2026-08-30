@@ -8,32 +8,33 @@
 
 ## 操作步驟
 
-![[Pasted image 20260829214238.png]]
+![Pasted image 20260829214238](Attachments/Pasted%20image%2020260829214238.png)
 1. 在盤點用 Google Sheet 選擇 **Extensions > Apps Script**。
 
-![[Pasted image 20260829214254.png]]
-1. 將本專案的 Apps Script 程式碼  [[main.gs]] 貼到編輯器，確認它使用目前綁定的
+![Pasted image 20260829214254](Attachments/Pasted%20image%2020260829214254.png)
+1. 將本專案的 Apps Script 程式碼  [main](main.gs) 貼到編輯器，確認它使用目前綁定的
    Spreadsheet，並儲存專案。
-![[Pasted image 20260829214329.png]]
+![Pasted image 20260829214329](Attachments/Pasted%20image%2020260829214329.png)
 
 2. 選擇 **Deploy > New deployment**。
-![[Pasted image 20260829214345.png]]
+![Pasted image 20260829214345](Attachments/Pasted%20image%2020260829214345.png)
 3. 在 **Select type** 選擇 **Web app**。
 
-![](Pasted%20image%2020260829214513.png)
+![Pasted image 20260829214513](Attachments/Pasted%20image%2020260829214513.png)
 2. 3. 設定 **Who has access**：
    - 選 **Anyone**，但必須妥善保護 URL。
 2. 按 **Deploy**，完成 Google 授權後複製 **Web app URL**。
-![](Pasted%20image%2020260829214551.png)
+![Pasted image 20260829214551](Attachments/Pasted%20image%2020260829214551.png)
 3. 授予存取權
-![](Pasted%20image%2020260829214641.png)
+![Pasted image 20260829214641](Attachments/Pasted%20image%2020260829214641.png)
 按Advanced
 
-![](Pasted%20image%2020260829214716.png)
+![Pasted image 20260829214716](Attachments/Pasted%20image%2020260829214716.png)
 按Go to 未命名的專案 (unsafe)
-![](Pasted%20image%2020260829214755.png)
+![Pasted image 20260829214755](Attachments/Pasted%20image%2020260829214755.png)
 Continue
-![](Pasted%20image%2020260829214825.png)
+
+![Pasted image 20260829214825](Attachments/Pasted%20image%2020260829214825.png)
 
 複製網址
 
@@ -55,7 +56,7 @@ flowchart TB
 若部署後修改 Apps Script 程式碼，需依 Google 的部署流程建立新版本或更新
 既有 deployment，並確認 `scan` 使用的仍是 `/exec` 網址。
 
-完成後可回到 [Google Sheet / Apps Script 規格](./README.md) 查看 Web App
+完成後可回到 [Google Sheet / Apps Script 規格](../README.md) 查看 Web App
 輸入與回傳格式。
 
 ## 盤點清單 API

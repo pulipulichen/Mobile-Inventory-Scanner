@@ -1,7 +1,7 @@
 export default {
   common: {
-    app_title: "QR label generator",
-    app_description: "Create inventory QR Code labels from a Google Sheet.",
+    app_title: "Barcode label generator",
+    app_description: "Create inventory barcode labels from a Google Sheet.",
     skip_to_content: "Skip to main content",
     language: "Language",
     language_button: "Language, currently {language}",
@@ -16,9 +16,9 @@ export default {
     close: "Close",
   },
   print: {
-    page_title: "QR Code label generator",
+    page_title: "Barcode label generator",
     subtitle:
-      "Load inventory IDs from Google Sheets, arrange QR Code or Code 128 labels for the selected paper size, and download a vector PDF.",
+      "Load inventory IDs from Google Sheets, arrange barcode labels for the selected paper size, and download a vector PDF.",
     source_heading: "1. Google Sheet source",
     sheet_url_label: "Google Sheet URL",
     sheet_url_hint:
@@ -33,24 +33,24 @@ export default {
     settings_heading: "2. Print settings",
     settings_hint:
       "Changes are saved in this browser and update the PDF preview and scan-simulation labels immediately.",
-    qr_size: "QR Code size",
-    qr_size_hint: "Physical edge length of each QR Code.",
+    qr_size: "Barcode size",
+    qr_size_hint: "Physical size of each barcode.",
     qr_size_hint_with_code128:
-      "Physical edge length of each QR Code. Code 128 width is derived from this size so the barcode stays scannable.",
+      "Physical size of each barcode. When both formats are printed, the Code 128 barcode width is derived from this size so it stays scannable.",
     code128_size: "Barcode width",
     code128_size_hint:
-      "Physical width of each Code 128 barcode. Height is calculated from the width.",
+      "Physical width of each barcode. Height is calculated from the width.",
     barcode_mode: "Barcode format",
     barcode_mode_hint:
-      "Print QR Codes, Code 128 barcodes, or both on each label.",
+      "Print QR Code barcodes, Code 128 barcodes, or both on each label.",
     barcode_mode_qr: "QR Code",
     barcode_mode_code128: "Code 128",
     barcode_mode_both: "QR Code + Code 128",
     id_font_size: "Text size",
-    id_font_size_hint: "Text size printed below the QR Code.",
+    id_font_size_hint: "Text size printed below the barcode.",
     code128_font_size_hint: "Text size printed below the barcode.",
-    qr_text_gap: "QR / text gap",
-    qr_text_gap_hint: "Space between the QR Code and its label text.",
+    qr_text_gap: "Barcode / text gap",
+    qr_text_gap_hint: "Space between the barcode and its label text.",
     code128_text_gap: "Barcode / text gap",
     code128_text_gap_hint: "Space between the barcode and its label text.",
     label_gap: "Label gap",
@@ -65,7 +65,7 @@ export default {
     orientation_landscape: "Landscape",
     label_text: "Label text",
     label_text_hint:
-      "Show the ID, the name, or no text below each QR Code. Empty names fall back to the ID.",
+      "Show the ID, the name, or no text below each barcode. Empty names fall back to the ID.",
     code128_label_text_hint:
       "Show the ID, the name, or no text below each barcode. Empty names fall back to the ID.",
     label_text_hidden: "Hidden",
@@ -88,21 +88,21 @@ export default {
       "{count} labels · {columns} per row · {rows} rows per page · {pages} pages",
     preview_empty: "Load a Sheet without duplicate IDs to see the label preview.",
     page: "Page {page} of {pages}",
-    qr_label: "QR Code for ID {id}",
-    qr_label_with_name: "QR Code for ID {id}, name {name}",
-    code128_label: "Code 128 barcode for ID {id}",
-    code128_label_with_name: "Code 128 barcode for ID {id}, name {name}",
-    symbol_label: "QR Code and Code 128 barcode for ID {id}",
+    qr_label: "Barcode for ID {id}",
+    qr_label_with_name: "Barcode for ID {id}, name {name}",
+    code128_label: "Barcode for ID {id}",
+    code128_label_with_name: "Barcode for ID {id}, name {name}",
+    symbol_label: "Two barcodes for ID {id}",
     symbol_label_with_name:
-      "QR Code and Code 128 barcode for ID {id}, name {name}",
+      "Two barcodes for ID {id}, name {name}",
     download_pdf: "Download PDF",
     pdf_filename: "inventory-qr-labels",
     pdf_filename_code128: "inventory-code128-labels",
     pdf_filename_both: "inventory-labels",
     code128_unsupported_heading:
-      "Some IDs cannot be encoded as Code 128, so PDF generation is paused",
+      "Some IDs cannot be encoded as Code 128 barcodes, so PDF generation is paused",
     code128_unsupported_description:
-      "Code 128 only supports ASCII letters, numbers, and common symbols. Switch to QR Code, or change these IDs and reload the Sheet.",
+      "Code 128 barcodes only support ASCII letters, numbers, and common symbols. Switch to a QR Code barcode, or change these IDs and reload the Sheet.",
     code128_unsupported_item: "{id}",
     footer_note:
       "PDF is generated locally in your browser. Your Sheet data is not uploaded to this app.",
@@ -113,17 +113,17 @@ export default {
     pdf_mode: "PDF labels",
     simulation_mode: "Scan simulation",
     simulation_unavailable: "Load a valid Sheet without duplicate IDs first.",
-    heading: "QR Code scan simulation",
+    heading: "Barcode scan simulation",
     description:
-      "Display a scrollable wall of QR Code labels on this screen and scan it with another device.",
+      "Display a scrollable wall of barcode labels on this screen and scan it with another device.",
     controls_heading: "Scan simulation controls",
-    item_count: "QR Code count",
+    item_count: "Barcode count",
     item_count_hint: "The current scene will contain {count} available IDs.",
-    item_count_option: "{count} QR Codes",
+    item_count_option: "{count} barcodes",
     item_count_all: "All IDs",
-    min_qr_size: "Minimum QR Code size",
-    max_qr_size: "Maximum QR Code size",
-    qr_size_hint: "Display size for each QR Code. The scene chooses a size in this range.",
+    min_qr_size: "Minimum barcode size",
+    max_qr_size: "Maximum barcode size",
+    qr_size_hint: "Display size for each barcode. The scene chooses a size in this range.",
     build_scene: "Build scene",
     randomize: "Randomize layout",
     rebuild_same_seed: "Rebuild with same seed",
@@ -135,19 +135,19 @@ export default {
     source_duplicates:
       "Scan simulation is disabled because the loaded Sheet contains duplicate IDs.",
     source_qr_loading:
-      "QR Codes are being updated to match the print settings. Please wait.",
+      "Barcodes are being updated to match the print settings. Please wait.",
     source_qr_error:
-      "Scan simulation is disabled because one or more QR Codes could not be generated.",
+      "Scan simulation is disabled because one or more barcodes could not be generated.",
     source_code128_error:
-      "Scan simulation is disabled because one or more IDs cannot be encoded as Code 128.",
+      "Scan simulation is disabled because one or more IDs cannot be encoded as Code 128 barcodes.",
     ready: "Choose the scene settings, then select “Build scene”.",
     no_items: "There are no valid IDs available for the scan scene.",
-    scene_created: "Scan scene built with {count} QR Codes.",
+    scene_created: "Scan scene built with {count} barcodes.",
     build_hint:
       "The scene will appear here after a valid Sheet is loaded and you build it.",
-    scene_heading: "QR Code scan scene",
+    scene_heading: "Barcode scan scene",
     scene_summary:
-      "{count} QR Codes · scene size {width} × {height} px before zoom",
+      "{count} barcodes · scene size {width} × {height} px before zoom",
     go_to_scan: "Open scan on another device",
     enter_fullscreen: "Enter full screen",
     exit_fullscreen: "Exit full screen",
@@ -182,22 +182,22 @@ export default {
     NO_VALID_ID:
       "The Sheet contains no valid, non-empty IDs.",
     QR_GENERATION_FAILED:
-      "QR Code generation failed. Reload the Sheet or try again later.",
+      "Barcode generation failed. Reload the Sheet or try again later.",
     CODE128_EMPTY: "The ID is empty, so a Code 128 barcode cannot be generated.",
     CODE128_UNSUPPORTED_CHARACTER:
-      "This ID contains characters that Code 128 cannot encode. Switch to QR Code, or use letters, numbers, and common symbols.",
+      "This ID contains characters that a Code 128 barcode cannot encode. Switch to a QR Code barcode, or use letters, numbers, and common symbols.",
     CODE128_ENCODING_FAILED:
-      "Code 128 generation failed. Reload the Sheet or try again later.",
+      "Code 128 barcode generation failed. Reload the Sheet or try again later.",
     SIMULATION_INVALID_ITEM_COUNT:
-      "Choose a supported QR Code count.",
+      "Choose a supported barcode count.",
     SIMULATION_INVALID_QR_SIZE:
-      "QR Code sizes must be between 48 px and 480 px.",
+      "Barcode sizes must be between 48 px and 480 px.",
     SIMULATION_MIN_QR_LARGER_THAN_MAX:
-      "The minimum QR Code size cannot be larger than the maximum.",
+      "The minimum barcode size cannot be larger than the maximum.",
     SIMULATION_INVALID_ZOOM:
       "Scene zoom must be between 50% and 200%.",
     SIMULATION_LAYOUT_FAILED:
-      "The scene could not fit all QR Codes. Try a smaller QR Code size range.",
+      "The scene could not fit all barcodes. Try a smaller barcode size range.",
     UNKNOWN:
       "An unexpected error occurred. Please try again.",
   },
